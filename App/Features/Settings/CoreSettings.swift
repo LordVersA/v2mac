@@ -9,7 +9,7 @@ struct CoreSettings: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("Version", value: updates.coreVersion ?? "…")
+                LabeledContent("Version", value: updates.coreVersion ?? "Unknown")
                 LabeledContent("Source", value: updates.coreIsUpdatedCopy ? "Updated copy" : "Bundled")
                 statusRow
             } header: {

@@ -4,6 +4,11 @@ public struct AppRelease: Sendable, Equatable {
     public var tag: String
     public var pageURL: URL
     public var version: String { VersionCompare.normalized(tag) }
+
+    public init(tag: String, pageURL: URL) {
+        self.tag = tag
+        self.pageURL = pageURL
+    }
 }
 
 /// Reads the latest release of the app's own repository (spec 11.3). Never installs anything.

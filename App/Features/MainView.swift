@@ -3,7 +3,19 @@ import SwiftUI
 
 struct MainView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openSettings) private var openSettings
     @Query(sort: \ServerGroup.sortIndex) private var groups: [ServerGroup]
+
+    /// Opens Settings on the tab where the update can be installed.
+    private func updateButton(_ title: LocalizedStringKey, tab: SettingsTab) -> some View {
+        Button(title, systemImage: "arrow.down.circle.fill") {
+            model.openSettings(openSettings, tab: tab)
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+        .controlSize(.small)
+        .tint(.blue)
+    }
 
     var body: some View {
         @Bindable var model = model
@@ -28,6 +40,16 @@ struct MainView: View {
             }
         }
         .frame(minWidth: 760, minHeight: 440)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigation) {
+                if model.updates.availableAppUpdate != nil {
+                    updateButton("Update Available", tab: .general)
+                }
+                if model.updates.availableCoreUpdate != nil {
+                    updateButton("Core Update Available", tab: .core)
+                }
+            }
+        }
         .sheet(isPresented: $model.showAddSheet) {
             AddSubscriptionSheet()
         }

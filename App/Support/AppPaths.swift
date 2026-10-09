@@ -86,6 +86,11 @@ enum Prefs {
         ])
     }
 
+    static var lastCoreUpdateCheck: Date? {
+        get { defaults.object(forKey: "lastCoreUpdateCheck") as? Date }
+        set { defaults.set(newValue, forKey: "lastCoreUpdateCheck") }
+    }
+
     static var lastAppUpdateCheck: Date? {
         get { defaults.object(forKey: "lastAppUpdateCheck") as? Date }
         set { defaults.set(newValue, forKey: "lastAppUpdateCheck") }

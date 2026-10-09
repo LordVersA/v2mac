@@ -25,6 +25,8 @@ final class AppModel {
     var showAddSheet = false
     var showInspector = true
     var showRegionsSheet = false
+    /// The Settings tab to show; the update buttons set it before opening Settings.
+    var settingsTab: SettingsTab = .general
     /// Rows currently shown in the server table (after search); the default test target.
     var visibleProfileIDs: [UUID] = []
 
@@ -61,6 +63,7 @@ final class AppModel {
         updates.restartCore = { connection.reconnectIfRunning() }
         regionPacks.startScheduler()
         updates.startScheduler()
+        Task { await updates.refreshCoreInfo() }
         let packs = regionPacks
         connection.regionRoutes = { packs.usableRoutes }
         #if DEBUG
@@ -155,7 +158,8 @@ final class AppModel {
         NSApp.activate()
     }
 
-    func openSettings(_ action: OpenSettingsAction) {
+    func openSettings(_ action: OpenSettingsAction, tab: SettingsTab? = nil) {
+        if let tab { settingsTab = tab }
         NSApp.setActivationPolicy(.regular)
         action()
         NSApp.activate()
@@ -223,6 +227,7 @@ final class AppModel {
                 if defaults.bool(forKey: "debugActivateFirst") { connection.connectActive() }
             }
         }
+        if defaults.bool(forKey: "debugFakeUpdates") { updates.fakeUpdates() }
         if defaults.bool(forKey: "debugAppUpdate") {
             Task {
                 await updates.checkApp(manual: true)
