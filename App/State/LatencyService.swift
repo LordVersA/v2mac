@@ -96,9 +96,10 @@ final class LatencyService {
     func testTCP(_ ids: [UUID]) {
         let all = snapshots(for: ids)
         guard !all.isEmpty else { return }
-        // UDP-based servers and custom configs have no meaningful TCP handshake.
+        // UDP-based servers have no TCP handshake to time. A custom config is pinged at the
+        // address of its proxy outbound, and is skipped only when it has none.
         let udp: Set<String> = ["hysteria", "wireguard"]
-        let applicable = all.filter { $0.kind == .outbound && !udp.contains($0.protocolName) && $0.transport != "kcp" && !$0.address.isEmpty }
+        let applicable = all.filter { !udp.contains($0.protocolName) && $0.transport != "kcp" && !$0.address.isEmpty && $0.port > 0 }
         let notApplicable = all.filter { s in !applicable.contains(where: { $0.id == s.id }) }
 
         begin(all.map(\.id))
