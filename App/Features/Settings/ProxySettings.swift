@@ -42,6 +42,9 @@ struct ProxySettings: View {
             }
         }
         .formStyle(.grouped)
+        .animation(.default, value: allowLAN)
+        .animation(.default, value: portValid)
+        .animation(.default, value: username.isEmpty || password.isEmpty)
         .onAppear { portText = String(port) }
         .onDisappear { commitPort() }
     }

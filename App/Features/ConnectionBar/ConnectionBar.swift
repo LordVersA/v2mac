@@ -4,6 +4,7 @@ struct ConnectionBar: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
     @Namespace private var glassNamespace
+    @State private var copied = false
 
     private var connection: ConnectionController { model.connection }
 
@@ -121,8 +122,9 @@ struct ConnectionBar: View {
             Divider()
             copy("export http_proxy=http://127.0.0.1:\(port) https_proxy=http://127.0.0.1:\(port) all_proxy=socks5://127.0.0.1:\(port)", label: "Shell export lines")
         } label: {
-            Label(connection.localAddress, systemImage: "doc.on.doc")
+            Label(connection.localAddress, systemImage: copied ? "checkmark" : "doc.on.doc")
                 .font(.caption.monospaced())
+                .contentTransition(.symbolEffect(.replace))
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
@@ -134,6 +136,11 @@ struct ConnectionBar: View {
         Button(label ?? text) {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
+            copied = true
+            Task {
+                try? await Task.sleep(for: .seconds(1.2))
+                copied = false
+            }
         }
     }
 

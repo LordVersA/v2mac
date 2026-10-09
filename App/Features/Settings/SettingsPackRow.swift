@@ -45,6 +45,8 @@ struct SettingsPackRow: View {
                 .labelsHidden()
             }
         }
+        .animation(.default, value: service.status(pack))
+        .animation(.default, value: enabled)
     }
 
     @ViewBuilder

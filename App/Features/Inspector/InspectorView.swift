@@ -25,6 +25,8 @@ struct InspectorView: View {
                         }
                         .buttonStyle(.glassProminent)
                         .disabled(isActive)
+                        .contentTransition(.symbolEffect(.replace))
+                        .animation(.snappy, value: isActive)
                         .frame(maxWidth: .infinity)
                     }
 
@@ -54,11 +56,8 @@ struct InspectorView: View {
                     }
 
                     Section {
-                        Button("Copy Share Link", systemImage: "link") {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(profile.originalLink ?? "", forType: .string)
-                        }
-                        .disabled(profile.originalLink == nil)
+                        CopyButton("Copy Share Link", systemImage: "link") { profile.originalLink ?? "" }
+                            .disabled(profile.originalLink == nil)
                         Button("QR Code", systemImage: "qrcode") { showQR = true }
                             .disabled(profile.originalLink == nil)
                             .popover(isPresented: $showQR, arrowEdge: .bottom) {
@@ -71,6 +70,7 @@ struct InspectorView: View {
                 ContentUnavailableView("No Selection", systemImage: "sidebar.right", description: Text("Select a server to see its details."))
             }
         }
+        .animation(.smooth(duration: 0.2), value: profile == nil)
     }
 
     private func field(_ title: String, _ value: String) -> some View {

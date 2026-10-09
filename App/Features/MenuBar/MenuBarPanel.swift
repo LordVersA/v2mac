@@ -60,6 +60,9 @@ struct MenuBarPanel: View {
                     Label(Format.rate(connection.upRate), systemImage: "arrow.up")
                 }
                 .font(.caption.monospacedDigit())
+                .contentTransition(.numericText())
+                .animation(.smooth, value: connection.downRate)
+                .animation(.smooth, value: connection.upRate)
                 .foregroundStyle(.secondary)
             }
 
@@ -102,13 +105,10 @@ struct MenuBarPanel: View {
             HStack {
                 Text(connection.localAddress).font(.callout.monospaced())
                 Spacer()
-                Button {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(connection.localAddress, forType: .string)
-                } label: { Image(systemName: "doc.on.doc") }
-                .buttonStyle(.borderless)
-                .help("Copy address")
-                .accessibilityLabel("Copy local proxy address")
+                CopyButton("Copy local proxy address") { connection.localAddress }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .help("Copy address")
             }
 
             if let release = model.updates.availableAppUpdate {
@@ -139,6 +139,7 @@ struct MenuBarPanel: View {
         }
         .padding(14)
         .frame(width: 320)
+        .animation(.smooth(duration: 0.35), value: connection.phase)
     }
 
     private var header: some View {
@@ -150,6 +151,7 @@ struct MenuBarPanel: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(connection.phase == .off ? Color.primary : Color.white)
                     .symbolEffect(.pulse, isActive: isBusy)
+                    .symbolEffect(.bounce, value: connection.phase == .connected)
                     .frame(width: 40, height: 40)
             }
             .buttonStyle(.plain)
@@ -223,6 +225,7 @@ private struct SwitchRow: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark")
                     .opacity(isActive ? 1 : 0)
+                    .animation(.smooth(duration: 0.3), value: isActive)
                     .frame(width: 14)
                 if let flag = name.flag { Text(flag) }
                 Text(name.title).lineLimit(1)
@@ -235,6 +238,7 @@ private struct SwitchRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .animation(.easeOut(duration: 0.12), value: hovering)
         .onHover { hovering = $0 }
     }
 }

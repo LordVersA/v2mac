@@ -29,6 +29,7 @@ struct CoreSettings: View {
             }
         }
         .formStyle(.grouped)
+        .animation(.default, value: updates.coreStatus)
         .task { await updates.refreshCoreInfo() }
     }
 
@@ -46,6 +47,7 @@ struct CoreSettings: View {
             DownloadProgressView(title: "Downloading core…", progress: updates.coreProgress, rate: updates.coreDownloadRate)
         case .installed(let version):
             Label("Installed \(version).", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                .symbolEffect(.bounce, options: .nonRepeating)
         case .failed(let message):
             Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red).font(.callout)
         }

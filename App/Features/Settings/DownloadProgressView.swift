@@ -11,6 +11,7 @@ struct DownloadProgressView: View {
         VStack(alignment: .leading, spacing: 4) {
             if let fraction = progress?.fraction {
                 ProgressView(value: fraction)
+                    .animation(.linear(duration: 0.3), value: fraction)
             } else {
                 ProgressView().progressViewStyle(.linear)
             }
@@ -18,6 +19,8 @@ struct DownloadProgressView: View {
                 Text(title)
                 Spacer()
                 Text(detail).monospacedDigit()
+                    .contentTransition(.numericText())
+                    .animation(.default, value: detail)
             }
             .font(.caption).foregroundStyle(.secondary)
         }

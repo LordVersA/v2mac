@@ -4,6 +4,7 @@ import SwiftUI
 struct ServerListView: View {
     @Environment(AppModel.self) private var model
     @Query private var profiles: [Profile]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var sortOrder = [KeyPathComparator(\ServerRow.sortIndex)]
     @State private var columns = TableColumnCustomization<ServerRow>()
@@ -47,8 +48,14 @@ struct ServerListView: View {
         let latency = model.latency
         let isTesting = latency.isRunning
         let appModel = model
+        let isUpdating = !model.subscriptions.updatingGroupIDs.isEmpty
+        let showsHeader = selectedGroup.map { !$0.isManual } ?? false
+        let showsEmptyState = rows.isEmpty && (!model.searchText.isEmpty || selectedGroupID != nil)
         VStack(spacing: 0) {
-            if let group = selectedGroup, !group.isManual { GroupHeader(group: group) }
+            if let group = selectedGroup, showsHeader {
+                GroupHeader(group: group)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            }
             Table(rows, selection: $model.selectedProfileIDs, sortOrder: $sortOrder, columnCustomization: $columns) {
                 TableColumn("") { row in
                     if let flag = row.flag {
@@ -65,6 +72,7 @@ struct ServerListView: View {
                         if isActive {
                             Image(systemName: "circle.fill").font(.caption2).foregroundStyle(tint)
                                 .accessibilityLabel(model.connection.phase == .connected ? "Active server, connected" : "Active server")
+                                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
                         }
                         Text(row.displayName).lineLimit(1)
                             .fontWeight(isActive ? .semibold : .regular)
@@ -77,6 +85,8 @@ struct ServerListView: View {
                             Text("Removed from subscription").font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    .animation(.snappy, value: isActive)
+                    .animation(.smooth, value: model.connection.phase == .connected)
                 }
                 .customizationID("name")
 
@@ -109,30 +119,36 @@ struct ServerListView: View {
                 if let id = ids.first { model.activate(profileID: id) }
             }
             .overlay {
-                if rows.isEmpty, !model.searchText.isEmpty || selectedGroupID != nil {
-                    // On a glass card, so the empty table's row stripes don't run through the text.
-                    Group {
-                        if !model.searchText.isEmpty {
-                            ContentUnavailableView.search
-                        } else if selectedGroup?.isManual == true {
-                            ContentUnavailableView(
-                                "No Custom Configs", systemImage: "doc.on.clipboard",
-                                description: Text("Paste share links or Xray configs with ⌘V.")
-                            )
-                        } else {
-                            ContentUnavailableView("No Servers", systemImage: "server.rack")
+                ZStack {
+                    if showsEmptyState {
+                        // On a glass card, so the empty table's row stripes don't run through the text.
+                        Group {
+                            if !model.searchText.isEmpty {
+                                ContentUnavailableView.search
+                            } else if selectedGroup?.isManual == true {
+                                ContentUnavailableView(
+                                    "No Custom Configs", systemImage: "doc.on.clipboard",
+                                    description: Text("Paste share links or Xray configs with ⌘V.")
+                                )
+                            } else {
+                                ContentUnavailableView("No Servers", systemImage: "server.rack")
+                            }
                         }
+                        .fixedSize()
+                        .padding(.horizontal, 36)
+                        .padding(.vertical, 28)
+                        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+                        .transition(.blurReplace)
                     }
-                    .fixedSize()
-                    .padding(.horizontal, 36)
-                    .padding(.vertical, 28)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 28))
                 }
+                .animation(.smooth(duration: 0.25), value: showsEmptyState)
             }
         }
+        // Only when the header comes or goes, so switching between subscriptions stays instant.
+        .animation(.snappy(duration: 0.25), value: showsHeader)
         .safeAreaInset(edge: .bottom) { ConnectionBar() }
         .searchable(text: $model.searchText, prompt: "Search")
-        .toolbar { toolbar(model: appModel, latency: latency, isTesting: isTesting) }
+        .toolbar { toolbar(model: appModel, latency: latency, isTesting: isTesting, isUpdating: isUpdating) }
         .inspector(isPresented: $model.showInspector) {
             InspectorView(profile: singleSelection)
                 .inspectorColumnWidth(min: 220, ideal: 260, max: 360)
@@ -147,7 +163,7 @@ struct ServerListView: View {
     }
 
     @ToolbarContentBuilder
-    private func toolbar(model: AppModel, latency: LatencyService, isTesting: Bool) -> some ToolbarContent {
+    private func toolbar(model: AppModel, latency: LatencyService, isTesting: Bool, isUpdating: Bool) -> some ToolbarContent {
         ToolbarItem {
             Button { model.showAddSheet = true } label: {
                 Label("Add", systemImage: "plus")
@@ -161,6 +177,7 @@ struct ServerListView: View {
                     .disabled(!model.connection.isRunning)
             } label: {
                 Label("Update", systemImage: "arrow.clockwise")
+                    .symbolEffect(.rotate, isActive: isUpdating)
             }
             .help("Update subscriptions")
         }
@@ -249,6 +266,7 @@ struct DelayText: View {
                 Image(systemName: "cellularbars", variableValue: Self.strength(ms))
             }
             .labelStyle(CompactLabelStyle())
+            .animation(.snappy, value: ms)
             .help(row.delayKind == "tcp" ? "TCP ping" : "Real delay")
             .foregroundStyle(ms < 300 ? Color.green : (ms < 800 ? Color.orange : Color.red))
             .accessibilityElement(children: .ignore)
@@ -276,7 +294,10 @@ struct SpeedText: View {
             ProgressView().controlSize(.small)
         } else if let bps = row.speedBps {
             if bps > 0 {
-                Text(Format.rate(bps)).monospacedDigit().help("Top stable download speed")
+                Text(Format.rate(bps)).monospacedDigit()
+                    .contentTransition(.numericText())
+                    .animation(.snappy, value: bps)
+                    .help("Top stable download speed")
             } else {
                 Text("failed").foregroundStyle(.orange)
             }
@@ -357,9 +378,12 @@ private struct GroupHeader: View {
                     .gaugeStyle(.accessoryLinearCapacity)
                     .tint(tint)
                     .frame(width: 96)
+                    .animation(.smooth, value: fraction)
             }
             Text(total > 0 ? "\(Format.bytes(used)) of \(Format.bytes(total))" : "\(Format.bytes(used)) used")
                 .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(.smooth, value: used)
                 .foregroundStyle(fraction >= 0.9 ? Color.red : Color.secondary)
         }
         .help(trafficHelp(used: used, total: total))

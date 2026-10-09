@@ -49,7 +49,7 @@ struct LogView: View {
                     .help("Keep the newest line in view")
             }
             ToolbarItemGroup {
-                Button("Copy", systemImage: "doc.on.doc") { copy() }
+                CopyButton("Copy") { lines.map(\.text).joined(separator: "\n") }
                 Button("Clear", systemImage: "trash") { model.logs.clear() }
             }
         }
@@ -59,11 +59,6 @@ struct LogView: View {
                                        description: Text("Core output appears here while it runs."))
             }
         }
-    }
-
-    private func copy() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(lines.map(\.text).joined(separator: "\n"), forType: .string)
     }
 
     private static func severity(_ line: String) -> Severity? {

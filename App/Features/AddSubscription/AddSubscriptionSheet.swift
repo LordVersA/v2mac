@@ -59,28 +59,31 @@ struct AddSubscriptionSheet: View {
             .onChange(of: kind) { clearError() }
 
             if let errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-                if directFetchBlocked {
-                    if model.connection.isRunning {
-                        Text("This link may only be reachable through your proxy.")
-                            .font(.caption).foregroundStyle(.secondary)
-                        Button("Try via Proxy") { viaProxy = true; add() }
-                    } else {
-                        Text("This link may only be reachable through a VPN or proxy. Connect to a server first, then turn on “Fetch via proxy”.")
-                            .font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 16) {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if directFetchBlocked {
+                        if model.connection.isRunning {
+                            Text("This link may only be reachable through your proxy.")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Button("Try via Proxy") { viaProxy = true; add() }
+                        } else {
+                            Text("This link may only be reachable through a VPN or proxy. Connect to a server first, then turn on “Fetch via proxy”.")
+                                .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    if let duplicateID {
+                        Button("Update Existing") {
+                            model.sidebarSelection = .group(duplicateID)
+                            Task { await model.subscriptions.update(groupID: duplicateID, viaProxy: viaProxy) }
+                            dismiss()
+                        }
                     }
                 }
-                if let duplicateID {
-                    Button("Update Existing") {
-                        model.sidebarSelection = .group(duplicateID)
-                        Task { await model.subscriptions.update(groupID: duplicateID, viaProxy: viaProxy) }
-                        dismiss()
-                    }
-                }
+                .transition(.opacity)
             }
 
             HStack {
@@ -98,6 +101,8 @@ struct AddSubscriptionSheet: View {
         }
         .padding(20)
         .frame(width: 460)
+        .animation(.snappy, value: errorMessage)
+        .animation(.snappy, value: isFetching)
         .onAppear(perform: start)
     }
 

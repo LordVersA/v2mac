@@ -36,5 +36,6 @@ struct AppUpdateRow: View {
                     .controlSize(.small)
             }
         }
+        .animation(.default, value: model.updates.appStatus)
     }
 }

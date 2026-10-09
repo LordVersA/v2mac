@@ -43,7 +43,7 @@ struct SidebarView: View {
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
             presenting: pendingDelete
         ) { group in
-            Button("Delete", role: .destructive) { model.deleteGroup(group) }
+            Button("Delete", role: .destructive) { withAnimation { model.deleteGroup(group) } }
         } message: { group in
             if let active = model.connection.activeServer, group.profiles.contains(where: { $0.id == active.id }) {
                 Text("This group contains the active server. V2Mac will disconnect.")

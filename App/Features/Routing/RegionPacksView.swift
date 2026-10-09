@@ -64,6 +64,8 @@ private struct PackRow: View {
                 .labelsHidden()
             }
         }
+        .animation(.default, value: service.status(pack))
+        .animation(.default, value: enabled)
         .padding(12)
     }
 
