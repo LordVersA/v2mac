@@ -8,13 +8,11 @@ struct SettingsView: View {
             GeneralSettings().tabItem { Label("General", systemImage: "gearshape") }
             ProxySettings().tabItem { Label("Proxy", systemImage: "network") }
             RoutingSettings().tabItem { Label("Routing", systemImage: "arrow.triangle.branch") }
-            SubscriptionSettings().tabItem { Label("Subscriptions", systemImage: "tray.and.arrow.down") }
-            LatencySettings().tabItem { Label("Latency", systemImage: "speedometer") }
+            SubscriptionSettings().tabItem { Label("Servers", systemImage: "tray.and.arrow.down") }
             CoreSettings().tabItem { Label("Core", systemImage: "cpu") }
-            AdvancedSettings().tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
             AboutSettings().tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 560, height: 420)
+        .frame(width: 560, height: 440)
     }
 }
 
@@ -45,6 +43,7 @@ private struct GeneralSettings: View {
             Toggle("Restart core after sleep or network change", isOn: $restartOnWake)
             Toggle("Check for app updates", isOn: $checkUpdates)
             AppUpdateRow()
+            DiagnosticsSection()
         }
         .formStyle(.grouped)
         .onAppear { loginEnabled = SMAppService.mainApp.status == .enabled }
@@ -309,28 +308,6 @@ private struct SubscriptionSettings: View {
     @AppStorage("subscriptionUpdateViaProxy") private var viaProxy = false
     @AppStorage("defaultIntervalHours") private var hours = 12
     @AppStorage("userAgent") private var userAgent = ""
-
-    var body: some View {
-        Form {
-            Toggle("Auto-update subscriptions", isOn: $auto)
-            Picker("Auto-update route", selection: $viaProxy) {
-                Text("Without proxy").tag(false)
-                Text("Via proxy").tag(true)
-            }
-            .disabled(!auto)
-            Stepper("Default interval: \(hours) h", value: $hours, in: 1...168)
-                .disabled(!auto)
-            Text("Used when the provider doesn't send an update interval.")
-                .font(.caption).foregroundStyle(.secondary)
-            TextField("User-Agent", text: $userAgent, prompt: Text("v2mac/\(Prefs.appVersion)"))
-        }
-        .formStyle(.grouped)
-    }
-}
-
-// MARK: Latency
-
-private struct LatencySettings: View {
     @AppStorage("latencyURL") private var url = "https://www.gstatic.com/generate_204"
     @AppStorage("latencyTimeout") private var timeout = 8.0
     @AppStorage("latencyConcurrency") private var concurrency = 8
@@ -338,12 +315,32 @@ private struct LatencySettings: View {
 
     var body: some View {
         Form {
-            TextField("Test URL", text: $url)
-            Stepper("Timeout: \(Int(timeout)) s", value: $timeout, in: 2...30, step: 1)
-            Stepper("Concurrency: \(concurrency)", value: $concurrency, in: 1...32)
-            TextField("Speed test file", text: $speedURL)
-            Text("A large file the speed test downloads through each server. It stops as soon as the speed levels off, so the whole file is never fetched.")
-                .font(.caption).foregroundStyle(.secondary)
+            Section {
+                Toggle("Auto-update subscriptions", isOn: $auto)
+                Picker("Auto-update route", selection: $viaProxy) {
+                    Text("Without proxy").tag(false)
+                    Text("Via proxy").tag(true)
+                }
+                .disabled(!auto)
+                Stepper("Default interval: \(hours) h", value: $hours, in: 1...168)
+                    .disabled(!auto)
+                TextField("User-Agent", text: $userAgent, prompt: Text("v2mac/\(Prefs.appVersion)"))
+            } header: {
+                Text("Subscriptions")
+            } footer: {
+                Text("The default interval is used when the provider doesn't send one.")
+            }
+
+            Section {
+                TextField("Test URL", text: $url)
+                Stepper("Timeout: \(Int(timeout)) s", value: $timeout, in: 2...30, step: 1)
+                Stepper("Concurrency: \(concurrency)", value: $concurrency, in: 1...32)
+                TextField("Speed test file", text: $speedURL)
+            } header: {
+                Text("Server testing")
+            } footer: {
+                Text("The speed test downloads a large file through each server. It stops as soon as the speed levels off, so the whole file is never fetched.")
+            }
         }
         .formStyle(.grouped)
     }
@@ -358,9 +355,15 @@ private struct CoreSettings: View {
 
     var body: some View {
         Form {
-            LabeledContent("Version", value: updates.coreVersion ?? "…")
-            LabeledContent("Source", value: updates.coreIsUpdatedCopy ? "Updated copy" : "Bundled")
-            statusRow
+            Section {
+                LabeledContent("Version", value: updates.coreVersion ?? "…")
+                LabeledContent("Source", value: updates.coreIsUpdatedCopy ? "Updated copy" : "Bundled")
+                statusRow
+            } header: {
+                Text("Xray-core")
+            } footer: {
+                Text("Updates are downloaded through the proxy when it is connected, verified against the published SHA-256, and self-tested before they replace the current core.")
+            }
             HStack {
                 Button("Check for Update") { Task { await updates.checkCore() } }
                     .disabled(updates.coreStatus == .checking || updates.coreStatus == .installing)
@@ -371,8 +374,6 @@ private struct CoreSettings: View {
                 Button("Revert to Bundled") { Task { await updates.revertToBundled() } }
                     .disabled(!updates.coreIsUpdatedCopy || updates.coreStatus == .installing)
             }
-            Text("Updates are downloaded through the proxy when it is connected, verified against the published SHA-256, and self-tested before they replace the current core.")
-                .font(.caption).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
         .task { await updates.refreshCoreInfo() }
@@ -400,14 +401,14 @@ private struct CoreSettings: View {
 
 // MARK: Advanced
 
-private struct AdvancedSettings: View {
+private struct DiagnosticsSection: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
     @AppStorage("logLevel") private var level = XrayLogLevel.warning.rawValue
     @AppStorage("logConnections") private var logConnections = false
 
     var body: some View {
-        Form {
+        Section("Diagnostics") {
             Picker("Log level", selection: $level) {
                 ForEach([XrayLogLevel.error, .warning, .info, .debug], id: \.rawValue) { Text($0.rawValue.capitalized).tag($0.rawValue) }
             }
@@ -416,7 +417,6 @@ private struct AdvancedSettings: View {
                 .onChange(of: logConnections) { model.connection.reconnectIfRunning() }
             Button("Show Logs") { model.openLogs(openWindow) }
         }
-        .formStyle(.grouped)
     }
 }
 
@@ -425,6 +425,18 @@ private struct AdvancedSettings: View {
 private struct AboutSettings: View {
     var body: some View {
         Form {
+            Section {
+                VStack(spacing: 6) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 72, height: 72)
+                        .accessibilityHidden(true)
+                    Text("V2Mac").font(.title2.bold())
+                    Text("Version \(Prefs.appVersion)").font(.callout).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+            }
             Section {
                 HStack(spacing: 4) {
                     Spacer()
@@ -436,12 +448,13 @@ private struct AboutSettings: View {
                 }
                 .padding(.vertical, 4)
             }
-            LabeledContent("Version", value: Prefs.appVersion)
-            LabeledContent("Xray-core") {
-                Link("github.com/XTLS/Xray-core", destination: URL(string: "https://github.com/XTLS/Xray-core")!)
+            Section {
+                LabeledContent("Xray-core") {
+                    Link("github.com/XTLS/Xray-core", destination: URL(string: "https://github.com/XTLS/Xray-core")!)
+                }
+            } footer: {
+                Text("V2Mac is GPL-3.0 software. It bundles Xray-core (MPL-2.0) and v2fly/Loyalsoldier rule data; see THIRD_PARTY.md for licences and attributions.")
             }
-            Text("V2Mac is GPL-3.0 software. It bundles Xray-core (MPL-2.0) and v2fly/Loyalsoldier rule data; see THIRD_PARTY.md for licences and attributions.")
-                .font(.caption).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
     }
