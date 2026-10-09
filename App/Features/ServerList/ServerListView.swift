@@ -112,7 +112,7 @@ struct ServerListView: View {
             .overlay {
                 if rows.isEmpty {
                     if !model.searchText.isEmpty {
-                        ContentUnavailableView.search(text: model.searchText)
+                        ContentUnavailableView.search
                     } else if selectedGroupID != nil {
                         ContentUnavailableView("No Servers", systemImage: "server.rack")
                     }

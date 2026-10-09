@@ -55,8 +55,7 @@ struct SidebarView: View {
         }
         .disabled(!model.connection.isRunning)
         Divider()
-        Button("Rename…") { editing = group }
-        Button("Edit URL…") { editing = group }
+        Button("Edit…") { editing = group }
         Button("Copy URL") {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(group.subscriptionURL, forType: .string)
@@ -74,23 +73,28 @@ private struct SidebarRow: View {
     @Environment(AppModel.self) private var model
     let group: ServerGroup
 
+    private var isUpdating: Bool { model.subscriptions.updatingGroupIDs.contains(group.id) }
+
     var body: some View {
         HStack {
-            Label(group.name, systemImage: "arrow.triangle.2.circlepath")
-            Spacer()
-            if model.subscriptions.updatingGroupIDs.contains(group.id) {
-                ProgressView().controlSize(.small)
-            } else if let error = group.lastUpdateError {
+            Label {
+                Text(group.name)
+            } icon: {
+                // The sync arrows appear, turning, only while this group is being fetched.
+                Image(systemName: isUpdating ? "arrow.triangle.2.circlepath" : "dot.radiowaves.up.forward")
+                    .symbolEffect(.rotate, isActive: isUpdating)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            if !isUpdating, let error = group.lastUpdateError {
+                Spacer()
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .help(error)
                     .accessibilityLabel("Last update failed: \(error)")
-            } else {
-                Text("\(group.profiles.count)")
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
             }
         }
+        // A zero badge is hidden, which leaves room for the warning.
+        .badge(group.lastUpdateError == nil || isUpdating ? group.profiles.count : 0)
     }
 }
 

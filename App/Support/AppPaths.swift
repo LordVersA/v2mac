@@ -184,7 +184,9 @@ enum Prefs {
 
 enum Format {
     static func rate(_ bytesPerSecond: Double) -> String {
-        ByteCountFormatter.string(fromByteCount: Int64(bytesPerSecond), countStyle: .binary) + "/s"
+        // Below one kilobyte the formatter says "Zero KB" or switches to bytes, which reads as noise.
+        guard bytesPerSecond >= 1024 else { return "0 KB/s" }
+        return ByteCountFormatter.string(fromByteCount: Int64(bytesPerSecond), countStyle: .binary) + "/s"
     }
 
     /// `12.3 MB`, always in megabytes so "received of total" reads consistently.
@@ -193,6 +195,6 @@ enum Format {
     }
 
     static func bytes(_ value: Int64) -> String {
-        ByteCountFormatter.string(fromByteCount: value, countStyle: .binary)
+        value.formatted(.byteCount(style: .binary, spellsOutZero: false))
     }
 }
