@@ -242,7 +242,7 @@ struct DelayText: View {
             let ms = row.delayMs ?? 0
             // Bars as well as colour, so the quality reads without relying on colour alone.
             Label {
-                Text("\(ms) ms").monospacedDigit()
+                Text("\(ms) ms").monospacedDigit().contentTransition(.numericText())
             } icon: {
                 Image(systemName: "cellularbars", variableValue: Self.strength(ms))
             }

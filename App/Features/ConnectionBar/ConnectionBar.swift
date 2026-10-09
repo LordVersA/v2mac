@@ -36,6 +36,9 @@ struct ConnectionBar: View {
                     Label(Format.rate(connection.upRate), systemImage: "arrow.up")
                 }
                 .font(.caption.monospacedDigit())
+                .contentTransition(.numericText())
+                .animation(.smooth, value: connection.downRate)
+                .animation(.smooth, value: connection.upRate)
                 .foregroundStyle(.secondary)
                 .fixedSize()
             }
@@ -55,6 +58,8 @@ struct ConnectionBar: View {
             Image(systemName: "power")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(connection.phase == .off ? Color.primary : Color.white)
+                .symbolEffect(.pulse, isActive: isBusy)
+                .symbolEffect(.bounce, value: connection.phase == .connected)
                 .frame(width: 38, height: 38)
         }
         .buttonStyle(.plain)
@@ -63,6 +68,13 @@ struct ConnectionBar: View {
         .disabled(connection.activeServer == nil)
         .help(connection.phase == .connected ? "Disconnect" : "Connect")
         .accessibilityLabel(connection.phase == .connected ? "Disconnect" : "Connect")
+    }
+
+    private var isBusy: Bool {
+        switch connection.phase {
+        case .connecting, .switching: true
+        default: false
+        }
     }
 
     private var title: String {

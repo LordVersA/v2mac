@@ -6,8 +6,12 @@ struct MenuBarIcon: View {
 
     var body: some View {
         switch phase {
-        case .off, .connecting, .switching:
+        case .off:
             Image("MenuBarGlyphOutline").accessibilityLabel("V2Mac, off")
+        case .connecting, .switching:
+            Image("MenuBarGlyphOutline")
+                .phaseAnimator([0.35, 1.0]) { image, opacity in image.opacity(opacity) } animation: { _ in .easeInOut(duration: 0.7) }
+                .accessibilityLabel("V2Mac, connecting")
         case .connected:
             Image("MenuBarGlyphFilled").accessibilityLabel("V2Mac, connected")
         case .failed:
