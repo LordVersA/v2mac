@@ -9,11 +9,12 @@ public enum ProfileKind: String, Sendable, Codable {
 public struct ParsedProfile: Sendable, Hashable {
     public var name: String
     public var kind: ProfileKind
-    /// vless, vmess, trojan, shadowsocks, hysteria, wireguard, socks, http, custom
+    /// vless, vmess, trojan, shadowsocks, hysteria, wireguard, socks, http.
+    /// For `.custom` it is the protocol of the config's proxy outbound, or "custom" when there is none.
     public var protocolName: String
     public var address: String
     public var port: Int
-    /// raw, xhttp, ws, grpc, httpupgrade, kcp, hysteria; "" for custom
+    /// raw, xhttp, ws, grpc, httpupgrade, kcp, hysteria
     public var transport: String
     /// none, tls, reality
     public var security: String

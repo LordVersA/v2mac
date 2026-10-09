@@ -53,6 +53,12 @@ final class Profile {
     func update(from parsed: ParsedProfile, sortIndex: Int) {
         self.sortIndex = sortIndex
         name = parsed.name
+        // Same fingerprint, same config; these only change when the app learns to describe it better.
+        protocolName = parsed.protocolName
+        address = parsed.address
+        port = parsed.port
+        transport = parsed.transport
+        security = parsed.security
         originalLink = parsed.originalLink
         warnings = parsed.warnings
         isStale = false
@@ -75,7 +81,6 @@ extension Profile {
 
     /// `protocol · transport · security`, leaving out the uninteresting defaults.
     var typeSummary: String {
-        if kind == .custom { return "custom" }
         let parts = [protocolName, transport, security == "none" ? "" : security]
         return parts.filter { !$0.isEmpty }.joined(separator: " · ")
     }

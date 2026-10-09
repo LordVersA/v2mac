@@ -78,6 +78,27 @@ import Testing
         #expect(r.profiles[1].address == "b.com")
     }
 
+    @Test func customConfigIsDescribedByItsProxyOutbound() throws {
+        let body = #"""
+        [{"remarks":"A","outbounds":[{"tag":"direct","protocol":"freedom"},{"tag":"proxy","protocol":"vless","settings":{"vnext":[{"address":"srv.example.com","port":443,"users":[{"id":"x"}]}]},"streamSettings":{"network":"splithttp","security":"reality"}},{"tag":"block","protocol":"blackhole"}]},
+         {"remarks":"B","outbounds":[{"protocol":"trojan","settings":{"address":"b.com","port":8443},"streamSettings":{"network":"tcp","security":"tls"}}]},
+         {"remarks":"C","outbounds":[{"protocol":"vmess","settings":{"address":"c.com","port":80}}]}]
+        """#
+        let p = try SubscriptionParser.parse(text: body).profiles
+        #expect(p.map(\.kind) == [.custom, .custom, .custom])
+        #expect(p.map(\.protocolName) == ["vless", "trojan", "vmess"])
+        #expect(p.map(\.transport) == ["xhttp", "raw", "raw"])
+        #expect(p.map(\.security) == ["reality", "tls", "none"])
+        #expect(p[0].address == "srv.example.com" && p[0].port == 443)
+    }
+
+    @Test func customConfigWithoutAProxyOutbound() throws {
+        let direct = try #require(try SubscriptionParser.parse(text: #"{"outbounds":[{"tag":"direct","protocol":"freedom"}]}"#).profiles.first)
+        #expect(direct.kind == .custom && direct.protocolName == "freedom")
+        let empty = try #require(try SubscriptionParser.parse(text: #"{"outbounds":[]}"#).profiles.first)
+        #expect(empty.protocolName == "custom" && empty.transport.isEmpty && empty.security.isEmpty)
+    }
+
     @Test func singleCustomConfigAndSingleOutbound() throws {
         #expect(try SubscriptionParser.parse(text: customConfig).profiles.first?.kind == .custom)
         let ob = #"{"tag":"my","protocol":"vless","settings":{"address":"a.com","port":443,"id":"x","encryption":"none"},"streamSettings":{"network":"tcp","security":"tls"}}"#

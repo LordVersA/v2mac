@@ -263,25 +263,25 @@ enum JSONProfile {
     private static func custom(_ config: JSONValue, outbounds: [JSONValue], number: Int) -> ParsedProfile {
         let proxy = outbounds.first { !nonProxyProtocols.contains($0["protocol"]?.stringValue ?? "") } ?? outbounds.first
         let (address, port) = endpoint(of: proxy)
+        let (transport, security) = stream(of: proxy)
         let remarks = config["remarks"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let proto = proxy?["protocol"]?.stringValue
         return ParsedProfile(
             name: (remarks?.isEmpty == false ? remarks : nil) ?? "Config \(number)",
             kind: .custom,
-            protocolName: "custom",
+            // Described by its proxy outbound, so the list shows what the config really is.
+            protocolName: (proto?.isEmpty == false ? proto : nil) ?? "custom",
             address: address,
             port: port,
-            transport: "",
-            security: "",
+            transport: proto?.isEmpty == false ? transport : "",
+            security: proto?.isEmpty == false ? security : "",
             config: config
         )
     }
 
     private static func outbound(_ value: JSONValue, protocolName: String) -> ParsedProfile {
         let (address, port) = endpoint(of: value)
-        let stream = value["streamSettings"]
-        let network = (stream?["network"]?.stringValue ?? "raw").lowercased()
-        let transport = network == "tcp" ? "raw" : (network == "splithttp" ? "xhttp" : network)
-        let security = stream?["security"]?.stringValue ?? "none"
+        let (transport, security) = stream(of: value)
         let tag = value["tag"]?.stringValue ?? value["remarks"]?.stringValue
         let name = (tag?.isEmpty == false ? tag : nil) ?? "\(address):\(port)"
         return ParsedProfile(
@@ -294,6 +294,14 @@ enum JSONProfile {
             security: security,
             config: value.removing("tag").removing("remarks")
         )
+    }
+
+    /// Canonical transport and security of an outbound's `streamSettings`, with Xray's defaults.
+    private static func stream(of outbound: JSONValue?) -> (transport: String, security: String) {
+        let stream = outbound?["streamSettings"]
+        let network = (stream?["network"]?.stringValue ?? "raw").lowercased()
+        let transport = network == "tcp" ? "raw" : (network == "splithttp" ? "xhttp" : network)
+        return (transport, stream?["security"]?.stringValue ?? "none")
     }
 
     /// Best-effort server address/port from flat settings, `vnext` or `servers`.
