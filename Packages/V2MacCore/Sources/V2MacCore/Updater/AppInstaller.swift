@@ -59,10 +59,11 @@ public enum AppInstaller {
         checksum: URL,
         expectedVersion: String,
         bundleIdentifier: String,
-        downloader: FileDownloader
+        downloader: FileDownloader,
+        onProgress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> Staged {
         let expected = try parseChecksum(try await downloader.download(checksum))
-        let image = try await downloader.download(dmg)
+        let image = try await downloader.download(dmg, onProgress: onProgress)
         guard RegionPackInstaller.sha256(image) == expected else {
             throw DownloadError.checksumMismatch(file: dmg.lastPathComponent)
         }

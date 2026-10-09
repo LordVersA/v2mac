@@ -121,8 +121,7 @@ struct MenuBarPanel: View {
                 Divider()
                 HStack {
                     if model.updates.isInstallingApp {
-                        ProgressView().controlSize(.small)
-                        Text("Downloading V2Mac \(release.version)…").foregroundStyle(.secondary)
+                        AppDownloadProgress(release: release)
                     } else {
                         Label("V2Mac \(release.version) is available", systemImage: "arrow.down.circle.fill")
                         Spacer()

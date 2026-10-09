@@ -61,6 +61,43 @@ private struct GeneralSettings: View {
     }
 }
 
+/// Percent, size and speed of the running app download.
+struct AppDownloadProgress: View {
+    @Environment(AppModel.self) private var model
+    let release: AppRelease
+
+    var body: some View {
+        let updates = model.updates
+        let progress = updates.appProgress
+        VStack(alignment: .leading, spacing: 4) {
+            if let fraction = progress?.fraction {
+                ProgressView(value: fraction)
+            } else {
+                ProgressView().progressViewStyle(.linear)
+            }
+            HStack {
+                Text("Downloading V2Mac \(release.version)…")
+                Spacer()
+                Text(detail(progress, rate: updates.appDownloadRate)).monospacedDigit()
+            }
+            .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func detail(_ progress: DownloadProgress?, rate: Double?) -> String {
+        guard let progress else { return "Starting…" }
+        var parts: [String] = []
+        if let fraction = progress.fraction { parts.append("\(Int(fraction * 100))%") }
+        if let total = progress.total {
+            parts.append("\(Format.megabytes(progress.received)) of \(Format.megabytes(total))")
+        } else {
+            parts.append(Format.megabytes(progress.received))
+        }
+        if let rate { parts.append(Format.rate(rate)) }
+        return parts.joined(separator: " · ")
+    }
+}
+
 private struct AppUpdateRow: View {
     @Environment(AppModel.self) private var model
 
@@ -74,8 +111,7 @@ private struct AppUpdateRow: View {
                 Button("Update Now") { Task { await model.updates.installApp(release) } }
                     .controlSize(.small)
             case .installing(let release):
-                ProgressView().controlSize(.small)
-                Text("Downloading V2Mac \(release.version)… The app restarts when it is ready.").foregroundStyle(.secondary)
+                AppDownloadProgress(release: release)
             case .installFailed(let release, let message):
                 Text("Update failed: \(message)").font(.caption).foregroundStyle(.secondary)
                 Link("View Release", destination: release.pageURL)

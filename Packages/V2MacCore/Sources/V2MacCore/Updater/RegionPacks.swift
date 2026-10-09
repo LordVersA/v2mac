@@ -42,6 +42,22 @@ public enum DownloadError: Error, Sendable, Equatable, LocalizedError {
     }
 }
 
+public struct DownloadProgress: Sendable, Equatable {
+    public var received: Int64
+    /// Nil when the server does not announce a length.
+    public var total: Int64?
+
+    public init(received: Int64, total: Int64?) {
+        self.received = received
+        self.total = total
+    }
+
+    public var fraction: Double? {
+        guard let total, total > 0 else { return nil }
+        return min(Double(received) / Double(total), 1)
+    }
+}
+
 /// Downloads a file, trying each route in order (spec 11: local proxy first, then direct).
 public struct FileDownloader: Sendable {
     public var routes: [FetchRoute]
@@ -54,11 +70,11 @@ public struct FileDownloader: Sendable {
         self.maxBytes = maxBytes
     }
 
-    public func download(_ url: URL) async throws -> Data {
+    public func download(_ url: URL, onProgress: (@Sendable (DownloadProgress) -> Void)? = nil) async throws -> Data {
         var lastError: Error = DownloadError.network("No route available.")
         for route in routes {
             do {
-                return try await download(url, route: route)
+                return try await download(url, route: route, onProgress: onProgress)
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
@@ -68,7 +84,7 @@ public struct FileDownloader: Sendable {
         throw lastError
     }
 
-    private func download(_ url: URL, route: FetchRoute) async throws -> Data {
+    private func download(_ url: URL, route: FetchRoute, onProgress: (@Sendable (DownloadProgress) -> Void)?) async throws -> Data {
         let session = SessionFactory.make(route: route, timeout: timeout)
         defer { session.finishTasksAndInvalidate() }
         do {
@@ -76,11 +92,19 @@ public struct FileDownloader: Sendable {
             guard let http = response as? HTTPURLResponse else { throw DownloadError.network("Invalid response.") }
             guard (200..<300).contains(http.statusCode) else { throw DownloadError.http(http.statusCode) }
             if http.expectedContentLength > Int64(maxBytes) { throw DownloadError.tooLarge }
+            let total: Int64? = http.expectedContentLength > 0 ? http.expectedContentLength : nil
             var data = Data()
+            var lastReport = ContinuousClock.now
+            onProgress?(DownloadProgress(received: 0, total: total))
             for try await chunk in bytes {
                 data.append(chunk)
                 if data.count > maxBytes { throw DownloadError.tooLarge }
+                if let onProgress, ContinuousClock.now - lastReport >= .milliseconds(100) {
+                    lastReport = .now
+                    onProgress(DownloadProgress(received: Int64(data.count), total: total))
+                }
             }
+            onProgress?(DownloadProgress(received: Int64(data.count), total: total))
             return data
         } catch let error as DownloadError {
             throw error

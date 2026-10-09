@@ -31,6 +31,11 @@ final class UpdateService {
     private(set) var coreVersion: String?
     private(set) var coreIsUpdatedCopy = false
     private(set) var appStatus: AppStatus = .idle
+    /// Progress of the app download while `appStatus` is `.installing`.
+    private(set) var appProgress: DownloadProgress?
+    /// Smoothed download speed in bytes per second.
+    private(set) var appDownloadRate: Double?
+    private var rateSample: (time: ContinuousClock.Instant, bytes: Int64)?
 
     /// Routes for downloads: local proxy first when the core runs, then direct (spec 11).
     var downloadRoutes: () -> [FetchRoute] = { [.direct] }
@@ -140,6 +145,9 @@ final class UpdateService {
     func installApp(_ release: AppRelease) async {
         guard !isInstallingApp else { return }
         appStatus = .installing(release)
+        appProgress = nil
+        appDownloadRate = nil
+        rateSample = nil
         do {
             let target = Bundle.main.bundleURL
             try AppInstaller.checkReplaceable(target)
@@ -151,7 +159,10 @@ final class UpdateService {
                 checksum: urls.checksum,
                 expectedVersion: release.version,
                 bundleIdentifier: Bundle.main.bundleIdentifier ?? "",
-                downloader: FileDownloader(routes: downloadRoutes(), timeout: 60, maxBytes: 256 * 1024 * 1024)
+                downloader: FileDownloader(routes: downloadRoutes(), timeout: 60, maxBytes: 256 * 1024 * 1024),
+                onProgress: { [weak self] progress in
+                    Task { @MainActor in self?.updateProgress(progress) }
+                }
             )
             do {
                 try AppInstaller.scheduleSwap(staged, replacing: target, processID: ProcessInfo.processInfo.processIdentifier)
@@ -163,6 +174,24 @@ final class UpdateService {
         } catch {
             appStatus = .installFailed(release, error.localizedDescription)
         }
+    }
+
+    private func updateProgress(_ progress: DownloadProgress) {
+        guard case .installing = appStatus else { return }
+        let now = ContinuousClock.now
+        if let sample = rateSample, progress.received >= sample.bytes {
+            let seconds = (now - sample.time) / .seconds(1)
+            if seconds >= 0.5 {
+                let instant = Double(progress.received - sample.bytes) / seconds
+                appDownloadRate = appDownloadRate.map { $0 * 0.6 + instant * 0.4 } ?? instant
+                rateSample = (now, progress.received)
+            }
+        } else {
+            // First report, or a fallback route restarted the download.
+            rateSample = (now, progress.received)
+            appDownloadRate = nil
+        }
+        appProgress = progress
     }
 
     /// Checks shortly after launch, then re-evaluates hourly (the 24 h throttle applies).

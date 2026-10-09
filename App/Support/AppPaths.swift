@@ -187,6 +187,11 @@ enum Format {
         ByteCountFormatter.string(fromByteCount: Int64(bytesPerSecond), countStyle: .binary) + "/s"
     }
 
+    /// `12.3 MB`, always in megabytes so "received of total" reads consistently.
+    static func megabytes(_ value: Int64) -> String {
+        String(format: "%.1f MB", Double(value) / 1_048_576)
+    }
+
     static func bytes(_ value: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: value, countStyle: .binary)
     }
