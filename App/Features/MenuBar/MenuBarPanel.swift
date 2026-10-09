@@ -68,19 +68,9 @@ struct MenuBarPanel: View {
                 Text("Switch Server").font(.caption).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(switchCandidates) { profile in
-                        Button { model.activate(profile) } label: {
-                            HStack {
-                                Image(systemName: "checkmark")
-                                    .opacity(profile.id == connection.activeServer?.id ? 1 : 0)
-                                    .frame(width: 14)
-                                Text(profile.name).lineLimit(1)
-                                Spacer()
-                                DelayText(row: ServerRow(profile)).font(.caption)
-                            }
-                            .contentShape(Rectangle())
+                        SwitchRow(profile: profile, isActive: profile.id == connection.activeServer?.id) {
+                            model.activate(profile)
                         }
-                        .buttonStyle(.plain)
-                        .padding(.vertical, 2)
                     }
                 }
             }
@@ -138,18 +128,36 @@ struct MenuBarPanel: View {
 
             Divider()
             HStack {
-                Button("Open V2Mac") { model.openMainWindow(openWindow) }
-                Button("Settings…") { model.openSettings(openSettings) }
+                Button("Open V2Mac", systemImage: "macwindow") { model.openMainWindow(openWindow) }
+                Button("Settings", systemImage: "gearshape") { model.openSettings(openSettings) }
+                    .labelStyle(.iconOnly)
                 Spacer()
-                Button("Quit") { NSApp.terminate(nil) }
+                Button("Quit", systemImage: "power.circle") { NSApp.terminate(nil) }
+                    .labelStyle(.iconOnly)
             }
+            .buttonStyle(.borderless)
         }
         .padding(14)
         .frame(width: 320)
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 12) {
+            Button {
+                connection.phase == .off || isFailed ? connection.connectActive() : connection.disconnect()
+            } label: {
+                Image(systemName: "power")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(connection.phase == .off ? Color.primary : Color.white)
+                    .symbolEffect(.pulse, isActive: isBusy)
+                    .frame(width: 40, height: 40)
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.regular.tint(stateColor).interactive(), in: .circle)
+            .disabled(connection.activeServer == nil)
+            .accessibilityLabel(connection.phase == .off ? "Connect" : "Disconnect")
+            .accessibilityValue(statusTitle)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle).font(.headline)
                 if case .failed(let message) = connection.phase {
@@ -160,20 +168,27 @@ struct MenuBarPanel: View {
                 }
             }
             Spacer()
-            Toggle("", isOn: Binding(
-                get: {
-                    switch connection.phase {
-                    case .connected, .connecting, .switching: true
-                    default: false
-                    }
-                },
-                set: { on in on ? connection.connectActive() : connection.disconnect() }
-            ))
-            .toggleStyle(.switch)
-            .labelsHidden()
-            .accessibilityLabel("Connect")
-            .accessibilityValue(statusTitle)
-            .disabled(connection.activeServer == nil)
+        }
+    }
+
+    private var isFailed: Bool {
+        if case .failed = connection.phase { return true }
+        return false
+    }
+
+    private var isBusy: Bool {
+        switch connection.phase {
+        case .connecting, .switching: true
+        default: false
+        }
+    }
+
+    private var stateColor: Color? {
+        switch connection.phase {
+        case .connected: .green
+        case .connecting, .switching: .orange
+        case .failed: .red
+        case .off: nil
         }
     }
 
@@ -192,5 +207,34 @@ struct MenuBarPanel: View {
         if !server.groupName.isEmpty { parts.append(server.groupName) }
         if let p = activeProfile, p.delayState == .ok, let ms = p.delayMs { parts.append("\(ms) ms") }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// One server in the quick-switch list, with its flag and a hover highlight.
+private struct SwitchRow: View {
+    let profile: Profile
+    let isActive: Bool
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        let name = ServerName(profile.name)
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark")
+                    .opacity(isActive ? 1 : 0)
+                    .frame(width: 14)
+                if let flag = name.flag { Text(flag) }
+                Text(name.title).lineLimit(1)
+                Spacer()
+                DelayText(row: ServerRow(profile)).font(.caption)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(hovering ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 6))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
     }
 }
