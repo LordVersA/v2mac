@@ -22,6 +22,15 @@ final class ConnectionController {
     private(set) var isRecovering = false
     private(set) var downRate: Double = 0
     private(set) var upRate: Double = 0
+    /// The last minute of rates, one sample per second, oldest first.
+    private(set) var rateHistory: [RateSample] = []
+
+    struct RateSample: Identifiable, Equatable {
+        let id: Int
+        let down: Double
+        let up: Double
+    }
+    private var sampleCounter = 0
 
     struct PortConflict: Equatable {
         let busy: Int
@@ -301,6 +310,7 @@ final class ConnectionController {
             statsTask = nil
             downRate = 0
             upRate = 0
+            rateHistory = []
         }
     }
 
@@ -316,11 +326,18 @@ final class ConnectionController {
                         let rate = snapshot.rate(since: previous)
                         self?.downRate = rate.downBytesPerSecond
                         self?.upRate = rate.upBytesPerSecond
+                        self?.record(down: rate.downBytesPerSecond, up: rate.upBytesPerSecond)
                     }
                     previous = snapshot
                 }
                 try? await Task.sleep(for: .seconds(1))
             }
         }
+    }
+
+    private func record(down: Double, up: Double) {
+        sampleCounter += 1
+        rateHistory.append(RateSample(id: sampleCounter, down: down, up: up))
+        if rateHistory.count > 60 { rateHistory.removeFirst(rateHistory.count - 60) }
     }
 }

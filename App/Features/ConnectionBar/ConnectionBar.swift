@@ -31,6 +31,8 @@ struct ConnectionBar: View {
             }
             Spacer(minLength: 12)
             if showRates, connection.phase == .connected {
+                TrafficSparkline(samples: connection.rateHistory)
+                    .frame(width: 70, height: 26)
                 HStack(spacing: 10) {
                     Label(Format.rate(connection.downRate), systemImage: "arrow.down")
                     Label(Format.rate(connection.upRate), systemImage: "arrow.up")
