@@ -113,6 +113,8 @@ struct ServerListView: View {
                 .width(min: 70, ideal: 80)
                 .customizationID("speed")
             }
+            // Sideways swipes move the table only when its columns are wider than the list.
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             .contextMenu(forSelectionType: UUID.self) { ids in
                 contextMenu(for: ids)
             } primaryAction: { ids in
