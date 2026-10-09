@@ -179,7 +179,9 @@ final class UpdateService {
                 try? FileManager.default.removeItem(at: staged.workDirectory)
                 throw error
             }
-            NSApp.terminate(nil)
+            // Not from inside this main-actor task: quitting waits for the core shutdown, which
+            // also runs on the main actor, and would never get its turn.
+            DispatchQueue.main.async { NSApp.terminate(nil) }
         } catch {
             appStatus = .installFailed(release, error.localizedDescription)
         }
