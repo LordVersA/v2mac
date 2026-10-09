@@ -7,7 +7,7 @@ struct AddDraft: Equatable {
         case custom
     }
 
-    var kind = Kind.subscription
+    var kind = Kind.custom
     var configText = ""
     var error: String?
 

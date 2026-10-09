@@ -101,7 +101,7 @@ final class SubscriptionService {
         } catch SubscriptionError.unrecognisedFormat {
             throw AddSubscriptionError.notAConfig
         }
-        let (groupID, added) = try await store.addManual(result.profiles, groupName: "Custom Configs")
+        let (groupID, added) = try await store.addManual(result.profiles, groupName: ServerGroup.manualName)
         guard added > 0 else { throw AddSubscriptionError.alreadyAdded }
         return groupID
     }

@@ -39,7 +39,7 @@ struct SidebarView: View {
             GroupEditSheet(group: group)
         }
         .confirmationDialog(
-            "Delete “\(pendingDelete?.name ?? "")”?",
+            pendingDelete?.isManual == true ? "Delete all configs in “\(pendingDelete?.name ?? "")”?" : "Delete “\(pendingDelete?.name ?? "")”?",
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
             presenting: pendingDelete
         ) { group in
@@ -47,6 +47,8 @@ struct SidebarView: View {
         } message: { group in
             if let active = model.connection.activeServer, group.profiles.contains(where: { $0.id == active.id }) {
                 Text("This group contains the active server. V2Mac will disconnect.")
+            } else if group.isManual {
+                Text("The group itself stays in the sidebar.")
             } else {
                 Text("Its servers will be removed.")
             }
@@ -57,11 +59,15 @@ struct SidebarView: View {
     private func menu(for group: ServerGroup) -> some View {
         if group.isManual {
             Button("Rename…") { editing = group }
+            Divider()
+            // The group itself stays; only its servers can go.
+            Button("Delete All Configs…", role: .destructive) { pendingDelete = group }
+                .disabled(group.profiles.isEmpty)
         } else {
             subscriptionMenu(for: group)
+            Divider()
+            Button("Delete…", role: .destructive) { pendingDelete = group }
         }
-        Divider()
-        Button("Delete…", role: .destructive) { pendingDelete = group }
     }
 
     @ViewBuilder

@@ -50,6 +50,7 @@ final class AppModel {
         connection = ConnectionController(logs: logs)
         subscriptions = SubscriptionService(container: container, connection: connection)
         latency = LatencyService(container: container)
+        ensureManualGroup()
         let connection = self.connection
         latency.physicalInterface = { connection.tun.physicalInterface }
         let routes: () -> [FetchRoute] = {
@@ -118,13 +119,30 @@ final class AppModel {
 
     // MARK: Groups
 
+    /// The Custom Configs group is always in the sidebar, also before anything was pasted.
+    private func ensureManualGroup() {
+        let groups = (try? context.fetch(FetchDescriptor<ServerGroup>())) ?? []
+        guard !groups.contains(where: \.isManual) else { return }
+        // Kept ahead of the subscriptions, whose indexes start at 0.
+        let group = ServerGroup(name: ServerGroup.manualName, subscriptionURL: "", sortIndex: -1)
+        group.autoUpdateEnabled = false
+        context.insert(group)
+        try? context.save()
+    }
+
+    /// Deletes a subscription. The Custom Configs group only loses its servers and stays in the sidebar.
     func deleteGroup(_ group: ServerGroup) {
         if let active = connection.activeServer, group.profiles.contains(where: { $0.id == active.id }) {
             connection.disconnect()
             connection.setActive(nil)
         }
-        if sidebarSelection == .group(group.id) { sidebarSelection = .all }
-        context.delete(group)
+        if group.isManual {
+            selectedProfileIDs.subtract(group.profiles.map(\.id))
+            for profile in group.profiles { context.delete(profile) }
+        } else {
+            if sidebarSelection == .group(group.id) { sidebarSelection = .all }
+            context.delete(group)
+        }
         try? context.save()
     }
 
@@ -134,6 +152,7 @@ final class AppModel {
               let text = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else { return }
         if AddDraft.isSubscriptionURL(text) {
+            addDraft = AddDraft(kind: .subscription)
             showAddSheet = true
             return
         }

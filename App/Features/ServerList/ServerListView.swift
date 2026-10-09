@@ -114,6 +114,11 @@ struct ServerListView: View {
                     Group {
                         if !model.searchText.isEmpty {
                             ContentUnavailableView.search
+                        } else if selectedGroup?.isManual == true {
+                            ContentUnavailableView(
+                                "No Custom Configs", systemImage: "doc.on.clipboard",
+                                description: Text("Paste share links or Xray configs with ⌘V.")
+                            )
                         } else {
                             ContentUnavailableView("No Servers", systemImage: "server.rack")
                         }

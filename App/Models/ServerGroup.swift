@@ -38,6 +38,8 @@ final class ServerGroup {
 }
 
 extension ServerGroup {
+    static let manualName = "Custom Configs"
+
     /// The group for pasted configs: it has no subscription to update from.
     var isManual: Bool { subscriptionURL.isEmpty }
 }

@@ -5,7 +5,7 @@ struct AddSubscriptionSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
-    @State private var kind = AddDraft.Kind.subscription
+    @State private var kind = AddDraft.Kind.custom
     @State private var url = ""
     @State private var configText = ""
     @State private var name = ""
@@ -16,34 +16,43 @@ struct AddSubscriptionSheet: View {
     /// The last direct fetch failed on the network, so the host may only be reachable through a proxy.
     @State private var directFetchBlocked = false
     @FocusState private var urlFocused: Bool
+    @FocusState private var configFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(kind == .subscription ? "Add Subscription" : "Add Custom Configs").font(.headline)
 
             Form {
-                Picker("Type", selection: $kind) {
+                Picker("Type", selection: $kind.animation(.snappy)) {
                     Text("Subscription URL").tag(AddDraft.Kind.subscription)
                     Text("Custom Config").tag(AddDraft.Kind.custom)
                 }
+                // Separate groups so the fields of one type blur out as the other's blur in.
                 switch kind {
                 case .subscription:
-                    TextField("URL", text: $url, prompt: Text("https://sub.example.com/abc123"))
-                        .focused($urlFocused)
-                    TextField("Name", text: $name, prompt: Text("(auto)"))
-                    Toggle("Fetch via proxy", isOn: $viaProxy)
-                        .disabled(!model.connection.isRunning)
-                    if !model.connection.isRunning {
-                        Text("Connect to a server first to fetch through it.")
+                    Group {
+                        TextField("URL", text: $url, prompt: Text("https://sub.example.com/abc123"))
+                            .focused($urlFocused)
+                        TextField("Name", text: $name, prompt: Text("(auto)"))
+                        Toggle("Fetch via proxy", isOn: $viaProxy)
+                            .disabled(!model.connection.isRunning)
+                        if !model.connection.isRunning {
+                            Text("Connect to a server first to fetch through it.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .transition(.blurReplace)
+                case .custom:
+                    Group {
+                        // A text field rather than a text editor: it never swaps in smart quotes, which break JSON.
+                        TextField("Configs", text: $configText, prompt: Text("Paste one or more share links or Xray JSON configs"), axis: .vertical)
+                            .lineLimit(12...12)
+                            .font(.callout.monospaced())
+                            .focused($configFocused)
+                        Text("They are added to the Custom Configs group.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                case .custom:
-                    // A text field rather than a text editor: it never swaps in smart quotes, which break JSON.
-                    TextField("Configs", text: $configText, prompt: Text("Paste one or more share links or Xray JSON configs"), axis: .vertical)
-                        .lineLimit(12...12)
-                        .font(.callout.monospaced())
-                    Text("They are added to the Custom Configs group.")
-                        .font(.caption).foregroundStyle(.secondary)
+                    .transition(.blurReplace)
                 }
             }
             .disabled(isFetching)
@@ -100,7 +109,7 @@ struct AddSubscriptionSheet: View {
         kind = draft.kind
         configText = draft.configText
         errorMessage = draft.error
-        urlFocused = true
+        if kind == .subscription { urlFocused = true } else { configFocused = true }
         if let clip = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
            AddDraft.isSubscriptionURL(clip) {
             url = clip
