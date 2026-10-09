@@ -70,6 +70,111 @@ import Testing
         #expect(throws: CoreUpdateError.noRelease) { try AppUpdateChecker.parseAtom(Data("<feed></feed>".utf8)) }
     }
 
+    // MARK: App install
+
+    @Test func buildsAppAssetURLsAndReadsChecksum() throws {
+        let urls = try #require(AppInstaller.assetURLs(repository: "o/r", tag: "v0.2.1"))
+        #expect(urls.dmg.absoluteString == "https://github.com/o/r/releases/download/v0.2.1/V2Mac-0.2.1.dmg")
+        #expect(urls.checksum.absoluteString == urls.dmg.absoluteString + ".sha256")
+        let hex = String(repeating: "AB", count: 32)
+        #expect(try AppInstaller.parseChecksum(Data("\(hex)  V2Mac-0.2.1.dmg\n".utf8)) == hex.lowercased())
+        #expect(throws: DownloadError.checksumMalformed) { try AppInstaller.parseChecksum(Data("<html>".utf8)) }
+    }
+
+    /// A signed stand-in app bundle packed into a DMG, as the release workflow does.
+    private func makeAppImage(version: String, identifier: String) async throws -> Data {
+        let fm = FileManager.default
+        let dir = try TestSupport.makeTempDirectory()
+        defer { try? fm.removeItem(at: dir) }
+        let app = dir.appendingPathComponent("stage/V2Mac.app")
+        try fm.createDirectory(at: app.appendingPathComponent("Contents/MacOS"), withIntermediateDirectories: true)
+        let info: NSDictionary = [
+            "CFBundleIdentifier": identifier, "CFBundleShortVersionString": version,
+            "CFBundleExecutable": "V2Mac", "CFBundlePackageType": "APPL",
+        ]
+        try info.write(to: app.appendingPathComponent("Contents/Info.plist"))
+        let binary = app.appendingPathComponent("Contents/MacOS/V2Mac")
+        try fm.copyItem(atPath: "/usr/bin/true", toPath: binary.path)
+        #expect(try await CoreUpdater.run("/usr/bin/codesign", ["--force", "--sign", "-", app.path]).status == 0)
+        let dmg = dir.appendingPathComponent("out.dmg")
+        let made = try await CoreUpdater.run("/usr/bin/hdiutil", [
+            "create", "-quiet", "-volname", "V2Mac", "-srcfolder", app.deletingLastPathComponent().path, "-format", "UDZO", dmg.path,
+        ])
+        #expect(made.status == 0, "\(made.output)")
+        return try Data(contentsOf: dmg)
+    }
+
+    private func serve(image: Data, checksum: String? = nil) async throws -> (TestHTTPServer, dmg: URL, checksum: URL) {
+        let sum = checksum ?? RegionPackInstaller.sha256(image)
+        let server = try await TestHTTPServer.start { path in
+            switch path {
+            case "/V2Mac-9.9.9.dmg": .init(body: image)
+            case "/V2Mac-9.9.9.dmg.sha256": .init(body: Data("\(sum)  V2Mac-9.9.9.dmg\n".utf8))
+            default: .init(status: 404)
+            }
+        }
+        let dmg = URL(string: "http://127.0.0.1:\(server.port)/V2Mac-9.9.9.dmg")!
+        return (server, dmg, URL(string: dmg.absoluteString + ".sha256")!)
+    }
+
+    @Test func preparesAVerifiedAppAndSwapsIt() async throws {
+        let fm = FileManager.default
+        let image = try await makeAppImage(version: "9.9.9", identifier: "test.v2mac")
+        let (server, dmg, checksum) = try await serve(image: image)
+        defer { server.stop() }
+        let staged = try await AppInstaller.prepare(
+            dmg: dmg, checksum: checksum, expectedVersion: "9.9.9", bundleIdentifier: "test.v2mac",
+            downloader: FileDownloader(routes: [.direct])
+        )
+        #expect(staged.version == "9.9.9")
+
+        // The "installed" app, and a process standing in for the running one.
+        let home = try TestSupport.makeTempDirectory()
+        defer { try? fm.removeItem(at: home) }
+        let target = home.appendingPathComponent("V2Mac.app")
+        try fm.createDirectory(at: target.appendingPathComponent("Contents"), withIntermediateDirectories: true)
+        try Data("old".utf8).write(to: target.appendingPathComponent("Contents/old"))
+        let running = Process()
+        running.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        running.arguments = ["60"]
+        try running.run()
+        let opened = home.appendingPathComponent("opened")
+        let open = home.appendingPathComponent("open.sh")
+        try "#!/bin/sh\necho \"$1\" > '\(opened.path)'\n".write(to: open, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: open.path)
+
+        try AppInstaller.scheduleSwap(staged, replacing: target, processID: running.processIdentifier, openCommand: open.path)
+        try await Task.sleep(for: .milliseconds(600))
+        #expect(fm.fileExists(atPath: target.appendingPathComponent("Contents/old").path), "replaced while still running")
+
+        running.terminate()
+        let deadline = ContinuousClock.now + .seconds(10)
+        while ContinuousClock.now < deadline, !fm.fileExists(atPath: opened.path) { try await Task.sleep(for: .milliseconds(50)) }
+        #expect(try String(contentsOf: opened, encoding: .utf8).trimmingCharacters(in: .newlines) == target.path)
+        #expect(fm.fileExists(atPath: target.appendingPathComponent("Contents/MacOS/V2Mac").path))
+        #expect(!fm.fileExists(atPath: target.appendingPathComponent("Contents/old").path))
+        #expect(!fm.fileExists(atPath: staged.workDirectory.path))
+        #expect(try fm.contentsOfDirectory(atPath: home.path).sorted() == ["V2Mac.app", "open.sh", "opened"])
+    }
+
+    @Test func rejectsABadAppDownload() async throws {
+        let image = try await makeAppImage(version: "9.9.9", identifier: "test.v2mac")
+        let (server, dmg, checksum) = try await serve(image: image)
+        defer { server.stop() }
+        let downloader = FileDownloader(routes: [.direct])
+        await #expect(throws: AppInstallError.wrongApp) {
+            _ = try await AppInstaller.prepare(dmg: dmg, checksum: checksum, expectedVersion: "9.9.9", bundleIdentifier: "other.app", downloader: downloader)
+        }
+        await #expect(throws: AppInstallError.wrongApp) {
+            _ = try await AppInstaller.prepare(dmg: dmg, checksum: checksum, expectedVersion: "9.9.8", bundleIdentifier: "test.v2mac", downloader: downloader)
+        }
+        let (bad, badDMG, badSum) = try await serve(image: image, checksum: String(repeating: "0", count: 64))
+        defer { bad.stop() }
+        await #expect(throws: DownloadError.checksumMismatch(file: "V2Mac-9.9.9.dmg")) {
+            _ = try await AppInstaller.prepare(dmg: badDMG, checksum: badSum, expectedVersion: "9.9.9", bundleIdentifier: "test.v2mac", downloader: downloader)
+        }
+    }
+
     // MARK: Install with a stand-in binary
 
     private func makeZip(script: String) throws -> Data {

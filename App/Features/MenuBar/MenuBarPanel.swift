@@ -119,8 +119,16 @@ struct MenuBarPanel: View {
 
             if let release = model.updates.availableAppUpdate {
                 Divider()
-                Link(destination: release.pageURL) {
-                    Label("Update available: V2Mac \(release.version)", systemImage: "arrow.down.circle.fill")
+                HStack {
+                    if model.updates.isInstallingApp {
+                        ProgressView().controlSize(.small)
+                        Text("Downloading V2Mac \(release.version)…").foregroundStyle(.secondary)
+                    } else {
+                        Label("V2Mac \(release.version) is available", systemImage: "arrow.down.circle.fill")
+                        Spacer()
+                        Button("Update Now") { Task { await model.updates.installApp(release) } }
+                            .controlSize(.small)
+                    }
                 }
                 .font(.callout)
             }

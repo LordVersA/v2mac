@@ -713,10 +713,23 @@ Defined in a bundled `RegionPacks.json`; adding a region is a data change.
 
 ### 11.3 App update check
 
-Once per 24 h (and on demand), read the latest release of the app's own repo.
-If its version is higher, show "Update available" in the menu bar panel and in
-Settings, linking to the release page. No automatic install in v1. Can be
-turned off.
+Once per 24 h (and on demand), read the latest release of the app's own repo
+(GitHub API; the releases Atom feed when the API cannot be read, which is common
+behind a shared proxy address). If its version is higher, show it in the menu
+bar panel and in Settings with an **Update Now** button. The check can be
+turned off; nothing is downloaded until the button is pressed.
+
+**Update Now** downloads `V2Mac-<version>.dmg` and its `.sha256` from the
+release, checks the hash, copies the app out of the image to a temporary
+folder and verifies its code signature, bundle identifier and version. Only
+then does the app quit; a detached shell script waits for the process to exit,
+moves the old bundle aside, moves the new one into place (putting the old one
+back if that fails) and opens it. The app reconnects on launch as usual. Any
+failure before the quit leaves the installed app untouched and offers the
+release page instead. The app must be in a folder the user can write to; a
+translocated or read-only copy is refused. Releases are ad-hoc signed, so the
+download is trusted through HTTPS to the repository and the published hash,
+not through a signing identity.
 
 ---
 

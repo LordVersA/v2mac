@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import V2MacCore
@@ -20,6 +21,9 @@ final class UpdateService {
         case checking
         case upToDate
         case available(AppRelease)
+        /// Downloading and checking the release; the app restarts when it is ready.
+        case installing(AppRelease)
+        case installFailed(AppRelease, String)
         case unavailable(String)
     }
 
@@ -37,8 +41,15 @@ final class UpdateService {
     private var schedulerTask: Task<Void, Never>?
 
     var availableAppUpdate: AppRelease? {
-        if case .available(let release) = appStatus { return release }
-        return nil
+        switch appStatus {
+        case .available(let release), .installing(let release), .installFailed(let release, _): release
+        default: nil
+        }
+    }
+
+    var isInstallingApp: Bool {
+        if case .installing = appStatus { return true }
+        return false
     }
 
     /// `owner/name` of the app's own repository, from Info.plist. Empty disables the check.
@@ -109,6 +120,7 @@ final class UpdateService {
             if manual { appStatus = .unavailable("No update source is configured for this build.") }
             return
         }
+        guard !isInstallingApp else { return }
         if !manual {
             guard UserDefaults.standard.bool(forKey: "checkAppUpdates") else { return }
             if let last = Prefs.lastAppUpdateCheck, Date().timeIntervalSince(last) < 24 * 3600 { return }
@@ -120,6 +132,36 @@ final class UpdateService {
             appStatus = found.map(AppStatus.available) ?? .upToDate
         } catch {
             appStatus = manual ? .unavailable(error.localizedDescription) : .idle
+        }
+    }
+
+    /// Downloads and verifies the release, then quits; a detached script swaps the app
+    /// bundle and opens the new version. The installed app is untouched on any failure.
+    func installApp(_ release: AppRelease) async {
+        guard !isInstallingApp else { return }
+        appStatus = .installing(release)
+        do {
+            let target = Bundle.main.bundleURL
+            try AppInstaller.checkReplaceable(target)
+            guard let urls = AppInstaller.assetURLs(repository: Self.repository, tag: release.tag) else {
+                throw CoreUpdateError.malformedResponse
+            }
+            let staged = try await AppInstaller.prepare(
+                dmg: urls.dmg,
+                checksum: urls.checksum,
+                expectedVersion: release.version,
+                bundleIdentifier: Bundle.main.bundleIdentifier ?? "",
+                downloader: FileDownloader(routes: downloadRoutes(), timeout: 60, maxBytes: 256 * 1024 * 1024)
+            )
+            do {
+                try AppInstaller.scheduleSwap(staged, replacing: target, processID: ProcessInfo.processInfo.processIdentifier)
+            } catch {
+                try? FileManager.default.removeItem(at: staged.workDirectory)
+                throw error
+            }
+            NSApp.terminate(nil)
+        } catch {
+            appStatus = .installFailed(release, error.localizedDescription)
         }
     }
 

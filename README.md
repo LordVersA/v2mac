@@ -12,7 +12,7 @@
 - **TUN mode:** one switch routes all traffic on the Mac through the proxy, including apps with no proxy setting. No paid developer account or system extension needed.
 - **Menu bar control:** connect, switch server, live speed, and a local address you can copy.
 - **Reliable:** restarts the core after a crash, sleep or network change, and reconnects on launch.
-- **Also:** LAN sharing with a password, QR codes, a log viewer, launch at login, and in-app Xray core updates.
+- **Also:** LAN sharing with a password, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
 - **Private:** no analytics or telemetry.
 
 ## Install
