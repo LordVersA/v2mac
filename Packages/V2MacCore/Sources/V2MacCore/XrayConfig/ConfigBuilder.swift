@@ -31,19 +31,31 @@ public struct RunOptions: Sendable, Hashable {
     public var metricsPort: Int
     /// Set while TUN mode is on.
     public var tun: TunLink?
+    /// TLS fragment and noise packets for connections to the server.
+    public var dialer: DialerSettings
+    /// The core's own resolver; nil leaves name resolution as each routing mode needs it.
+    public var dns: DNSSettings?
+    /// Loopback port for the outbound API, set when servers may be switched without a restart.
+    public var apiPort: Int?
 
     public init(
         inbound: InboundSettings = InboundSettings(),
         logLevel: XrayLogLevel = .warning,
         logConnections: Bool = false,
         metricsPort: Int,
-        tun: TunLink? = nil
+        tun: TunLink? = nil,
+        dialer: DialerSettings = DialerSettings(),
+        dns: DNSSettings? = nil,
+        apiPort: Int? = nil
     ) {
         self.inbound = inbound
         self.logLevel = logLevel
         self.logConnections = logConnections
         self.metricsPort = metricsPort
         self.tun = tun
+        self.dialer = dialer
+        self.dns = dns
+        self.apiPort = apiPort
     }
 }
 

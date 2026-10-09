@@ -41,7 +41,7 @@ on the Mac through the same connection.
 | Localisation | English only, plain string literals. |
 | Intel Macs, macOS 15 and earlier | arm64, macOS 26+ only. |
 | Developer ID signing, notarization, Sparkle | Planned after v1. |
-| Mux, TLS fragment, global sniffing options, DNS settings UI | Outbounds are used as provided. |
+| Mux, global sniffing options | Outbounds are used as provided. TLS fragment, noise packets and DNS came later (section 8.4). |
 | Auto-select fastest server, notifications, global hotkeys | Future. |
 
 ---
@@ -512,12 +512,50 @@ Take the stored config and:
    `socks` / `http` / `mixed` inbound to `mixed-in`; drop rules that referenced
    only other removed inbounds.
 4. Leave `outbounds`, the rest of `routing`, `dns` and everything else as
-   written. The routing mode picker is disabled ("Managed by this config").
+   written, apart from what section 8.4 adds. There is no routing mode picker;
+   the status line reads "Custom routing".
 
 ### 8.3 Output
 
 Written to `run/config.json` with mode `0600`, replaced atomically, deleted when
 the core stops.
+
+### 8.4 Connection settings
+
+All off by default except live switching; each is a switch in Settings → Connection.
+
+**TLS fragment and noise packets.** When either is on, the config gains
+
+```json
+{ "tag": "v2mac-dialer", "protocol": "freedom",
+  "settings": { "fragment": { "packets": "tlshello", "length": "100-200", "interval": "10-20" },
+                "noises": [ { "type": "rand", "packet": "10-20", "delay": "10-16" } ] } }
+```
+
+(`fragment` and `noises` each only while its switch is on; `packets` is `tlshello` or `1-3`) and
+the proxy outbound gets `streamSettings.sockopt.dialerProxy: "v2mac-dialer"`. Left alone: outbounds
+that already name a `dialerProxy` or `proxySettings.tag`, servers on loopback, and `freedom`,
+`blackhole`, `dns`, `loopback` and `wireguard` outbounds. In a custom config the same is applied to
+every eligible outbound and the helper is appended only if one of them uses it. In TUN mode the
+helper is bound to the physical interface, because it is the one that dials. Latency and speed
+tests use the same settings. A range that is not `N` or `N-M` falls back to the default.
+Fragmenting helps on some networks and stops TLS handshakes on others, hence off by default.
+
+**DNS.** When on, the config's `dns` is `{"servers": [...], "queryStrategy": "UseIP" | "UseIPv4" |
+"UseIPv6", "enableParallelQuery": true}` with the user's servers (default: the two DoH servers of
+the bypass mode, which it then replaces), and the `direct` outbound gets
+`settings.domainStrategy` set to the same strategy so direct traffic is resolved there too.
+Traffic through the server is still resolved by the server. A custom config that has a `dns`
+section keeps it; one without gets this one.
+
+**Switching without a restart.** When on, configs for outbound profiles gain
+`"api": {"tag": "api", "listen": "127.0.0.1:<free port>", "services": ["HandlerService"]}`.
+Activating another outbound profile while connected, with every other setting unchanged, runs
+`xray api rmo --server=127.0.0.1:<port> proxy` and then `xray api ado ... <file>` with the new
+outbound (tagged, dialled and bound as above). The core, its ports and the traffic counters stay;
+connections already open finish on the old server. If either command fails the core is restarted
+as before. Custom configs, and any change of port, mode, TUN, log or the settings above, always
+restart. The API port is loopback-only and unauthenticated, like the metrics port.
 
 ---
 
@@ -910,13 +948,17 @@ Empty search: "No servers match".
 | Latency | Test URL | `https://www.gstatic.com/generate_204` |
 | | Timeout | 8 s |
 | | Concurrency | 8 |
+| Connection | Switch servers without restarting | On |
+| | TLS fragment: split (TLS hello / first packets), piece size, pause | Off; `100-200` bytes, `10-20` ms |
+| | Noise packets: packet size, pause | Off; `10-20` bytes, `10-16` ms |
+| | Use custom DNS: servers, addresses (IPv4 and IPv6 / IPv4 only / IPv6 only) | Off; Cloudflare and Google DoH |
 | Core | Version, Check for Update, Revert to Bundled | — |
 | Advanced | Log level: error / warning / info / debug | warning |
 | | Log connections | Off |
 | About | Version, source link, licences and attributions | — |
 
-Changing Port, LAN, credentials, Mode, Log level or Log connections while
-connected restarts the core.
+Changing Port, LAN, credentials, Mode, Log level, Log connections, fragment, noise
+or DNS while connected restarts the core.
 
 ---
 

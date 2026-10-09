@@ -145,6 +145,43 @@ public actor CoreRunner {
         throw CoreError.readyTimeout
     }
 
+    // MARK: Live switch
+
+    /// Replaces the outbound tagged `tag` in the running core through its API (`apiPort` is the
+    /// `api.listen` port of the config it was started with). Connections already open finish on
+    /// the old outbound. When this throws, the core may be left without that outbound: restart it.
+    public func replaceOutbound(tag: String, with outbound: JSONValue, apiPort: Int) async throws {
+        guard state == .running else { throw CoreError.apiFailed("The core is not running.") }
+        let file = runDirectory.appendingPathComponent("outbound-\(UUID().uuidString).json")
+        let data = try JSONValue.object(["outbounds": .array([outbound])]).data()
+        guard FileManager.default.createFile(atPath: file.path, contents: data, attributes: [.posixPermissions: 0o600]) else {
+            throw CoreError.apiFailed("Could not write the outbound file.")
+        }
+        defer { try? FileManager.default.removeItem(at: file) }
+        let server = "--server=127.0.0.1:\(apiPort)"
+        try await Self.runAPI(executable, ["rmo", server, tag])
+        try await Self.runAPI(executable, ["ado", server, file.path])
+    }
+
+    /// Runs one `xray api` command; it gives up by itself after three seconds.
+    private static func runAPI(_ executable: URL, _ arguments: [String]) async throws {
+        let process = Process()
+        process.executableURL = executable
+        process.arguments = ["api"] + arguments
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        process.standardInput = FileHandle.nullDevice
+        let status: Int32 = try await withCheckedThrowingContinuation { continuation in
+            process.terminationHandler = { continuation.resume(returning: $0.terminationStatus) }
+            do { try process.run() } catch { process.terminationHandler = nil; continuation.resume(throwing: CoreError.apiFailed(error.localizedDescription)) }
+        }
+        guard status != 0 else { return }
+        let output = String(decoding: pipe.fileHandleForReading.availableData, as: UTF8.self)
+        let detail = output.split(whereSeparator: \.isNewline).last.map(String.init) ?? "exit \(status)"
+        throw CoreError.apiFailed(detail)
+    }
+
     // MARK: Stop
 
     public func stop() async {

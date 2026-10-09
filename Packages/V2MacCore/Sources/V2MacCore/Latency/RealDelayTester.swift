@@ -59,7 +59,7 @@ public struct LatencyResult: Sendable, Equatable {
 
 enum LatencyConfig {
     /// One loopback SOCKS inbound per outbound, each routed only to its own outbound.
-    static func batch(outbounds: [JSONValue], ports: [Int], interface: String? = nil) -> JSONValue {
+    static func batch(outbounds: [JSONValue], ports: [Int], interface: String? = nil, dialer: DialerSettings = DialerSettings()) -> JSONValue {
         var inbounds: [JSONValue] = []
         var tagged: [JSONValue] = []
         var rules: [JSONValue] = []
@@ -71,9 +71,12 @@ enum LatencyConfig {
                 "protocol": "socks",
                 "settings": ["auth": "noauth", "udp": false],
             ])
-            let bound = outbound.setting("tag", to: .string("out-\(i)"))
+            let bound = ConfigBuilder.dialing(outbound.setting("tag", to: .string("out-\(i)")), through: dialer)
             tagged.append(interface.map { ConfigBuilder.binding(bound, to: $0) } ?? bound)
             rules.append(["type": "field", "inboundTag": [.string("in-\(i)")], "outboundTag": .string("out-\(i)")])
+        }
+        if let extra = ConfigBuilder.dialerOutbound(dialer) {
+            tagged.append(interface.map { ConfigBuilder.binding(extra, to: $0) } ?? extra)
         }
         return [
             "log": ["loglevel": "none"],
@@ -91,8 +94,11 @@ public struct RealDelayTester: Sendable {
     private let options: LatencyOptions
     /// Set in TUN mode, so the test cores reach each server directly instead of through the tunnel.
     private let outboundInterface: String?
+    /// Fragment and noise settings, so a test dials the server the way a connection would.
+    private let dialer: DialerSettings
 
-    public init(executable: URL, assetDirectory: URL, options: LatencyOptions = LatencyOptions(), outboundInterface: String? = nil) {
+    public init(executable: URL, assetDirectory: URL, options: LatencyOptions = LatencyOptions(), outboundInterface: String? = nil, dialer: DialerSettings = DialerSettings()) {
+        self.dialer = dialer
         self.executable = executable
         self.assetDirectory = assetDirectory
         self.options = options
@@ -131,7 +137,7 @@ public struct RealDelayTester: Sendable {
 
         do {
             let ports = try PortUtil.freePorts(batch.count)
-            let config = LatencyConfig.batch(outbounds: batch.map(\.config), ports: ports, interface: outboundInterface)
+            let config = LatencyConfig.batch(outbounds: batch.map(\.config), ports: ports, interface: outboundInterface, dialer: dialer)
             let runner = CoreRunner(executable: executable, assetDirectory: assetDirectory, runDirectory: dir)
             do {
                 try await runner.start(config: config, readyPort: ports[0])
@@ -171,7 +177,7 @@ public struct RealDelayTester: Sendable {
             let ports = try PortUtil.freePorts(2)
             var config = try ConfigBuilder.buildCustom(
                 config: target.config,
-                options: RunOptions(inbound: InboundSettings(port: ports[0]), logLevel: .none, metricsPort: ports[1])
+                options: RunOptions(inbound: InboundSettings(port: ports[0]), logLevel: .none, metricsPort: ports[1], dialer: dialer)
             )
             if let outboundInterface { config = ConfigBuilder.bindingOutbounds(of: config, to: outboundInterface) }
             let runner = CoreRunner(executable: executable, assetDirectory: assetDirectory, runDirectory: dir)

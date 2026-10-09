@@ -68,11 +68,14 @@ extension ConfigBuilder {
     public static func build(outbound: JSONValue, options: RunOptions, routing plan: RoutingPlan) throws -> JSONValue {
         guard case .object = outbound else { throw ConfigBuilderError.outboundNotAnObject }
         let sections = routingSections(for: plan)
-        var proxy = outbound.setting("tag", to: .string(proxyTag))
         var direct: JSONValue = ["tag": .string(directTag), "protocol": "freedom"]
+        // Direct traffic is resolved by the chosen servers too, not by the system resolver.
+        if let dns = options.dns { direct = direct.setting("settings", to: ["domainStrategy": .string(dns.queryStrategy.rawValue)]) }
+        // Present whenever the settings are on, so a live switch can dial through it as well.
+        var extras = dialerOutbound(options.dialer).map { [$0] } ?? []
         if let tun = options.tun {
-            proxy = binding(proxy, to: tun.outboundInterface)
             direct = binding(direct, to: tun.outboundInterface)
+            extras = extras.map { binding($0, to: tun.outboundInterface) }
         }
         var config: JSONValue = [
             "log": logSection(options),
@@ -80,19 +83,22 @@ extension ConfigBuilder {
             "policy": statsPolicy,
             "metrics": metricsSection(port: options.metricsPort),
             "inbounds": inbounds(for: options),
-            "outbounds": [
-                proxy,
+            "outbounds": .array([
+                proxyOutbound(outbound, options: options),
                 direct,
                 ["tag": .string(blockTag), "protocol": "blackhole"],
-            ],
+            ] + extras),
             "routing": sections.routing,
         ]
-        if let dns = sections.dns { config = config.setting("dns", to: dns) }
+        if let dns = options.dns.map(dnsSection) ?? sections.dns { config = config.setting("dns", to: dns) }
+        if let port = options.apiPort { config = config.setting("api", to: apiSection(port: port)) }
         return config
     }
 
     /// Spec 8.2: run a full Xray config as written, replacing only inbounds, log, metrics and stats.
-    /// In TUN mode its outbounds are also bound to the physical interface.
+    /// In TUN mode its outbounds are also bound to the physical interface. Fragment and noise
+    /// settings are added to proxy outbounds that have no dialer of their own, and the DNS
+    /// setting applies only when the config brings no `dns` section.
     public static func buildCustom(config: JSONValue, options: RunOptions) throws -> JSONValue {
         guard case .object = config else { throw ConfigBuilderError.outboundNotAnObject }
 
@@ -119,6 +125,8 @@ extension ConfigBuilder {
         policy = policy.setting("system", to: system)
         out = out.setting("policy", to: policy)
 
+        out = dialingOutbounds(of: out, through: options.dialer)
+        if let dns = options.dns, config["dns"] == nil { out = out.setting("dns", to: dnsSection(dns)) }
         if let tun = options.tun { out = bindingOutbounds(of: out, to: tun.outboundInterface) }
 
         if let routing = config["routing"], case .array(let rules)? = routing["rules"] {

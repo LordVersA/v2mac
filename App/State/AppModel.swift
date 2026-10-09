@@ -329,6 +329,20 @@ final class AppModel {
                 connection.useSuggestedPort()
             }
         }
+        if defaults.bool(forKey: "debugSwitchTest") {
+            // Connects to one share-link server, then picks another: the second should be a live switch.
+            Task {
+                let all = (try? context.fetch(FetchDescriptor<Profile>(sortBy: [SortDescriptor(\.sortIndex)]))) ?? []
+                let servers = all.filter { $0.kind == .outbound }.sorted { ($0.delayMs ?? .max) < ($1.delayMs ?? .max) }
+                guard servers.count >= 2 else { print("[v2mac-debug] switch test: needs two share-link servers"); return }
+                self.activate(servers[0])
+                for _ in 0..<40 where !connection.isRunning { try? await Task.sleep(for: .milliseconds(250)) }
+                print("[v2mac-debug] switch test: first server up, running=\(connection.isRunning)")
+                self.activate(servers[1])
+                try? await Task.sleep(for: .seconds(2))
+                print("[v2mac-debug] switch test: after second server, phase=\(connection.phase)")
+            }
+        }
         guard let url = defaults.string(forKey: "debugAddSubscription") else { return }
         let activate = defaults.bool(forKey: "debugActivateFirst")
         let testMode = defaults.string(forKey: "debugTest")

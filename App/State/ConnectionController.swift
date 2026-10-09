@@ -44,6 +44,8 @@ final class ConnectionController {
     let tun: TunController
     private let runner: CoreRunner
     private var metricsPort: Int?
+    /// What the running core was started with, kept only for servers that can be switched live.
+    private var running: (options: RunOptions, plan: RoutingPlan)?
     private var statsTask: Task<Void, Never>?
     private var queue: Task<Void, Never>?
     private var userWantsRunning = false
@@ -133,7 +135,7 @@ final class ConnectionController {
     func activate(_ server: ActiveServer) {
         cancelRecovery()
         setActive(server)
-        connectActive()
+        enqueue { await self.performConnect(server, mayLiveSwitch: true) }
     }
 
     func connectActive() {
@@ -230,13 +232,50 @@ final class ConnectionController {
         }
     }
 
-    private func performConnect(_ server: ActiveServer) async {
+    private var routingPlan: RoutingPlan {
+        switch routingMode {
+        case .global: .global
+        case .bypassRegions: .bypass(regionRoutes())
+        case .direct: .direct
+        }
+    }
+
+    /// `mayLiveSwitch` is set only when the user picks a server: every other caller is asking
+    /// for a real restart (new settings, a network change, a crash).
+    private func performConnect(_ server: ActiveServer, mayLiveSwitch: Bool = false) async {
         userWantsRunning = true
         localError = nil
         portConflict = nil
         // Before the running core stops: the administrator prompt can stay open for a while.
         let tunLink = tun.isEnabled ? await tun.prepare() : nil
         if tunLink == nil { tun.down() }
+        let inbound = Prefs.inbound
+        let plan = routingPlan
+        func options(metrics: Int, api: Int?) -> RunOptions {
+            RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: Prefs.logConnections, metricsPort: metrics,
+                       tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api)
+        }
+
+        // Same settings, only the server differs: swap the outbound and keep the core.
+        if mayLiveSwitch, Prefs.liveSwitch, coreState == .running, server.kind == .outbound,
+           let running, let api = running.options.apiPort,
+           options(metrics: running.options.metricsPort, api: api) == running.options, plan == running.plan {
+            isSwitching = true
+            do {
+                let outbound = ConfigBuilder.proxyOutbound(server.config, options: running.options)
+                try await runner.replaceOutbound(tag: ConfigBuilder.proxyTag, with: outbound, apiPort: api)
+                logs.append("[v2mac] Switched to \(server.name) without restarting the core")
+                #if DEBUG
+                print("[v2mac-debug] live switch ok")
+                #endif
+                isSwitching = false
+                return
+            } catch {
+                logs.append("[v2mac] Could not switch without a restart (\(error.localizedDescription)); restarting the core")
+            }
+        }
+
+        running = nil
         if coreState != .stopped {
             isSwitching = true
             await runner.stop()
@@ -244,27 +283,23 @@ final class ConnectionController {
         defer { isSwitching = false }
 
         await runner.setExecutable(AppPaths.coreExecutable)
-        let inbound = Prefs.inbound
         port = inbound.port
         do {
             let metrics = try PortUtil.freePort()
             metricsPort = metrics
-            let options = RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: Prefs.logConnections, metricsPort: metrics, tun: tunLink)
             let config: JSONValue
+            var started: RunOptions?
             switch server.kind {
             case .outbound:
-                let plan: RoutingPlan
-                switch routingMode {
-                case .global: plan = .global
-                case .bypassRegions: plan = .bypass(regionRoutes())
-                case .direct: plan = .direct
-                }
+                let options = options(metrics: metrics, api: Prefs.liveSwitch ? try PortUtil.freePort() : nil)
                 config = try ConfigBuilder.build(outbound: server.config, options: options, routing: plan)
+                started = options
             case .custom:
-                config = try ConfigBuilder.buildCustom(config: server.config, options: options)
+                config = try ConfigBuilder.buildCustom(config: server.config, options: options(metrics: metrics, api: nil))
             }
             logs.append("[v2mac] Connecting to \(server.name)")
             try await runner.start(config: config, readyPort: port)
+            running = started.map { ($0, plan) }
             Prefs.wasRunning = true
             if tunLink != nil { tun.up() }
         } catch {

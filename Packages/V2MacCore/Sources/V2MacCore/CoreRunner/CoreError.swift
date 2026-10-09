@@ -16,6 +16,7 @@ public enum CoreError: Error, Sendable, Equatable, LocalizedError {
     case startFailed(String)
     case exitedBeforeReady(code: Int32, detail: String?)
     case readyTimeout
+    case apiFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -33,6 +34,8 @@ public enum CoreError: Error, Sendable, Equatable, LocalizedError {
             detail ?? "Xray exited during startup (exit \(code))."
         case .readyTimeout:
             "Xray did not become ready in time."
+        case .apiFailed(let detail):
+            detail
         }
     }
 }

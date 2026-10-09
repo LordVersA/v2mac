@@ -2,9 +2,16 @@ import Foundation
 import V2MacCore
 
 enum AppPaths {
+    /// Debug builds (the "V2MacDev" app) keep their own folder, away from an installed V2Mac.
+    #if DEBUG
+    static let dataFolderName = "v2mac-dev"
+    #else
+    static let dataFolderName = "v2mac"
+    #endif
+
     static let dataDirectory: URL = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("v2mac", isDirectory: true)
+        .appendingPathComponent(dataFolderName, isDirectory: true)
 
     static var assetsDirectory: URL { dataDirectory.appendingPathComponent("assets", isDirectory: true) }
     static var runDirectory: URL { dataDirectory.appendingPathComponent("run", isDirectory: true) }
@@ -67,7 +74,7 @@ enum Prefs {
     /// Spec 13 defaults. Registered so `@AppStorage` in Settings and these getters agree.
     static func registerDefaults() {
         defaults.register(defaults: [
-            "proxyPort": 10808,
+            "proxyPort": defaultPort,
             "reconnectOnLaunch": true,
             "restartOnWakeOrNetwork": true,
             "checkAppUpdates": true,
@@ -81,6 +88,17 @@ enum Prefs {
             "latencyTimeout": 8.0,
             "latencyConcurrency": 8,
             "speedTestURL": Prefs.defaultSpeedURL,
+            "liveSwitch": true,
+            "fragmentEnabled": false,
+            "fragmentPackets": FragmentSettings.Packets.tlsHello.rawValue,
+            "fragmentLength": FragmentSettings.defaultLength,
+            "fragmentInterval": FragmentSettings.defaultInterval,
+            "noiseEnabled": false,
+            "noisePacket": NoiseSettings.defaultPacket,
+            "noiseDelay": NoiseSettings.defaultDelay,
+            "dnsEnabled": false,
+            "dnsServers": DNSSettings.defaultServers.joined(separator: ", "),
+            "dnsQueryStrategy": DNSQueryStrategy.useIP.rawValue,
             "logLevel": XrayLogLevel.warning.rawValue,
             "logConnections": false,
         ])
@@ -135,8 +153,45 @@ enum Prefs {
         )
     }
 
+    /// Changing servers swaps the outbound in the running core instead of restarting it.
+    static var liveSwitch: Bool { defaults.bool(forKey: "liveSwitch") }
+
+    /// TLS fragment and noise packets, each only while its switch is on.
+    static var dialer: DialerSettings {
+        var settings = DialerSettings()
+        if defaults.bool(forKey: "fragmentEnabled") {
+            settings.fragment = FragmentSettings(
+                packets: FragmentSettings.Packets(rawValue: defaults.string(forKey: "fragmentPackets") ?? "") ?? .tlsHello,
+                length: defaults.string(forKey: "fragmentLength") ?? "",
+                interval: defaults.string(forKey: "fragmentInterval") ?? ""
+            )
+        }
+        if defaults.bool(forKey: "noiseEnabled") {
+            settings.noise = NoiseSettings(
+                packet: defaults.string(forKey: "noisePacket") ?? "",
+                delay: defaults.string(forKey: "noiseDelay") ?? ""
+            )
+        }
+        return settings
+    }
+
+    static var dns: DNSSettings? {
+        guard defaults.bool(forKey: "dnsEnabled") else { return nil }
+        return DNSSettings(
+            servers: DNSSettings.servers(from: defaults.string(forKey: "dnsServers") ?? ""),
+            queryStrategy: DNSQueryStrategy(rawValue: defaults.string(forKey: "dnsQueryStrategy") ?? "") ?? .useIP
+        )
+    }
+
+    /// Debug builds listen elsewhere, so they never fight an installed V2Mac for its port.
+    #if DEBUG
+    static let defaultPort = 10818
+    #else
+    static let defaultPort = 10808
+    #endif
+
     static var port: Int {
-        get { let p = defaults.integer(forKey: "proxyPort"); return p == 0 ? 10808 : p }
+        get { let p = defaults.integer(forKey: "proxyPort"); return p == 0 ? defaultPort : p }
         set { defaults.set(newValue, forKey: "proxyPort") }
     }
 
