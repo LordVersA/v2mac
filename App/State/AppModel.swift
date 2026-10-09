@@ -67,7 +67,12 @@ final class AppModel {
         let packs = regionPacks
         connection.regionRoutes = { packs.usableRoutes }
         #if DEBUG
-        if demo { seedDemoData(); AppDelegate.model = self; return }
+        if demo {
+            seedDemoData()
+            if UserDefaults.standard.bool(forKey: "debugFakeUpdates") { updates.fakeUpdates() }
+            AppDelegate.model = self
+            return
+        }
         #endif
         restoreActiveServer()
         if Prefs.reconnectOnLaunch, Prefs.wasRunning, connection.activeServer != nil {
@@ -227,7 +232,6 @@ final class AppModel {
                 if defaults.bool(forKey: "debugActivateFirst") { connection.connectActive() }
             }
         }
-        if defaults.bool(forKey: "debugFakeUpdates") { updates.fakeUpdates() }
         if defaults.bool(forKey: "debugAppUpdate") {
             Task {
                 await updates.checkApp(manual: true)

@@ -11,9 +11,10 @@ struct MainView: View {
         Button(title, systemImage: "arrow.down.circle.fill") {
             model.openSettings(openSettings, tab: tab)
         }
+        // Toolbars show only the icon by default.
+        .labelStyle(.titleAndIcon)
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
-        .controlSize(.small)
         .tint(.blue)
     }
 
@@ -41,12 +42,12 @@ struct MainView: View {
         }
         .frame(minWidth: 760, minHeight: 440)
         .toolbar {
-            ToolbarItemGroup(placement: .navigation) {
+            ToolbarItemGroup(placement: .primaryAction) {
                 if model.updates.availableAppUpdate != nil {
-                    updateButton("Update Available", tab: .general)
+                    updateButton("Software Update Available", tab: .general)
                 }
                 if model.updates.availableCoreUpdate != nil {
-                    updateButton("Core Update Available", tab: .core)
+                    updateButton("Xray Update Available", tab: .core)
                 }
             }
         }
