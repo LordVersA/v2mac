@@ -136,6 +136,7 @@ final class AppModel {
     }
 
     func testReal(_ ids: [UUID]? = nil) { latency.testReal(ids ?? testTargets()) }
+    func testSpeed(_ ids: [UUID]? = nil) { latency.testSpeed(ids ?? testTargets()) }
     func testTCP(_ ids: [UUID]? = nil) { latency.testTCP(ids ?? testTargets()) }
 
     // MARK: Windows
@@ -227,7 +228,7 @@ final class AppModel {
             }
             if let testMode {
                 let ids = ((try? context.fetch(FetchDescriptor<Profile>())) ?? []).map(\.id)
-                if testMode == "tcp" { latency.testTCP(ids) } else { latency.testReal(ids) }
+                if testMode == "tcp" { latency.testTCP(ids) } else if testMode == "speed" { latency.testSpeed(ids) } else { latency.testReal(ids) }
             }
         }
     }

@@ -285,12 +285,16 @@ private struct LatencySettings: View {
     @AppStorage("latencyURL") private var url = "https://www.gstatic.com/generate_204"
     @AppStorage("latencyTimeout") private var timeout = 8.0
     @AppStorage("latencyConcurrency") private var concurrency = 8
+    @AppStorage("speedTestURL") private var speedURL = Prefs.defaultSpeedURL
 
     var body: some View {
         Form {
             TextField("Test URL", text: $url)
             Stepper("Timeout: \(Int(timeout)) s", value: $timeout, in: 2...30, step: 1)
             Stepper("Concurrency: \(concurrency)", value: $concurrency, in: 1...32)
+            TextField("Speed test file", text: $speedURL)
+            Text("A large file the speed test downloads through each server. It stops as soon as the speed levels off, so the whole file is never fetched.")
+                .font(.caption).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
     }

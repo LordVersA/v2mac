@@ -97,6 +97,12 @@ struct ServerListView: View {
                 }
                 .width(min: 70, ideal: 80)
                 .customizationID("delay")
+
+                TableColumn("Speed", value: \.speedSortKey) { row in
+                    SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id))
+                }
+                .width(min: 70, ideal: 80)
+                .customizationID("speed")
             }
             .contextMenu(forSelectionType: UUID.self) { ids in
                 contextMenu(for: ids)
@@ -156,6 +162,7 @@ struct ServerListView: View {
             } else {
                 Menu {
                     Button("Real Delay") { model.testReal() }
+                    Button("Speed Test") { model.testSpeed() }
                     Button("TCP Ping") { model.testTCP() }
                 } label: {
                     Label("Test", systemImage: "speedometer")
@@ -177,6 +184,7 @@ struct ServerListView: View {
     private func contextMenu(for ids: Set<UUID>) -> some View {
         if !ids.isEmpty {
             Button(ids.count == 1 ? "Test Delay" : "Test Delay (\(ids.count))") { model.testReal(Array(ids)) }
+            Button("Speed Test") { model.testSpeed(Array(ids)) }
             Button("TCP Ping") { model.testTCP(Array(ids)) }
             Divider()
         }
@@ -227,7 +235,7 @@ struct DelayText: View {
         case .na:
             Text("n/a").foregroundStyle(.tertiary)
         case .timeout:
-            Text("timeout").foregroundStyle(.red)
+            Text("timeout").foregroundStyle(.orange)
         case .invalid:
             Text("invalid").foregroundStyle(.red)
         case .ok:
@@ -236,6 +244,25 @@ struct DelayText: View {
                 .monospacedDigit()
                 .help(row.delayKind == "tcp" ? "TCP ping" : "Real delay")
                 .foregroundStyle(ms < 300 ? Color.green : (ms < 800 ? Color.orange : Color.red))
+        }
+    }
+}
+
+struct SpeedText: View {
+    let row: ServerRow
+    var isTesting = false
+
+    var body: some View {
+        if isTesting {
+            ProgressView().controlSize(.small)
+        } else if let bps = row.speedBps {
+            if bps > 0 {
+                Text(Format.rate(bps)).monospacedDigit().help("Top stable download speed")
+            } else {
+                Text("failed").foregroundStyle(.orange)
+            }
+        } else {
+            Text("—").foregroundStyle(.tertiary)
         }
     }
 }

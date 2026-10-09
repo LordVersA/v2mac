@@ -29,6 +29,8 @@ final class Profile {
     var delayStateRaw: String = DelayState.untested.rawValue
     var delayKindRaw: String?
     var delayTestedAt: Date?
+    /// Top stable download speed in bytes per second; 0 means the speed test failed.
+    var speedBps: Double?
 
     init(parsed: ParsedProfile, sortIndex: Int, group: ServerGroup?) {
         id = UUID()
@@ -59,6 +61,7 @@ final class Profile {
         delayState = .untested
         delayKindRaw = nil
         delayTestedAt = nil
+        speedBps = nil
     }
 }
 
@@ -89,6 +92,7 @@ struct ServerRow: Identifiable, Hashable, Sendable {
     let delayMs: Int?
     let delayState: DelayState
     let delayKind: String?
+    let speedBps: Double?
     let hasWarnings: Bool
     let isStale: Bool
     let groupOrder: Int
@@ -105,6 +109,7 @@ struct ServerRow: Identifiable, Hashable, Sendable {
         delayMs = p.delayMs
         delayState = p.delayState
         delayKind = p.delayKindRaw
+        speedBps = p.speedBps
         hasWarnings = !p.warnings.isEmpty
         isStale = p.isStale
         groupOrder = p.group?.sortIndex ?? 0
@@ -115,6 +120,9 @@ struct ServerRow: Identifiable, Hashable, Sendable {
     var delaySortKey: Int {
         delayState == .ok ? (delayMs ?? Int.max) : Int.max
     }
+
+    /// Fastest first when sorted descending; untested and failed rows count as zero.
+    var speedSortKey: Double { speedBps ?? 0 }
 }
 
 /// Everything the connection controller needs, detached from SwiftData.

@@ -63,6 +63,8 @@ struct AppCommands: Commands {
         CommandMenu("Servers") {
             Button("Test Real Delay") { model.testReal() }
                 .keyboardShortcut("t")
+            Button("Speed Test") { model.testSpeed() }
+                .keyboardShortcut("t", modifiers: [.command, .option])
             Button("TCP Ping") { model.testTCP() }
                 .keyboardShortcut("t", modifiers: [.command, .shift])
             Button("Stop Testing") { model.latency.cancel() }

@@ -6,13 +6,17 @@ public struct LatencyOptions: Sendable, Equatable {
     public var timeout: TimeInterval
     public var concurrency: Int
     public var batchSize: Int
+    /// When set, every server that answers is also timed downloading this file.
+    public var speedURL: URL?
 
     public init(
         url: URL = URL(string: "https://www.gstatic.com/generate_204")!,
         timeout: TimeInterval = 8,
         concurrency: Int = 8,
-        batchSize: Int = 32
+        batchSize: Int = 32,
+        speedURL: URL? = nil
     ) {
+        self.speedURL = speedURL
         self.url = url
         self.timeout = timeout
         self.concurrency = max(1, concurrency)
@@ -36,6 +40,16 @@ public enum LatencyOutcome: Sendable, Equatable {
     case ok(ms: Int)
     case timeout
     case invalid(String)
+}
+
+public enum SpeedOutcome: Sendable, Equatable {
+    case ok(bytesPerSecond: Double)
+    case failed
+}
+
+public struct SpeedResult: Sendable, Equatable {
+    public var id: UUID
+    public var outcome: SpeedOutcome
 }
 
 public struct LatencyResult: Sendable, Equatable {
@@ -87,7 +101,11 @@ public struct RealDelayTester: Sendable {
 
     /// Results are delivered as they arrive. Cancelling the calling task stops outstanding
     /// requests and kills the throwaway core.
-    public func run(_ targets: [LatencyTarget], onResult: @escaping @Sendable (LatencyResult) async -> Void) async {
+    public func run(
+        _ targets: [LatencyTarget],
+        onResult: @escaping @Sendable (LatencyResult) async -> Void,
+        onSpeed: @escaping @Sendable (SpeedResult) async -> Void = { _ in }
+    ) async {
         let outbounds = targets.filter { $0.kind == .outbound }
         let customs = targets.filter { $0.kind == .custom }
 
@@ -95,18 +113,18 @@ public struct RealDelayTester: Sendable {
         while index < outbounds.count {
             if Task.isCancelled { return }
             let end = min(index + options.batchSize, outbounds.count)
-            await testBatch(Array(outbounds[index..<end]), onResult: onResult)
+            await testBatch(Array(outbounds[index..<end]), onResult: onResult, onSpeed: onSpeed)
             index = end
         }
         for target in customs {
             if Task.isCancelled { return }
-            await testCustom(target, onResult: onResult)
+            await testCustom(target, onResult: onResult, onSpeed: onSpeed)
         }
     }
 
     // MARK: Batches
 
-    private func testBatch(_ batch: [LatencyTarget], onResult: @escaping @Sendable (LatencyResult) async -> Void, attempt: Int = 0) async {
+    private func testBatch(_ batch: [LatencyTarget], onResult: @escaping @Sendable (LatencyResult) async -> Void, onSpeed: @escaping @Sendable (SpeedResult) async -> Void, attempt: Int = 0) async {
         guard !batch.isEmpty else { return }
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("v2mac-latency-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -123,7 +141,7 @@ public struct RealDelayTester: Sendable {
             }
             await waitUntilListening(ports)
             await withTaskCancellationHandler {
-                await measure(batch, ports: ports, onResult: onResult)
+                await measure(batch, ports: ports, onResult: onResult, onSpeed: onSpeed)
             } onCancel: {
                 Task { await runner.stop() }
             }
@@ -131,7 +149,7 @@ public struct RealDelayTester: Sendable {
         } catch {
             if Task.isCancelled { return }
             if case CoreError.portInUse = error, attempt < 2 {
-                await testBatch(batch, onResult: onResult, attempt: attempt + 1)
+                await testBatch(batch, onResult: onResult, onSpeed: onSpeed, attempt: attempt + 1)
                 return
             }
             if batch.count == 1 {
@@ -140,13 +158,13 @@ public struct RealDelayTester: Sendable {
             } else {
                 // One bad outbound stops the whole core: bisect to find it.
                 let mid = batch.count / 2
-                await testBatch(Array(batch[..<mid]), onResult: onResult)
-                await testBatch(Array(batch[mid...]), onResult: onResult)
+                await testBatch(Array(batch[..<mid]), onResult: onResult, onSpeed: onSpeed)
+                await testBatch(Array(batch[mid...]), onResult: onResult, onSpeed: onSpeed)
             }
         }
     }
 
-    private func testCustom(_ target: LatencyTarget, onResult: @escaping @Sendable (LatencyResult) async -> Void) async {
+    private func testCustom(_ target: LatencyTarget, onResult: @escaping @Sendable (LatencyResult) async -> Void, onSpeed: @escaping @Sendable (SpeedResult) async -> Void) async {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("v2mac-latency-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
         do {
@@ -164,7 +182,7 @@ public struct RealDelayTester: Sendable {
                 throw error
             }
             await withTaskCancellationHandler {
-                await measure([target], ports: [ports[0]], onResult: onResult)
+                await measure([target], ports: [ports[0]], onResult: onResult, onSpeed: onSpeed)
             } onCancel: {
                 Task { await runner.stop() }
             }
@@ -187,10 +205,12 @@ public struct RealDelayTester: Sendable {
 
     // MARK: Requests
 
-    private func measure(_ batch: [LatencyTarget], ports: [Int], onResult: @escaping @Sendable (LatencyResult) async -> Void) async {
+    private func measure(_ batch: [LatencyTarget], ports: [Int], onResult: @escaping @Sendable (LatencyResult) async -> Void, onSpeed: @escaping @Sendable (SpeedResult) async -> Void) async {
         let url = options.url
         let timeout = options.timeout
         let limit = options.concurrency
+        var reachable: [(id: UUID, port: Int)] = []
+        let portByID = Dictionary(uniqueKeysWithValues: zip(batch.map(\.id), ports))
         await withTaskGroup(of: LatencyResult.self) { group in
             var next = 0
             func launch() {
@@ -202,10 +222,55 @@ public struct RealDelayTester: Sendable {
             for _ in 0..<min(limit, batch.count) { launch() }
             while let result = await group.next() {
                 await onResult(result)
+                if case .ok = result.outcome, let port = portByID[result.id] { reachable.append((result.id, port)) }
                 if Task.isCancelled { group.cancelAll(); continue }
                 launch()
             }
         }
+        // One at a time: parallel downloads would share the link and understate every server.
+        guard let speedURL = options.speedURL else { return }
+        for item in reachable {
+            if Task.isCancelled { return }
+            let outcome = await Self.measureSpeed(port: item.port, url: speedURL, timeout: timeout)
+            await onSpeed(SpeedResult(id: item.id, outcome: outcome))
+        }
+    }
+
+    static func measureSpeed(port: Int, url: URL, timeout: TimeInterval) async -> SpeedOutcome {
+        guard let nwPort = NWEndpoint.Port(rawValue: UInt16(clamping: port)) else { return .failed }
+        let config = URLSessionConfiguration.ephemeral
+        config.proxyConfigurations = [ProxyConfiguration(socksv5Proxy: .hostPort(host: "127.0.0.1", port: nwPort))]
+        config.timeoutIntervalForRequest = timeout
+        config.timeoutIntervalForResource = timeout + SpeedMeter().maximumDuration
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.urlCache = nil
+        let counter = ByteCounter()
+        let session = URLSession(configuration: config, delegate: counter, delegateQueue: nil)
+        defer { session.invalidateAndCancel() }
+        let task = session.dataTask(with: URLRequest(url: url))
+        task.resume()
+
+        let clock = ContinuousClock()
+        var meter = SpeedMeter()
+        var start: ContinuousClock.Instant?
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(100))
+            let state = counter.snapshot()
+            if state.failed || (state.status != nil && !(200..<300).contains(state.status!)) { break }
+            if start == nil, state.bytes > 0 { start = clock.now }
+            if let begin = start {
+                let elapsed = (clock.now - begin) / .seconds(1)
+                if state.finished {
+                    // The file ended before the speed settled: use the whole transfer.
+                    return .ok(bytesPerSecond: max(meter.peak, SpeedMeter.average(bytes: state.bytes, elapsed: elapsed)))
+                }
+                if meter.add(elapsed: elapsed, bytes: state.bytes) { return .ok(bytesPerSecond: meter.peak) }
+            } else if state.finished {
+                break
+            }
+        }
+        task.cancel()
+        return meter.peak > 0 ? .ok(bytesPerSecond: meter.peak) : .failed
     }
 
     static func measureOne(port: Int, url: URL, timeout: TimeInterval) async -> LatencyOutcome {
@@ -229,6 +294,37 @@ public struct RealDelayTester: Sendable {
             return .ok(ms: max(1, Int((elapsed / .milliseconds(1)).rounded())))
         } catch {
             return .timeout
+        }
+    }
+}
+
+/// Counts downloaded bytes from a URLSession delegate; read from a polling loop.
+private final class ByteCounter: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    struct State {
+        var bytes: Int64 = 0
+        var status: Int?
+        var finished = false
+        var failed = false
+    }
+    private let lock = NSLock()
+    private var state = State()
+
+    func snapshot() -> State { lock.withLock { state } }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
+                    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        lock.withLock { state.status = (response as? HTTPURLResponse)?.statusCode }
+        completionHandler(.allow)
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        lock.withLock { state.bytes += Int64(data.count) }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        lock.withLock {
+            if error != nil { state.failed = state.bytes == 0 }
+            state.finished = true
         }
     }
 }

@@ -6,6 +6,8 @@ import V2MacCore
 @MainActor @Observable
 final class LatencyService {
     private(set) var testingIDs: Set<UUID> = []
+    /// Rows still waiting for or running their download test.
+    private(set) var speedTestingIDs: Set<UUID> = []
     private(set) var completed = 0
     private(set) var total = 0
     var isRunning: Bool { task != nil }
@@ -62,6 +64,33 @@ final class LatencyService {
         }
     }
 
+    // MARK: Speed
+
+    /// Real delay first; servers that answer are then timed downloading the speed-test file.
+    func testSpeed(_ ids: [UUID]) {
+        let targets = snapshots(for: ids)
+        guard !targets.isEmpty else { return }
+        begin(targets.map(\.id))
+        speedTestingIDs = Set(targets.map(\.id))
+        var options = Prefs.latencyOptions
+        options.speedURL = Prefs.speedURL
+        let tester = RealDelayTester(
+            executable: AppPaths.coreExecutable,
+            assetDirectory: AppPaths.assetsDirectory,
+            options: options,
+            outboundInterface: physicalInterface()
+        )
+        let latencyTargets = targets.map { LatencyTarget(id: $0.id, config: $0.config, kind: $0.kind) }
+        task = Task { [weak self] in
+            await tester.run(latencyTargets, onResult: { [weak self] result in
+                await self?.record(result, kind: "real", expectsSpeed: true)
+            }, onSpeed: { [weak self] result in
+                await self?.recordSpeed(result)
+            })
+            self?.finish()
+        }
+    }
+
     // MARK: TCP ping
 
     func testTCP(_ ids: [UUID]) {
@@ -89,6 +118,7 @@ final class LatencyService {
         task?.cancel()
         task = nil
         testingIDs = []
+        speedTestingIDs = []
     }
 
     // MARK: Bookkeeping
@@ -96,13 +126,26 @@ final class LatencyService {
     private func begin(_ ids: [UUID]) {
         task?.cancel()
         testingIDs = Set(ids)
+        speedTestingIDs = []
         completed = 0
         total = ids.count
     }
 
-    private func record(_ result: LatencyResult, kind: String) async {
+    private func record(_ result: LatencyResult, kind: String, expectsSpeed: Bool = false) async {
         try? await store.apply(id: result.id, outcome: result.outcome, kind: kind)
         testingIDs.remove(result.id)
+        if expectsSpeed {
+            // Only servers that answered get a download test; the rest are done now.
+            if case .ok = result.outcome { return }
+            try? await store.applySpeed(id: result.id, outcome: nil)
+            speedTestingIDs.remove(result.id)
+        }
+        completed += 1
+    }
+
+    private func recordSpeed(_ result: SpeedResult) async {
+        try? await store.applySpeed(id: result.id, outcome: result.outcome)
+        speedTestingIDs.remove(result.id)
         completed += 1
     }
 
@@ -114,6 +157,7 @@ final class LatencyService {
 
     private func finish() {
         testingIDs = []
+        speedTestingIDs = []
         task = nil
         #if DEBUG
         print("[v2mac-debug] latency run finished: \(completed)/\(total)")

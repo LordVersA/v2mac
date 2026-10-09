@@ -80,6 +80,7 @@ enum Prefs {
             "latencyURL": "https://www.gstatic.com/generate_204",
             "latencyTimeout": 8.0,
             "latencyConcurrency": 8,
+            "speedTestURL": Prefs.defaultSpeedURL,
             "logLevel": XrayLogLevel.warning.rawValue,
             "logConnections": false,
         ])
@@ -155,6 +156,12 @@ enum Prefs {
     static var enabledRegionPacks: Set<String> {
         get { Set(defaults.stringArray(forKey: "enabledRegionPacks") ?? []) }
         set { defaults.set(Array(newValue).sorted(), forKey: "enabledRegionPacks") }
+    }
+
+    static let defaultSpeedURL = "https://speed.cloudflare.com/__down?bytes=100000000"
+
+    static var speedURL: URL {
+        defaults.string(forKey: "speedTestURL").flatMap(URL.init(string:)) ?? URL(string: defaultSpeedURL)!
     }
 
     static var latencyOptions: LatencyOptions {

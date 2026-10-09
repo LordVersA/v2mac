@@ -25,4 +25,14 @@ actor LatencyStore {
         }
         try modelContext.save()
     }
+
+    func applySpeed(id: UUID, outcome: SpeedOutcome?) throws {
+        guard let profile = try modelContext.fetch(FetchDescriptor<Profile>(predicate: #Predicate { $0.id == id })).first else { return }
+        switch outcome {
+        case .ok(let bps)?: profile.speedBps = bps
+        case .failed?: profile.speedBps = 0
+        case nil: profile.speedBps = nil
+        }
+        try modelContext.save()
+    }
 }
