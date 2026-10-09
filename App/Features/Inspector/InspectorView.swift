@@ -5,6 +5,8 @@ struct InspectorView: View {
     @Environment(AppModel.self) private var model
     let profile: Profile?
     @State private var showQR = false
+    /// Worked out when the server changes: it means parsing the server's whole config.
+    @State private var sni: (id: UUID, value: String?)?
 
     var body: some View {
         Group {
@@ -35,7 +37,7 @@ struct InspectorView: View {
                         if !profile.transport.isEmpty { LabeledContent("Transport", value: profile.transport) }
                         LabeledContent("Security", value: profile.security.isEmpty ? "—" : profile.security)
                         if !profile.address.isEmpty { field("Address", "\(profile.address):\(profile.port)") }
-                        if let sni = sni(of: profile) { field("SNI / Host", sni) }
+                        if let sni, sni.id == profile.id, let value = sni.value { field("SNI / Host", value) }
                     }
 
                     Section("Performance") {
@@ -71,6 +73,7 @@ struct InspectorView: View {
             }
         }
         .animation(.smooth(duration: 0.2), value: profile == nil)
+        .task(id: profile?.id) { sni = profile.map { ($0.id, sni(of: $0)) } }
     }
 
     private func field(_ title: String, _ value: String) -> some View {

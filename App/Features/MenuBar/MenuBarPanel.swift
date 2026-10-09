@@ -33,8 +33,8 @@ struct MenuBarPanel: View {
     }
 
     /// The active server, then the fastest tested servers of its group (up to six rows).
-    private var switchCandidates: [Profile] {
-        guard let active = activeProfile else { return [] }
+    private func switchCandidates(active: Profile?) -> [Profile] {
+        guard let active else { return [] }
         let peers = profiles
             .filter { $0.group?.id == active.group?.id && $0.id != active.id && !$0.isStale }
             .sorted { lhs, rhs in
@@ -46,31 +46,26 @@ struct MenuBarPanel: View {
     }
 
     var body: some View {
+        // Each scans every profile, so once per update is enough.
+        let active = activeProfile
+        let candidates = switchCandidates(active: active)
         VStack(alignment: .leading, spacing: 12) {
             header
             if let server = connection.activeServer {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(server.name).font(.subheadline.weight(.medium)).lineLimit(1)
-                    Text(serverDetail(server)).font(.caption).foregroundStyle(.secondary)
+                    Text(serverDetail(server, profile: active)).font(.caption).foregroundStyle(.secondary)
                 }
             }
             if connection.phase == .connected {
-                HStack(spacing: 14) {
-                    Label(Format.rate(connection.downRate), systemImage: "arrow.down")
-                    Label(Format.rate(connection.upRate), systemImage: "arrow.up")
-                }
-                .font(.caption.monospacedDigit())
-                .contentTransition(.numericText())
-                .animation(.smooth, value: connection.downRate)
-                .animation(.smooth, value: connection.upRate)
-                .foregroundStyle(.secondary)
+                PanelRates(connection: connection)
             }
 
-            if !switchCandidates.isEmpty {
+            if !candidates.isEmpty {
                 Divider()
                 Text("Switch Server").font(.caption).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 2) {
-                    ForEach(switchCandidates) { profile in
+                    ForEach(candidates) { profile in
                         SwitchRow(profile: profile, isActive: profile.id == connection.activeServer?.id) {
                             model.activate(profile)
                         }
@@ -204,11 +199,28 @@ struct MenuBarPanel: View {
         }
     }
 
-    private func serverDetail(_ server: ActiveServer) -> String {
+    private func serverDetail(_ server: ActiveServer, profile: Profile?) -> String {
         var parts: [String] = []
         if !server.groupName.isEmpty { parts.append(server.groupName) }
-        if let p = activeProfile, p.delayState == .ok, let ms = p.delayMs { parts.append("\(ms) ms") }
+        if let p = profile, p.delayState == .ok, let ms = p.delayMs { parts.append("\(ms) ms") }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// The live rates. On their own so that the once-a-second updates do not re-evaluate the whole panel.
+private struct PanelRates: View {
+    let connection: ConnectionController
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Label(Format.rate(connection.downRate), systemImage: "arrow.down")
+            Label(Format.rate(connection.upRate), systemImage: "arrow.up")
+        }
+        .font(.caption.monospacedDigit())
+        .contentTransition(.numericText())
+        .animation(.smooth, value: connection.downRate)
+        .animation(.smooth, value: connection.upRate)
+        .foregroundStyle(.secondary)
     }
 }
 

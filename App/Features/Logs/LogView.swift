@@ -7,8 +7,9 @@ struct LogView: View {
     @State private var problemsOnly = false
     @State private var follow = true
 
-    private var lines: [(id: Int, text: String)] {
-        let all = model.logs.lines.enumerated().map { (id: $0.offset, text: $0.element) }
+    private var lines: [LogStore.Line] {
+        let all = model.logs.lines
+        guard problemsOnly || !filter.isEmpty else { return all }
         return all.filter { line in
             (!problemsOnly || Self.severity(line.text) != nil)
                 && (filter.isEmpty || line.text.localizedCaseInsensitiveContains(filter))
@@ -16,11 +17,13 @@ struct LogView: View {
     }
 
     var body: some View {
+        let lines = lines
+        let lastID = lines.last?.id
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 1) {
-                        ForEach(lines, id: \.id) { line in
+                        ForEach(lines) { line in
                             Text(line.text)
                                 .font(.system(.caption, design: .monospaced))
                                 .foregroundStyle(Self.color(for: line.text))
@@ -31,11 +34,12 @@ struct LogView: View {
                     }
                     .padding(10)
                 }
-                .onChange(of: model.logs.lines.count) {
-                    if follow, let last = lines.last { proxy.scrollTo(last.id, anchor: .bottom) }
+                // The newest line's id, not the count: the count stops changing once the buffer is full.
+                .onChange(of: lastID) {
+                    if follow, let lastID { proxy.scrollTo(lastID, anchor: .bottom) }
                 }
                 .onAppear {
-                    if let last = lines.last { proxy.scrollTo(last.id, anchor: .bottom) }
+                    if let lastID { proxy.scrollTo(lastID, anchor: .bottom) }
                 }
             }
         }
@@ -49,7 +53,7 @@ struct LogView: View {
                     .help("Keep the newest line in view")
             }
             ToolbarItemGroup {
-                CopyButton("Copy") { lines.map(\.text).joined(separator: "\n") }
+                CopyButton("Copy") { self.lines.map(\.text).joined(separator: "\n") }
                 Button("Clear", systemImage: "trash") { model.logs.clear() }
             }
         }

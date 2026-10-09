@@ -48,59 +48,62 @@ struct ServerListView: View {
         let isTesting = latency.isRunning
         let appModel = model
         let isUpdating = !model.subscriptions.updatingGroupIDs.isEmpty
+        // Looked up once: it is a database fetch.
+        let selectedGroup = selectedGroup
         let showsHeader = selectedGroup.map { !$0.isManual } ?? false
         let showsEmptyState = rows.isEmpty && (!model.searchText.isEmpty || selectedGroupID != nil)
-        VStack(spacing: 0) {
-            if let group = selectedGroup, showsHeader {
-                GroupHeader(group: group)
-                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
-            }
-            ServerTable(rows: rows, profiles: profiles, sortOrder: $sortOrder)
-            .overlay {
-                ZStack {
-                    if showsEmptyState {
-                        // On a glass card, so the empty table's row stripes don't run through the text.
-                        Group {
-                            if !model.searchText.isEmpty {
-                                ContentUnavailableView.search
-                            } else if selectedGroup?.isManual == true {
-                                ContentUnavailableView(
-                                    "No Custom Configs", systemImage: "doc.on.clipboard",
-                                    description: Text("Paste share links or Xray configs with ⌘V.")
-                                )
-                            } else {
-                                ContentUnavailableView("No Servers", systemImage: "server.rack")
-                            }
-                        }
-                        .fixedSize()
-                        .padding(.horizontal, 36)
-                        .padding(.vertical, 28)
-                        .glassEffect(.regular, in: .rect(cornerRadius: 28))
-                        .transition(.blurReplace)
-                    }
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                if let group = selectedGroup, showsHeader {
+                    GroupHeader(group: group)
+                        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
-                .animation(.smooth(duration: 0.25), value: showsEmptyState)
+                ServerTable(rows: rows, profiles: profiles, sortOrder: $sortOrder)
+                .overlay {
+                    ZStack {
+                        if showsEmptyState {
+                            // On a glass card, so the empty table's row stripes don't run through the text.
+                            Group {
+                                if !model.searchText.isEmpty {
+                                    ContentUnavailableView.search
+                                } else if selectedGroup?.isManual == true {
+                                    ContentUnavailableView(
+                                        "No Custom Configs", systemImage: "doc.on.clipboard",
+                                        description: Text("Paste share links or Xray configs with ⌘V.")
+                                    )
+                                } else {
+                                    ContentUnavailableView("No Servers", systemImage: "server.rack")
+                                }
+                            }
+                            .fixedSize()
+                            .padding(.horizontal, 36)
+                            .padding(.vertical, 28)
+                            .glassEffect(.regular, in: .rect(cornerRadius: 28))
+                            .transition(.blurReplace)
+                        }
+                    }
+                    .animation(.smooth(duration: 0.25), value: showsEmptyState)
+                }
+            }
+            // Only when the header comes or goes, so switching between subscriptions stays instant.
+            .animation(.snappy(duration: 0.25), value: showsHeader)
+            .safeAreaInset(edge: .bottom) { ConnectionBar() }
+
+            // A plain panel, not `.inspector`: with that modifier attached (even hidden) the table
+            // re-fits every visible cell several times on each step of a window resize.
+            if model.showInspector {
+                Divider()
+                InspectorPane(profiles: profiles)
+                    .frame(width: 260)
             }
         }
-        // Only when the header comes or goes, so switching between subscriptions stays instant.
-        .animation(.snappy(duration: 0.25), value: showsHeader)
-        .safeAreaInset(edge: .bottom) { ConnectionBar() }
         .searchable(text: $model.searchText, prompt: "Search")
         .toolbar { toolbar(model: appModel, latency: latency, isTesting: isTesting, isUpdating: isUpdating) }
-        .inspector(isPresented: $model.showInspector) {
-            InspectorView(profile: singleSelection)
-                .inspectorColumnWidth(min: 220, ideal: 260, max: 360)
-        }
         .navigationTitle(selectedGroup?.name ?? "All Servers")
         #if DEBUG
         .navigationSubtitle("Dev build")
         #endif
         .onChange(of: rows.map(\.id), initial: true) { _, ids in model.visibleProfileIDs = ids }
-    }
-
-    private var singleSelection: Profile? {
-        guard model.selectedProfileIDs.count == 1, let id = model.selectedProfileIDs.first else { return nil }
-        return profiles.first { $0.id == id }
     }
 
     @ToolbarContentBuilder
@@ -124,10 +127,7 @@ struct ServerListView: View {
         }
         ToolbarItem {
             if isTesting {
-                Button { latency.cancel() } label: {
-                    Label("Stop Testing", systemImage: "stop.circle")
-                }
-                .help("Stop testing (\(latency.completed)/\(latency.total))")
+                StopTestingButton(latency: latency)
             } else {
                 Menu {
                     Button("Real Delay") { model.testReal() }
@@ -147,6 +147,33 @@ struct ServerListView: View {
             }
             .help("Toggle Inspector (⌘I)")
         }
+    }
+}
+
+/// Reads the selection itself, so that picking a row does not rebuild (and re-sort) the list.
+private struct InspectorPane: View {
+    let profiles: [Profile]
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        InspectorView(profile: selection)
+    }
+
+    private var selection: Profile? {
+        guard model.selectedProfileIDs.count == 1, let id = model.selectedProfileIDs.first else { return nil }
+        return profiles.first { $0.id == id }
+    }
+}
+
+/// Reads the progress itself: read in the list's toolbar it rebuilt the whole list on every result.
+private struct StopTestingButton: View {
+    let latency: LatencyService
+
+    var body: some View {
+        Button { latency.cancel() } label: {
+            Label("Stop Testing", systemImage: "stop.circle")
+        }
+        .help("Stop testing (\(latency.completed)/\(latency.total))")
     }
 }
 

@@ -4,7 +4,6 @@ import SwiftUI
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
     @Query(sort: \ServerGroup.sortIndex) private var groups: [ServerGroup]
-    @Query private var profiles: [Profile]
 
     @State private var editing: ServerGroup?
     @State private var pendingDelete: ServerGroup?
@@ -13,7 +12,7 @@ struct SidebarView: View {
         @Bindable var model = model
         List(selection: $model.sidebarSelection) {
             Label("All", systemImage: "square.stack.3d.up")
-                .badge(profiles.count)
+                .badge(groups.reduce(0) { $0 + $1.profiles.count })
                 .tag(SidebarItem.all)
 
             // Pasted configs live in their own group, apart from the subscriptions.

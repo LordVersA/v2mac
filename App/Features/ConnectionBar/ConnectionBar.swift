@@ -27,7 +27,7 @@ struct ConnectionBar: View {
 
     // MARK: Fitting the width
 
-    private enum RateLayout { case inline, stacked }
+    fileprivate enum RateLayout { case inline, stacked }
 
     /// What the bar shows, widest first. Narrow detail columns drop the extras instead of
     /// forcing the window wider: the rates stack to save room, then the address gives way,
@@ -107,9 +107,10 @@ struct ConnectionBar: View {
         ZStack {
             titleBlock.fixedSize()
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { titleWidth = $0 }
-            rateLabels(.inline).font(.caption.monospacedDigit()).fixedSize()
+            // Their width does not depend on the rates (see `RateLabels`), so zero will do.
+            RateLabels(down: 0, up: 0, layout: .inline).font(.caption.monospacedDigit()).fixedSize()
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { inlineRatesWidth = $0 }
-            rateLabels(.stacked).font(.caption.monospacedDigit()).fixedSize()
+            RateLabels(down: 0, up: 0, layout: .stacked).font(.caption.monospacedDigit()).fixedSize()
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { stackedRatesWidth = $0 }
         }
         .hidden()
@@ -130,15 +131,7 @@ struct ConnectionBar: View {
             titleBlock
             Spacer(minLength: Self.minimumGap)
             if let rates, connection.phase == .connected {
-                TrafficSparkline(samples: connection.rateHistory)
-                    .frame(width: sparklineWidth(rates), height: 26)
-                rateLabels(rates)
-                    .font(.caption.monospacedDigit())
-                    .contentTransition(.numericText())
-                    .animation(.smooth, value: connection.downRate)
-                    .animation(.smooth, value: connection.upRate)
-                    .foregroundStyle(.secondary)
-                    .fixedSize()
+                RateReadout(connection: connection, layout: rates, sparklineWidth: sparklineWidth(rates), spacing: Self.spacing)
             }
             TunToggle(connection: connection)
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { tunWidth = $0 }
@@ -158,24 +151,6 @@ struct ConnectionBar: View {
     }
 
     // MARK: Pieces
-
-    @ViewBuilder
-    private func rateLabels(_ layout: RateLayout) -> some View {
-        let down = rateLabel(connection.downRate, systemImage: "arrow.down")
-        let up = rateLabel(connection.upRate, systemImage: "arrow.up")
-        switch layout {
-        case .inline: HStack(spacing: 10) { down; up }
-        case .stacked: VStack(alignment: .leading, spacing: 1) { down; up }
-        }
-    }
-
-    /// Reserves the width of the widest rate, so the graph and its neighbours hold still
-    /// while the numbers change.
-    private func rateLabel(_ rate: Double, systemImage: String) -> some View {
-        Label("1,023 KB/s", systemImage: systemImage)
-            .hidden()
-            .overlay(alignment: .leading) { Label(Format.rate(rate), systemImage: systemImage) }
-    }
 
     private var connectButton: some View {
         Button { connection.toggle() } label: {
@@ -284,5 +259,51 @@ struct ConnectionBar: View {
     private var barGlass: Glass {
         if case .failed = connection.phase { return .regular.tint(.red.opacity(0.22)) }
         return .regular
+    }
+}
+
+/// The graph and the live rates. On their own so that the once-a-second updates do not
+/// re-evaluate the whole bar.
+private struct RateReadout: View {
+    let connection: ConnectionController
+    let layout: ConnectionBar.RateLayout
+    let sparklineWidth: CGFloat
+    let spacing: CGFloat
+
+    var body: some View {
+        HStack(spacing: spacing) {
+            TrafficSparkline(samples: connection.rateHistory)
+                .frame(width: sparklineWidth, height: 26)
+            RateLabels(down: connection.downRate, up: connection.upRate, layout: layout)
+                .font(.caption.monospacedDigit())
+                .contentTransition(.numericText())
+                .animation(.smooth, value: connection.downRate)
+                .animation(.smooth, value: connection.upRate)
+                .foregroundStyle(.secondary)
+                .fixedSize()
+        }
+    }
+}
+
+private struct RateLabels: View {
+    let down: Double
+    let up: Double
+    let layout: ConnectionBar.RateLayout
+
+    var body: some View {
+        let down = label(down, systemImage: "arrow.down")
+        let up = label(up, systemImage: "arrow.up")
+        switch layout {
+        case .inline: HStack(spacing: 10) { down; up }
+        case .stacked: VStack(alignment: .leading, spacing: 1) { down; up }
+        }
+    }
+
+    /// Reserves the width of the widest rate, so the graph and its neighbours hold still
+    /// while the numbers change.
+    private func label(_ rate: Double, systemImage: String) -> some View {
+        Label("1,023 KB/s", systemImage: systemImage)
+            .hidden()
+            .overlay(alignment: .leading) { Label(Format.rate(rate), systemImage: systemImage) }
     }
 }
