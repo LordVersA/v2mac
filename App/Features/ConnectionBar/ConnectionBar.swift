@@ -48,7 +48,10 @@ struct ConnectionBar: View {
                     .fixedSize()
             }
             TunToggle(connection: connection)
-            RoutingModeMenu(connection: connection, packs: model.regionPacks) { model.showRegionsSheet = true }
+            // A custom config has no mode to pick; the status line says so instead.
+            if !connection.activeIsCustom {
+                RoutingModeMenu(connection: connection, packs: model.regionPacks) { model.showRegionsSheet = true }
+            }
             if showAddress { addressMenu }
         }
         .padding(.leading, 8)
@@ -104,6 +107,10 @@ struct ConnectionBar: View {
         connection.activeServer?.name ?? "No server selected"
     }
 
+    private var routingTitle: String {
+        connection.activeIsCustom ? "Custom routing" : connection.routingMode.title
+    }
+
     @ViewBuilder
     private var subtitle: some View {
         switch connection.phase {
@@ -117,9 +124,9 @@ struct ConnectionBar: View {
         case .switching:
             status("Switching…")
         case .connected:
-            status("Connected · \(connection.routingMode.title)")
+            status("Connected · \(routingTitle)")
         case .off:
-            status(connection.activeServer == nil ? "Double-click a server to connect" : "Off · \(connection.routingMode.title)")
+            status(connection.activeServer == nil ? "Double-click a server to connect" : "Off · \(routingTitle)")
         }
     }
 
@@ -128,6 +135,7 @@ struct ConnectionBar: View {
     private func status(_ text: String) -> some View {
         let note = connection.tun.statusNote
         Text(note.map { "\(text) · \($0)" } ?? text).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            .help(connection.activeIsCustom ? "Routing is managed by this config" : "")
         if let failure = connection.tun.failureMessage {
             Text(failure).font(.caption).foregroundStyle(.orange).lineLimit(2)
         }
