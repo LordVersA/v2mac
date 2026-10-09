@@ -35,7 +35,10 @@ final class UpdateService {
     private(set) var appProgress: DownloadProgress?
     /// Smoothed download speed in bytes per second.
     private(set) var appDownloadRate: Double?
-    private var rateSample: (time: ContinuousClock.Instant, bytes: Int64)?
+    private(set) var coreProgress: DownloadProgress?
+    private(set) var coreDownloadRate: Double?
+    private var appRate = RateTracker()
+    private var coreRate = RateTracker()
 
     /// Routes for downloads: local proxy first when the core runs, then direct (spec 11).
     var downloadRoutes: () -> [FetchRoute] = { [.direct] }
@@ -90,6 +93,9 @@ final class UpdateService {
     func installCore(_ release: CoreRelease) async {
         guard coreStatus != .installing else { return }
         coreStatus = .installing
+        coreProgress = nil
+        coreDownloadRate = nil
+        coreRate = RateTracker()
         let current = AppPaths.runDirectory.appendingPathComponent("config.json")
         do {
             let installed = try await CoreUpdater.install(
@@ -97,7 +103,10 @@ final class UpdateService {
                 downloader: downloader,
                 coreDirectory: AppPaths.coreDirectory,
                 assetDirectory: AppPaths.assetsDirectory,
-                currentConfig: current
+                currentConfig: current,
+                onProgress: { [weak self] progress in
+                    Task { @MainActor in self?.updateCoreProgress(progress) }
+                }
             )
             coreStatus = .installed(installed.version)
             await refreshCoreInfo()
@@ -147,7 +156,7 @@ final class UpdateService {
         appStatus = .installing(release)
         appProgress = nil
         appDownloadRate = nil
-        rateSample = nil
+        appRate = RateTracker()
         do {
             let target = Bundle.main.bundleURL
             try AppInstaller.checkReplaceable(target)
@@ -178,20 +187,14 @@ final class UpdateService {
 
     private func updateProgress(_ progress: DownloadProgress) {
         guard case .installing = appStatus else { return }
-        let now = ContinuousClock.now
-        if let sample = rateSample, progress.received >= sample.bytes {
-            let seconds = (now - sample.time) / .seconds(1)
-            if seconds >= 0.5 {
-                let instant = Double(progress.received - sample.bytes) / seconds
-                appDownloadRate = appDownloadRate.map { $0 * 0.6 + instant * 0.4 } ?? instant
-                rateSample = (now, progress.received)
-            }
-        } else {
-            // First report, or a fallback route restarted the download.
-            rateSample = (now, progress.received)
-            appDownloadRate = nil
-        }
+        appDownloadRate = appRate.add(progress.received)
         appProgress = progress
+    }
+
+    private func updateCoreProgress(_ progress: DownloadProgress) {
+        guard coreStatus == .installing else { return }
+        coreDownloadRate = coreRate.add(progress.received)
+        coreProgress = progress
     }
 
     /// Checks shortly after launch, then re-evaluates hourly (the 24 h throttle applies).
@@ -204,5 +207,29 @@ final class UpdateService {
                 try? await Task.sleep(for: .seconds(3600))
             }
         }
+    }
+}
+
+/// Smoothed bytes-per-second from cumulative byte counts.
+struct RateTracker {
+    private var sample: (time: ContinuousClock.Instant, bytes: Int64)?
+    private var rate: Double?
+
+    /// Feed the running total; returns the current speed, nil until one can be measured.
+    mutating func add(_ bytes: Int64) -> Double? {
+        let now = ContinuousClock.now
+        if let sample, bytes >= sample.bytes {
+            let seconds = (now - sample.time) / .seconds(1)
+            if seconds >= 0.5 {
+                let instant = Double(bytes - sample.bytes) / seconds
+                rate = rate.map { $0 * 0.6 + instant * 0.4 } ?? instant
+                self.sample = (now, bytes)
+            }
+        } else {
+            // First report, or a fallback route restarted the download.
+            sample = (now, bytes)
+            rate = nil
+        }
+        return rate
     }
 }

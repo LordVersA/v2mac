@@ -61,14 +61,13 @@ private struct GeneralSettings: View {
     }
 }
 
-/// Percent, size and speed of the running app download.
-struct AppDownloadProgress: View {
-    @Environment(AppModel.self) private var model
-    let release: AppRelease
+/// Percent, size and speed of a running download.
+struct DownloadProgressView: View {
+    let title: String
+    let progress: DownloadProgress?
+    let rate: Double?
 
     var body: some View {
-        let updates = model.updates
-        let progress = updates.appProgress
         VStack(alignment: .leading, spacing: 4) {
             if let fraction = progress?.fraction {
                 ProgressView(value: fraction)
@@ -76,15 +75,15 @@ struct AppDownloadProgress: View {
                 ProgressView().progressViewStyle(.linear)
             }
             HStack {
-                Text("Downloading V2Mac \(release.version)…")
+                Text(title)
                 Spacer()
-                Text(detail(progress, rate: updates.appDownloadRate)).monospacedDigit()
+                Text(detail).monospacedDigit()
             }
             .font(.caption).foregroundStyle(.secondary)
         }
     }
 
-    private func detail(_ progress: DownloadProgress?, rate: Double?) -> String {
+    private var detail: String {
         guard let progress else { return "Starting…" }
         var parts: [String] = []
         if let fraction = progress.fraction { parts.append("\(Int(fraction * 100))%") }
@@ -95,6 +94,20 @@ struct AppDownloadProgress: View {
         }
         if let rate { parts.append(Format.rate(rate)) }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// The running app-update download.
+struct AppDownloadProgress: View {
+    @Environment(AppModel.self) private var model
+    let release: AppRelease
+
+    var body: some View {
+        DownloadProgressView(
+            title: "Downloading V2Mac \(release.version)…",
+            progress: model.updates.appProgress,
+            rate: model.updates.appDownloadRate
+        )
     }
 }
 
@@ -376,7 +389,7 @@ private struct CoreSettings: View {
         case .available(let release):
             LabeledContent("Available", value: release.version + (release.publishedAt.map { " · " + $0.formatted(date: .abbreviated, time: .omitted) } ?? ""))
         case .installing:
-            HStack { ProgressView().controlSize(.small); Text("Downloading and verifying…") }
+            DownloadProgressView(title: "Downloading core…", progress: updates.coreProgress, rate: updates.coreDownloadRate)
         case .installed(let version):
             Label("Installed \(version).", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
         case .failed(let message):

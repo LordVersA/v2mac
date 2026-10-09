@@ -151,9 +151,10 @@ public enum CoreUpdater {
         downloader: FileDownloader,
         coreDirectory: URL,
         assetDirectory: URL,
-        currentConfig: URL? = nil
+        currentConfig: URL? = nil,
+        onProgress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> Installed {
-        let zip = try await downloader.download(release.assetURL)
+        let zip = try await downloader.download(release.assetURL, onProgress: onProgress)
         let expected = try parseDigest(try await downloader.download(release.checksumURL))
         guard RegionPackInstaller.sha256(zip) == expected else {
             throw DownloadError.checksumMismatch(file: assetName)
