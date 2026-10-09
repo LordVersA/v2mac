@@ -33,6 +33,18 @@ To proxy the whole Mac instead, turn on the **TUN** switch next to the routing m
 
 Closing the window keeps the proxy running. Quit with ⌘Q to stop it.
 
+## Leak protection in Chrome: noleaker
+
+A proxy alone does not stop the browser from giving you away: WebRTC can expose your real IP, DNS and QUIC can go around the proxy, and your timezone and language still say where you are. For Chrome and other Chromium-based browsers, use [**noleaker**](https://github.com/LordVersA/noleaker), a free, open-source extension from the same author that pairs with V2Mac:
+
+- Sends all browser traffic and DNS lookups through V2Mac's SOCKS5 proxy, and blocks WebRTC and QUIC leaks.
+- Matches timezone, language and geolocation to the country of your server.
+- Kill switch: if the proxy goes down, requests are blocked instead of going out directly.
+- Built-in leak test that checks each of these and says which setting fixes a failure.
+- Compatibility mode lets Iran-hosted sites skip the proxy.
+
+Setup: install noleaker from its [latest release](https://github.com/LordVersA/noleaker/releases/latest), add a proxy with host `127.0.0.1` and port `10808`, and switch **Protection** on. noleaker cannot send a proxy username or password, so leave those empty in V2Mac's settings. It is tested on Chrome 120 and newer.
+
 ## Build from source
 
 ```sh
