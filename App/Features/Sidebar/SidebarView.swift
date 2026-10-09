@@ -38,7 +38,7 @@ struct SidebarView: View {
             Button("Delete", role: .destructive) { model.deleteGroup(group) }
         } message: { group in
             if let active = model.connection.activeServer, group.profiles.contains(where: { $0.id == active.id }) {
-                Text("This group contains the active server. v2mac will disconnect.")
+                Text("This group contains the active server. V2Mac will disconnect.")
             } else {
                 Text("Its servers will be removed.")
             }

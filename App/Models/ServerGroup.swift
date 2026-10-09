@@ -19,6 +19,10 @@ final class ServerGroup {
     var expiresAt: Date?
     var uploadBytes: Int64?
     var downloadBytes: Int64?
+    /// A client User-Agent that made this provider send its usage headers (found automatically).
+    var userAgent: String?
+    /// True once the automatic User-Agent search has run, so it is not repeated on every update.
+    var userAgentProbed: Bool = false
     var supportURL: String?
     var webPageURL: String?
     @Relationship(deleteRule: .cascade, inverse: \Profile.group)

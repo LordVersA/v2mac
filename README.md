@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/images/banner.jpg" alt="v2mac" width="720"></p>
 
-# v2mac
+# V2Mac
 
 Native macOS menu bar shell around [Xray-core](https://github.com/XTLS/Xray-core). It imports subscription links, runs the core, and exposes the connection as a local SOCKS5 + HTTP proxy on `127.0.0.1:10808`. It has no TUN mode and does not reimplement any proxy protocol. Design and behaviour are in [docs/SPEC.md](docs/SPEC.md).
 
@@ -8,16 +8,16 @@ Requires macOS 26 or later on Apple Silicon.
 
 ## Install
 
-1. Download `v2mac-<version>.dmg` from the Releases page and compare its SHA-256 with the `.sha256` file next to it:
+1. Download `V2Mac-<version>.dmg` from the Releases page and compare its SHA-256 with the `.sha256` file next to it:
    ```sh
-   shasum -a 256 v2mac-<version>.dmg
+   shasum -a 256 V2Mac-<version>.dmg
    ```
-2. Open the DMG and drag **v2mac** onto **Applications**.
+2. Open the DMG and drag **V2Mac** onto **Applications**.
 3. **First launch.** The app is ad-hoc signed, not notarized, so macOS blocks it the first time:
-   - Open v2mac once (it will be refused), then go to **System Settings → Privacy & Security**, scroll to the message about v2mac and click **Open Anyway**.
+   - Open V2Mac once (it will be refused), then go to **System Settings → Privacy & Security**, scroll to the message about V2Mac and click **Open Anyway**.
    - Or remove the quarantine flag from a terminal:
      ```sh
-     xattr -dr com.apple.quarantine /Applications/v2mac.app
+     xattr -dr com.apple.quarantine /Applications/V2Mac.app
      ```
    Right-click → Open no longer works on current macOS, and Homebrew does not avoid this step.
 4. **Connect.** Click **Add Subscription**, paste the subscription URL, double-click a server (or select it and press the power button). The menu bar icon fills in when the proxy is up.
@@ -27,7 +27,7 @@ Closing the window keeps the proxy running; **Quit** (⌘Q) stops it. In Setting
 
 ## Updates
 
-- **App:** v2mac checks its releases page once a day and shows "Update available" in the menu bar panel. It never installs anything by itself; download the new DMG and replace the app.
+- **App:** V2Mac checks its releases page once a day and shows "Update available" in the menu bar panel. It never installs anything by itself; download the new DMG and replace the app.
 - **Xray core:** Settings → Core → Check for Update. Downloads are checked against the published SHA-256 and self-tested before they replace the bundled core. "Revert to Bundled" undoes it.
 - **Region rule files:** each enabled region updates on its own schedule (Never / Daily / Weekly) or with Update Now.
 

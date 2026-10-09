@@ -20,7 +20,7 @@ struct V2MacApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("v2mac", id: "main") {
+        Window("V2Mac", id: "main") {
             MainView()
                 .environment(model)
                 .modelContainer(model.container)

@@ -5,18 +5,22 @@ import V2MacCore
 /// Background writer for subscription data (spec 6.4 reconcile).
 @ModelActor
 actor SubscriptionStore {
-    func createGroup(url: String, name: String, result: SubscriptionResult, viaProxy: Bool) throws -> UUID {
+    func createGroup(url: String, name: String, outcome: FetchOutcome, viaProxy: Bool) throws -> UUID {
         let all = try modelContext.fetch(FetchDescriptor<ServerGroup>())
         let group = ServerGroup(name: name, subscriptionURL: url, sortIndex: (all.map(\.sortIndex).max() ?? -1) + 1)
         modelContext.insert(group)
-        reconcile(group, with: result, viaProxy: viaProxy, activeProfileID: nil)
+        reconcile(group, with: outcome.result, viaProxy: viaProxy, activeProfileID: nil)
+        group.userAgent = outcome.userAgent
+        group.userAgentProbed = outcome.probed
         try modelContext.save()
         return group.id
     }
 
-    func apply(_ result: SubscriptionResult, to groupID: UUID, viaProxy: Bool, activeProfileID: UUID?) throws {
+    func apply(_ outcome: FetchOutcome, to groupID: UUID, viaProxy: Bool, activeProfileID: UUID?) throws {
         guard let group = try fetchGroup(groupID) else { return }
-        reconcile(group, with: result, viaProxy: viaProxy, activeProfileID: activeProfileID)
+        reconcile(group, with: outcome.result, viaProxy: viaProxy, activeProfileID: activeProfileID)
+        group.userAgent = outcome.userAgent
+        group.userAgentProbed = outcome.probed
         try modelContext.save()
     }
 
@@ -57,14 +61,17 @@ actor SubscriptionStore {
         }
 
         let m = result.metadata
-        group.serverIntervalHours = m.updateIntervalHours
-        group.usedBytes = m.usedBytes
-        group.totalBytes = m.totalBytes
-        group.expiresAt = m.expiresAt
-        group.uploadBytes = m.uploadBytes
-        group.downloadBytes = m.downloadBytes
-        group.supportURL = m.supportURL?.absoluteString
-        group.webPageURL = m.webPageURL?.absoluteString
+        group.serverIntervalHours = m.updateIntervalHours ?? group.serverIntervalHours
+        // A response without usage headers keeps the last known account info instead of blanking it.
+        if m.hasUsageInfo {
+            group.usedBytes = m.usedBytes
+            group.totalBytes = m.totalBytes
+            group.expiresAt = m.expiresAt
+            group.uploadBytes = m.uploadBytes
+            group.downloadBytes = m.downloadBytes
+        }
+        group.supportURL = m.supportURL?.absoluteString ?? group.supportURL
+        group.webPageURL = m.webPageURL?.absoluteString ?? group.webPageURL
         group.lastUpdatedAt = Date()
         group.lastUpdateViaProxy = viaProxy
         group.lastSkippedCount = result.skipped.count

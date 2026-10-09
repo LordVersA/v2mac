@@ -56,12 +56,20 @@ struct ServerListView: View {
                         isConnected: model.connection.phase == .connected
                     )
                 }
-                .width(22)
+                .width(14)
                 .customizationID("active")
 
-                TableColumn("Name", value: \.name) { row in
+                TableColumn("") { row in
+                    if let flag = row.flag {
+                        Text(flag).font(.system(size: 15)).accessibilityLabel("Flag")
+                    }
+                }
+                .width(24)
+                .customizationID("flag")
+
+                TableColumn("Name", value: \.displayName) { row in
                     HStack(spacing: 6) {
-                        Text(row.name).lineLimit(1)
+                        Text(row.displayName).lineLimit(1)
                         if row.hasWarnings {
                             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                                 .accessibilityLabel("Has warnings")

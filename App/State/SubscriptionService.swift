@@ -15,8 +15,24 @@ enum AddSubscriptionError: LocalizedError {
     }
 }
 
+/// A fetched subscription plus the User-Agent that produced it.
+struct FetchOutcome: Sendable {
+    var result: SubscriptionResult
+    var userAgent: String?
+    var probed: Bool
+}
+
+extension SubscriptionMetadata {
+    /// The provider sent traffic or expiry information.
+    var hasUsageInfo: Bool { usedBytes != nil || totalBytes != nil || expiresAt != nil }
+}
+
 @MainActor @Observable
 final class SubscriptionService {
+    /// Client names many panels recognise before they send usage headers. Tried only when the
+    /// default User-Agent gets none, and only once per subscription.
+    private static let compatibleAgents = ["Happ/1.0", "Hiddify/2.0", "Streisand/1.0", "v2box/1.0"]
+
     private(set) var updatingGroupIDs: Set<UUID> = []
 
     private let container: ModelContainer
@@ -30,7 +46,23 @@ final class SubscriptionService {
         self.connection = connection
     }
 
-    private var fetcher: SubscriptionFetcher { SubscriptionFetcher(userAgent: Prefs.userAgent) }
+    /// Fetches with the remembered or default User-Agent. When the response carries no usage
+    /// info, other client User-Agents are tried once, and the first that makes the provider send
+    /// it is remembered for this subscription. A User-Agent set by hand in Settings is never replaced.
+    private func fetch(url: URL, route: FetchRoute, rememberedAgent: String?, alreadyProbed: Bool) async throws -> FetchOutcome {
+        let first = try await SubscriptionFetcher(userAgent: rememberedAgent ?? Prefs.userAgent).fetch(url: url, route: route)
+        let customised = !(UserDefaults.standard.string(forKey: "userAgent") ?? "").isEmpty
+        if first.metadata.hasUsageInfo || rememberedAgent != nil || alreadyProbed || customised {
+            return FetchOutcome(result: first, userAgent: rememberedAgent, probed: alreadyProbed || first.metadata.hasUsageInfo)
+        }
+        for agent in Self.compatibleAgents {
+            if let alternative = try? await SubscriptionFetcher(userAgent: agent).fetch(url: url, route: route),
+               alternative.metadata.hasUsageInfo, !alternative.profiles.isEmpty {
+                return FetchOutcome(result: alternative, userAgent: agent, probed: true)
+            }
+        }
+        return FetchOutcome(result: first, userAgent: nil, probed: true)
+    }
 
     private func route(viaProxy: Bool) throws -> FetchRoute {
         guard viaProxy else { return .direct }
@@ -50,10 +82,11 @@ final class SubscriptionService {
         if let existing = existingGroupID(url: trimmed) { throw AddSubscriptionError.duplicate(existing) }
 
         let route = try route(viaProxy: viaProxy)
-        let result = try await fetcher.fetch(url: url, route: route)
+        let outcome = try await fetch(url: url, route: route, rememberedAgent: nil, alreadyProbed: false)
+        let result = outcome.result
         let typed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let groupName = !typed.isEmpty ? typed : (result.metadata.title ?? url.host ?? "Subscription")
-        return try await store.createGroup(url: trimmed, name: groupName, result: result, viaProxy: viaProxy)
+        return try await store.createGroup(url: trimmed, name: groupName, outcome: outcome, viaProxy: viaProxy)
     }
 
     func update(groupID: UUID, viaProxy: Bool) async {
@@ -65,8 +98,11 @@ final class SubscriptionService {
         updatingGroupIDs.insert(groupID)
         defer { updatingGroupIDs.remove(groupID) }
         do {
-            let result = try await fetcher.fetch(url: url, route: try route(viaProxy: viaProxy))
-            try await store.apply(result, to: groupID, viaProxy: viaProxy, activeProfileID: connection.activeServer?.id)
+            let outcome = try await fetch(
+                url: url, route: try route(viaProxy: viaProxy),
+                rememberedAgent: group.userAgent, alreadyProbed: group.userAgentProbed
+            )
+            try await store.apply(outcome, to: groupID, viaProxy: viaProxy, activeProfileID: connection.activeServer?.id)
         } catch {
             try? await store.recordFailure(groupID: groupID, message: error.localizedDescription)
         }

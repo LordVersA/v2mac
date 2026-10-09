@@ -37,7 +37,7 @@ final class AppModel {
         do {
             container = try ModelContainer(for: ServerGroup.self, Profile.self, configurations: configuration)
         } catch {
-            fatalError("Could not open the v2mac database: \(error)")
+            fatalError("Could not open the V2Mac database: \(error)")
         }
         connection = ConnectionController(logs: logs)
         subscriptions = SubscriptionService(container: container, connection: connection)

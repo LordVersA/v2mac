@@ -54,6 +54,11 @@ final class Profile {
         originalLink = parsed.originalLink
         warnings = parsed.warnings
         isStale = false
+        // Results measured before the refresh no longer describe this server.
+        delayMs = nil
+        delayState = .untested
+        delayKindRaw = nil
+        delayTestedAt = nil
     }
 }
 
@@ -77,6 +82,8 @@ extension Profile {
 struct ServerRow: Identifiable, Hashable, Sendable {
     let id: UUID
     let name: String
+    let flag: String?
+    let displayName: String
     let typeSummary: String
     let address: String
     let delayMs: Int?
@@ -90,6 +97,9 @@ struct ServerRow: Identifiable, Hashable, Sendable {
     init(_ p: Profile) {
         id = p.id
         name = p.name
+        let parts = ServerName(p.name)
+        flag = parts.flag
+        displayName = parts.title
         typeSummary = p.typeSummary
         address = p.address
         delayMs = p.delayMs

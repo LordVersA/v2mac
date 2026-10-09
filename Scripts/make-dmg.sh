@@ -27,7 +27,7 @@ xcodebuild -project v2mac.xcodeproj -scheme v2mac -configuration Release \
   CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
   build | tail -n 3
 
-APP="$BUILD_DIR/Build/Products/Release/v2mac.app"
+APP="$BUILD_DIR/Build/Products/Release/V2Mac.app"
 [[ -d "$APP" ]] || { echo "error: build produced no app" >&2; exit 1; }
 
 # The helper must be signed before the app that contains it.
@@ -39,13 +39,13 @@ CODESIGN_ARGS=(--force --sign "$SIGN_IDENTITY")
 
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 mkdir -p "$OUT_DIR"
-DMG="$OUT_DIR/v2mac-$VERSION.dmg"
+DMG="$OUT_DIR/V2Mac-$VERSION.dmg"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 rm -f "$DMG"
-hdiutil create -quiet -volname "v2mac" -srcfolder "$STAGE" -format UDZO -ov "$DMG"
+hdiutil create -quiet -volname "V2Mac" -srcfolder "$STAGE" -format UDZO -ov "$DMG"
 
 if [[ "$SIGN_IDENTITY" != "-" ]]; then
   /usr/bin/codesign --force --sign "$SIGN_IDENTITY" --timestamp "$DMG"

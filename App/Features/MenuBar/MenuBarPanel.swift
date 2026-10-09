@@ -7,11 +7,11 @@ struct MenuBarIcon: View {
     var body: some View {
         switch phase {
         case .off, .connecting, .switching:
-            Image("MenuBarGlyphOutline").accessibilityLabel("v2mac, off")
+            Image("MenuBarGlyphOutline").accessibilityLabel("V2Mac, off")
         case .connected:
-            Image("MenuBarGlyphFilled").accessibilityLabel("v2mac, connected")
+            Image("MenuBarGlyphFilled").accessibilityLabel("V2Mac, connected")
         case .failed:
-            Image(systemName: "exclamationmark.triangle.fill").accessibilityLabel("v2mac, connection failed")
+            Image(systemName: "exclamationmark.triangle.fill").accessibilityLabel("V2Mac, connection failed")
         }
     }
 }
@@ -107,14 +107,14 @@ struct MenuBarPanel: View {
             if let release = model.updates.availableAppUpdate {
                 Divider()
                 Link(destination: release.pageURL) {
-                    Label("Update available: v2mac \(release.version)", systemImage: "arrow.down.circle.fill")
+                    Label("Update available: V2Mac \(release.version)", systemImage: "arrow.down.circle.fill")
                 }
                 .font(.callout)
             }
 
             Divider()
             HStack {
-                Button("Open v2mac") { model.openMainWindow(openWindow) }
+                Button("Open V2Mac") { model.openMainWindow(openWindow) }
                 Button("Settings…") { model.openSettings(openSettings) }
                 Spacer()
                 Button("Quit") { NSApp.terminate(nil) }

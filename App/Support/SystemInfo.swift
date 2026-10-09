@@ -17,7 +17,7 @@ enum SystemInfo {
             var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
             guard getnameinfo(addr, socklen_t(addr.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0
             else { continue }
-            let ip = String(cString: host)
+            let ip = String(decoding: host.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
             if ip.hasPrefix("169.254.") { continue }
             if name == "en0" { return ip }
             fallback = fallback ?? ip

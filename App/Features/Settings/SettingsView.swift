@@ -29,10 +29,10 @@ private struct GeneralSettings: View {
 
     var body: some View {
         Form {
-            Toggle("Launch at login", isOn: Binding(get: { loginEnabled }, set: setLogin))
+            Toggle("Launch at login", isOn: Binding(get: { loginEnabled }, set: { setLogin($0) }))
             if SMAppService.mainApp.status == .requiresApproval {
                 HStack {
-                    Text("Approve v2mac in System Settings → Login Items.")
+                    Text("Approve V2Mac in System Settings → Login Items.")
                         .font(.caption).foregroundStyle(.secondary)
                     Button("Open Login Items") { SMAppService.openSystemSettingsLoginItems() }
                         .controlSize(.small)
@@ -68,13 +68,13 @@ private struct AppUpdateRow: View {
         HStack {
             switch model.updates.appStatus {
             case .available(let release):
-                Label("v2mac \(release.version) is available.", systemImage: "arrow.down.circle.fill")
+                Label("V2Mac \(release.version) is available.", systemImage: "arrow.down.circle.fill")
                 Link("View Release", destination: release.pageURL)
             case .checking:
                 ProgressView().controlSize(.small)
                 Text("Checking…").foregroundStyle(.secondary)
             case .upToDate:
-                Label("v2mac is up to date.", systemImage: "checkmark.circle").foregroundStyle(.secondary)
+                Label("V2Mac is up to date.", systemImage: "checkmark.circle").foregroundStyle(.secondary)
             case .unavailable(let message):
                 Text(message).font(.caption).foregroundStyle(.secondary)
             case .idle:
@@ -358,11 +358,22 @@ private struct AdvancedSettings: View {
 private struct AboutSettings: View {
     var body: some View {
         Form {
+            Section {
+                HStack(spacing: 4) {
+                    Spacer()
+                    Text("Made with")
+                    Image(systemName: "heart.fill").foregroundStyle(.red).accessibilityLabel("love")
+                    Text("by")
+                    Link("LordVersa", destination: URL(string: "https://github.com/LordVersA")!)
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+            }
             LabeledContent("Version", value: Prefs.appVersion)
             LabeledContent("Xray-core") {
                 Link("github.com/XTLS/Xray-core", destination: URL(string: "https://github.com/XTLS/Xray-core")!)
             }
-            Text("v2mac is GPL-3.0 software. It bundles Xray-core (MPL-2.0) and v2fly/Loyalsoldier rule data; see THIRD_PARTY.md for licences and attributions.")
+            Text("V2Mac is GPL-3.0 software. It bundles Xray-core (MPL-2.0) and v2fly/Loyalsoldier rule data; see THIRD_PARTY.md for licences and attributions.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
