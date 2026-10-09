@@ -40,3 +40,23 @@ struct RoutingModeMenu: View {
         }
     }
 }
+
+/// TUN mode switch shared by the connection bar and the menu bar panel.
+struct TunToggle: View {
+    let connection: ConnectionController
+    var showsLabel = true
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { connection.tun.isEnabled },
+            set: { on in connection.setTunEnabled(on) }
+        )) {
+            if showsLabel { Text("TUN").font(.caption) }
+        }
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+        .fixedSize()
+        .help("TUN mode: route all traffic on this Mac through the proxy. Asks for an administrator password once each time V2Mac is opened.")
+        .accessibilityLabel("TUN mode")
+    }
+}

@@ -8,7 +8,8 @@ v2mac is a small, native macOS menu bar app that acts as a shell around
 [Xray-core](https://github.com/XTLS/Xray-core). It imports subscription links,
 shows their servers in groups, lets the user activate one, and serves the
 connection as a local SOCKS5 + HTTP proxy. It does not reimplement any proxy
-protocol and has no TUN mode.
+protocol. An optional TUN mode (section 9.5, added after v1) routes all traffic
+on the Mac through the same connection.
 
 ---
 
@@ -30,7 +31,7 @@ protocol and has no TUN mode.
 
 | Not in v1 | Note |
 |---|---|
-| TUN / system-wide VPN | Explicitly excluded. |
+| TUN / system-wide VPN | Excluded from v1; added later as TUN mode (section 9.5). |
 | Setting the macOS system proxy | The app only exposes local ports. |
 | Adding single share links, QR import, file import, URL schemes | Subscription URL is the only input. |
 | Manual (non-subscription) groups | Model allows them later; no UI. |
@@ -84,6 +85,7 @@ Answers given during the design interview.
 | 30 | Licence | GPL-3.0. |
 | 31 | Release | Ad-hoc signed DMG on GitHub Releases; update check via GitHub; notarization later. |
 | 32 | Project layout | Thin app target + local Swift package `V2MacCore`; XcodeGen; Swift Testing. |
+| 33 | TUN mode | Added after v1. Root helper started through the administrator prompt once per app session, no Network Extension, no paid developer account. Off by default. |
 
 ### 2.1 Defaults chosen by the author (not asked; change freely)
 
@@ -576,6 +578,58 @@ stopped ──start──▶ starting ──ready──▶ running ──stop─
 
 Every failed state offers "Show Logs", which opens the log panel.
 
+### 9.5 TUN mode
+
+Off by default. A switch in the connection bar and in the menu bar panel turns
+it on; the choice is remembered (`tunEnabled`). Changing it while connected
+restarts the core.
+
+**Two processes.** The core keeps running as the user. A second Xray, the
+*forwarder*, runs as root with a fixed config: one `tun` inbound
+(`autoSystemRoutingTable` for `0.0.0.0/0` and `::/0`, `autoOutboundsInterface:
+auto`, sniffing that overrides the destination) and a SOCKS outbound to a
+loopback port of the core. Server and subscription configs never run as root.
+
+**Core side.** While TUN mode is on the core config gets a second inbound,
+`tun-in` (SOCKS, `127.0.0.1`, no auth, UDP on, port fixed for the session), and
+every outbound that dials out is bound to the physical interface with
+`streamSettings.sockopt.interface`, so the core's own connections do not
+re-enter the TUN. Outbounds that already name an interface, that target this
+Mac, or that never dial (`blackhole`, `dns`, `loopback`) are left alone. Rules
+of a custom profile that named its proxy inbounds also apply to `tun-in`.
+Traffic counters are the sum of `mixed-in` and `tun-in`.
+
+**Root helper.** No Network Extension, so no paid developer account. On the
+first connect with TUN mode on, the app runs a shell script as root through
+`osascript` ("with administrator privileges"): one password prompt per app
+session. The helper:
+
+- copies the core binary and the forwarder config to `/var/run/v2mac-tun-<uid>/`
+  (root-owned) and only ever runs those copies;
+- takes its orders from two flag files in `run/`: `tun.session` (stay alive) and
+  `tun.on` (forwarder up). They carry no data, so a process without root can
+  only switch the TUN on or off, not change what runs as root;
+- stops the forwarder and exits when the app's process is gone or `tun.session`
+  is removed. Routes belong to the `utun` interface and vanish with it, also
+  after a crash. Nothing is installed and nothing survives a reboot.
+
+**Lifecycle.** The TUN is up while the core is connecting, switching or
+connected, and comes down on disconnect, on a core that stays failed, and on
+quit. Cancelling the prompt turns TUN mode off and connects without it. A
+network change always restarts the core in TUN mode, because the binding names
+one interface; the app's own `utun` is not counted as a network change.
+
+**DNS.** Not changed. The forwarder sends port 53 straight out, as before the
+TUN came up; through the core it would deadlock, because the core needs the
+resolver to find its own server. Poisoned answers are tolerated for HTTP, TLS
+and QUIC because the sniffed name replaces the resolved address. DNS queries
+themselves are not hidden from the local network. Routing DNS through the proxy
+is future work.
+
+**Known limits.** "Without proxy" downloads (subscriptions, updates) still go
+through the tunnel while it is up. Latency tests are bound to the physical
+interface so they keep measuring the servers.
+
 ---
 
 ## 10. Latency testing
@@ -852,7 +906,13 @@ connected restarts the core.
 │  └─ region-<id>-geoip.dat, region-<id>-geosite.dat
 └─ run/
    ├─ config.json                0600, exists only while running
-   └─ xray.pid
+   ├─ xray.pid
+   ├─ tun-helper.sh, tun-config.json   written when a TUN session starts
+   └─ tun.session, tun.on        flag files for the TUN helper (section 9.5)
+
+/var/run/v2mac-tun-<uid>/        root-owned, exists only while the TUN helper runs
+├─ xray, config.json             the copies the helper runs
+└─ pid, xray.log
 
 v2mac.app/Contents/
 ├─ MacOS/v2mac
@@ -947,6 +1007,9 @@ v2mac/
   upstream.
 - The app only ever terminates a process whose PID it recorded and whose
   executable path matches its own core.
+- TUN mode is the only part that runs as root, and only after the system's
+  administrator prompt. What runs as root is a fixed forwarder config and a
+  copy of the core in a root-owned directory; see section 9.5.
 
 ---
 

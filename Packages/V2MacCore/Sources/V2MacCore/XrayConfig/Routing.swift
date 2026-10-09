@@ -68,15 +68,21 @@ extension ConfigBuilder {
     public static func build(outbound: JSONValue, options: RunOptions, routing plan: RoutingPlan) throws -> JSONValue {
         guard case .object = outbound else { throw ConfigBuilderError.outboundNotAnObject }
         let sections = routingSections(for: plan)
+        var proxy = outbound.setting("tag", to: .string(proxyTag))
+        var direct: JSONValue = ["tag": .string(directTag), "protocol": "freedom"]
+        if let tun = options.tun {
+            proxy = binding(proxy, to: tun.outboundInterface)
+            direct = binding(direct, to: tun.outboundInterface)
+        }
         var config: JSONValue = [
             "log": logSection(options),
             "stats": [:],
             "policy": statsPolicy,
             "metrics": metricsSection(port: options.metricsPort),
-            "inbounds": [mixedInbound(options.inbound)],
+            "inbounds": inbounds(for: options),
             "outbounds": [
-                outbound.setting("tag", to: .string(proxyTag)),
-                ["tag": .string(directTag), "protocol": "freedom"],
+                proxy,
+                direct,
                 ["tag": .string(blockTag), "protocol": "blackhole"],
             ],
             "routing": sections.routing,
@@ -86,6 +92,7 @@ extension ConfigBuilder {
     }
 
     /// Spec 8.2: run a full Xray config as written, replacing only inbounds, log, metrics and stats.
+    /// In TUN mode its outbounds are also bound to the physical interface.
     public static func buildCustom(config: JSONValue, options: RunOptions) throws -> JSONValue {
         guard case .object = config else { throw ConfigBuilderError.outboundNotAnObject }
 
@@ -100,7 +107,7 @@ extension ConfigBuilder {
         }
 
         var out = config
-            .setting("inbounds", to: [mixedInbound(options.inbound)])
+            .setting("inbounds", to: inbounds(for: options))
             .setting("log", to: logSection(options))
             .setting("metrics", to: metricsSection(port: options.metricsPort))
             .setting("stats", to: config["stats"] ?? [:])
@@ -112,6 +119,8 @@ extension ConfigBuilder {
         policy = policy.setting("system", to: system)
         out = out.setting("policy", to: policy)
 
+        if let tun = options.tun { out = bindingOutbounds(of: out, to: tun.outboundInterface) }
+
         if let routing = config["routing"], case .array(let rules)? = routing["rules"] {
             var rewritten: [JSONValue] = []
             for rule in rules {
@@ -120,7 +129,9 @@ extension ConfigBuilder {
                 for tag in tags {
                     guard let name = tag.stringValue else { continue }
                     if proxyInboundTags.contains(name) {
-                        if !newTags.contains(.string(inboundTag)) { newTags.append(.string(inboundTag)) }
+                        // TUN traffic follows the rules written for the config's own proxy inbounds.
+                        let ours = options.tun == nil ? [inboundTag] : trafficInboundTags
+                        for tag in ours where !newTags.contains(.string(tag)) { newTags.append(.string(tag)) }
                     } else if otherInboundTags.contains(name) {
                         continue // that inbound no longer exists
                     } else {

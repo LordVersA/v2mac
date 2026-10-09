@@ -20,15 +20,20 @@ public enum TCPPing {
         _ targets: [TCPPingTarget],
         timeout: TimeInterval = 3,
         concurrency: Int = 32,
+        interface: String? = nil,
         onResult: @escaping @Sendable (LatencyResult) async -> Void
     ) async {
+        // In TUN mode an unpinned handshake is answered by the TUN itself, in about a millisecond.
+        var pinned: NWInterface?
+        if let interface { pinned = await NetworkInterfaces.nwInterface(named: interface) }
+        let via = pinned
         await withTaskGroup(of: LatencyResult.self) { group in
             var next = 0
             func launch() {
                 guard next < targets.count else { return }
                 let target = targets[next]
                 next += 1
-                group.addTask { LatencyResult(id: target.id, outcome: await ping(target, timeout: timeout)) }
+                group.addTask { LatencyResult(id: target.id, outcome: await ping(target, timeout: timeout, via: via)) }
             }
             for _ in 0..<min(max(1, concurrency), targets.count) { launch() }
             while let result = await group.next() {
@@ -39,9 +44,11 @@ public enum TCPPing {
         }
     }
 
-    static func ping(_ target: TCPPingTarget, timeout: TimeInterval) async -> LatencyOutcome {
+    static func ping(_ target: TCPPingTarget, timeout: TimeInterval, via interface: NWInterface? = nil) async -> LatencyOutcome {
         guard let port = NWEndpoint.Port(rawValue: UInt16(clamping: target.port)), !target.host.isEmpty else { return .timeout }
-        let connection = NWConnection(host: NWEndpoint.Host(target.host), port: port, using: .tcp)
+        let parameters = NWParameters.tcp
+        parameters.requiredInterface = interface
+        let connection = NWConnection(host: NWEndpoint.Host(target.host), port: port, using: parameters)
         let queue = DispatchQueue(label: "v2mac.tcpping")
         let clock = ContinuousClock()
         let start = clock.now

@@ -29,17 +29,21 @@ public struct RunOptions: Sendable, Hashable {
     public var logLevel: XrayLogLevel
     public var logConnections: Bool
     public var metricsPort: Int
+    /// Set while TUN mode is on.
+    public var tun: TunLink?
 
     public init(
         inbound: InboundSettings = InboundSettings(),
         logLevel: XrayLogLevel = .warning,
         logConnections: Bool = false,
-        metricsPort: Int
+        metricsPort: Int,
+        tun: TunLink? = nil
     ) {
         self.inbound = inbound
         self.logLevel = logLevel
         self.logConnections = logConnections
         self.metricsPort = metricsPort
+        self.tun = tun
     }
 }
 

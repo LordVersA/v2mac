@@ -142,6 +142,11 @@ enum Prefs {
         set { defaults.set(newValue, forKey: "logConnections") }
     }
 
+    static var tunEnabled: Bool {
+        get { defaults.bool(forKey: "tunEnabled") }
+        set { defaults.set(newValue, forKey: "tunEnabled") }
+    }
+
     static var routingMode: RoutingMode {
         get { RoutingMode(rawValue: defaults.string(forKey: "routingMode") ?? "") ?? .global }
         set { defaults.set(newValue.rawValue, forKey: "routingMode") }

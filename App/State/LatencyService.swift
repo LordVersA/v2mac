@@ -13,6 +13,8 @@ final class LatencyService {
     private let container: ModelContainer
     private let store: LatencyStore
     private var task: Task<Void, Never>?
+    /// Set while TUN mode is up: tests must leave through this interface, not the tunnel.
+    var physicalInterface: @MainActor () -> String? = { nil }
 
     init(container: ModelContainer) {
         self.container = container
@@ -48,7 +50,8 @@ final class LatencyService {
         let tester = RealDelayTester(
             executable: AppPaths.coreExecutable,
             assetDirectory: AppPaths.assetsDirectory,
-            options: Prefs.latencyOptions
+            options: Prefs.latencyOptions,
+            outboundInterface: physicalInterface()
         )
         let latencyTargets = targets.map { LatencyTarget(id: $0.id, config: $0.config, kind: $0.kind) }
         task = Task { [weak self] in
@@ -72,9 +75,10 @@ final class LatencyService {
         begin(all.map(\.id))
         let targets = applicable.map { TCPPingTarget(id: $0.id, host: $0.address, port: $0.port) }
         let naIDs = notApplicable.map(\.id)
+        let interface = physicalInterface()
         task = Task { [weak self] in
             for id in naIDs { await self?.recordNotApplicable(id) }
-            await TCPPing.run(targets) { [weak self] result in
+            await TCPPing.run(targets, interface: interface) { [weak self] result in
                 await self?.record(result, kind: "tcp")
             }
             self?.finish()

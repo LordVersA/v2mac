@@ -39,6 +39,7 @@ struct ConnectionBar: View {
                 .foregroundStyle(.secondary)
                 .fixedSize()
             }
+            TunToggle(connection: connection)
             RoutingModeMenu(connection: connection, packs: model.regionPacks) { model.showRegionsSheet = true }
             if showAddress { addressMenu }
         }
@@ -77,14 +78,23 @@ struct ConnectionBar: View {
                 FailureActions(connection: connection) { model.openLogs(openWindow) }
             }
         case .connecting:
-            Text("Connecting…").font(.caption).foregroundStyle(.secondary)
+            status("Connecting…")
         case .switching:
-            Text("Switching…").font(.caption).foregroundStyle(.secondary)
+            status("Switching…")
         case .connected:
-            Text("Connected · \(connection.routingMode.title)").font(.caption).foregroundStyle(.secondary)
+            status("Connected · \(connection.routingMode.title)")
         case .off:
-            Text(connection.activeServer == nil ? "Double-click a server to connect" : "Off · \(connection.routingMode.title)")
-                .font(.caption).foregroundStyle(.secondary)
+            status(connection.activeServer == nil ? "Double-click a server to connect" : "Off · \(connection.routingMode.title)")
+        }
+    }
+
+    /// The status line, with what TUN mode is doing; a TUN failure gets its own line.
+    @ViewBuilder
+    private func status(_ text: String) -> some View {
+        let note = connection.tun.statusNote
+        Text(note.map { "\(text) · \($0)" } ?? text).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+        if let failure = connection.tun.failureMessage {
+            Text(failure).font(.caption).foregroundStyle(.orange).lineLimit(2)
         }
     }
 

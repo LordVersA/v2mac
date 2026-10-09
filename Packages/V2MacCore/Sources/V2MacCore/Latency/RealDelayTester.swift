@@ -45,7 +45,7 @@ public struct LatencyResult: Sendable, Equatable {
 
 enum LatencyConfig {
     /// One loopback SOCKS inbound per outbound, each routed only to its own outbound.
-    static func batch(outbounds: [JSONValue], ports: [Int]) -> JSONValue {
+    static func batch(outbounds: [JSONValue], ports: [Int], interface: String? = nil) -> JSONValue {
         var inbounds: [JSONValue] = []
         var tagged: [JSONValue] = []
         var rules: [JSONValue] = []
@@ -57,7 +57,8 @@ enum LatencyConfig {
                 "protocol": "socks",
                 "settings": ["auth": "noauth", "udp": false],
             ])
-            tagged.append(outbound.setting("tag", to: .string("out-\(i)")))
+            let bound = outbound.setting("tag", to: .string("out-\(i)"))
+            tagged.append(interface.map { ConfigBuilder.binding(bound, to: $0) } ?? bound)
             rules.append(["type": "field", "inboundTag": [.string("in-\(i)")], "outboundTag": .string("out-\(i)")])
         }
         return [
@@ -74,11 +75,14 @@ public struct RealDelayTester: Sendable {
     private let executable: URL
     private let assetDirectory: URL
     private let options: LatencyOptions
+    /// Set in TUN mode, so the test cores reach each server directly instead of through the tunnel.
+    private let outboundInterface: String?
 
-    public init(executable: URL, assetDirectory: URL, options: LatencyOptions = LatencyOptions()) {
+    public init(executable: URL, assetDirectory: URL, options: LatencyOptions = LatencyOptions(), outboundInterface: String? = nil) {
         self.executable = executable
         self.assetDirectory = assetDirectory
         self.options = options
+        self.outboundInterface = outboundInterface
     }
 
     /// Results are delivered as they arrive. Cancelling the calling task stops outstanding
@@ -109,7 +113,7 @@ public struct RealDelayTester: Sendable {
 
         do {
             let ports = try PortUtil.freePorts(batch.count)
-            let config = LatencyConfig.batch(outbounds: batch.map(\.config), ports: ports)
+            let config = LatencyConfig.batch(outbounds: batch.map(\.config), ports: ports, interface: outboundInterface)
             let runner = CoreRunner(executable: executable, assetDirectory: assetDirectory, runDirectory: dir)
             do {
                 try await runner.start(config: config, readyPort: ports[0])
@@ -147,10 +151,11 @@ public struct RealDelayTester: Sendable {
         defer { try? FileManager.default.removeItem(at: dir) }
         do {
             let ports = try PortUtil.freePorts(2)
-            let config = try ConfigBuilder.buildCustom(
+            var config = try ConfigBuilder.buildCustom(
                 config: target.config,
                 options: RunOptions(inbound: InboundSettings(port: ports[0]), logLevel: .none, metricsPort: ports[1])
             )
+            if let outboundInterface { config = ConfigBuilder.bindingOutbounds(of: config, to: outboundInterface) }
             let runner = CoreRunner(executable: executable, assetDirectory: assetDirectory, runDirectory: dir)
             do {
                 try await runner.start(config: config, readyPort: ports[0])

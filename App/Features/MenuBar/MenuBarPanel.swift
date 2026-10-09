@@ -93,6 +93,19 @@ struct MenuBarPanel: View {
             .font(.callout)
 
             HStack {
+                Text("TUN Mode").foregroundStyle(.secondary)
+                if let note = connection.tun.statusNote, !connection.tun.isOn {
+                    Text(note).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer()
+                TunToggle(connection: connection, showsLabel: false)
+            }
+            .font(.callout)
+            if let failure = connection.tun.failureMessage {
+                Text(failure).font(.caption).foregroundStyle(.orange).lineLimit(3)
+            }
+
+            HStack {
                 Text(connection.localAddress).font(.callout.monospaced())
                 Spacer()
                 Button {

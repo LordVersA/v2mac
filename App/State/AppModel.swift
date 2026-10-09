@@ -43,6 +43,7 @@ final class AppModel {
         subscriptions = SubscriptionService(container: container, connection: connection)
         latency = LatencyService(container: container)
         let connection = self.connection
+        latency.physicalInterface = { connection.tun.physicalInterface }
         let routes: () -> [FetchRoute] = {
             guard connection.isRunning else { return [.direct] }
             let inbound = Prefs.inbound

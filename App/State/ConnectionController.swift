@@ -32,6 +32,7 @@ final class ConnectionController {
     private static let restartDelays: [Duration] = [.seconds(1), .seconds(3), .seconds(10)]
 
     let logs: LogStore
+    let tun: TunController
     private let runner: CoreRunner
     private var metricsPort: Int?
     private var statsTask: Task<Void, Never>?
@@ -58,6 +59,7 @@ final class ConnectionController {
 
     init(logs: LogStore) {
         self.logs = logs
+        tun = TunController(logs: logs)
         runner = CoreRunner(
             executable: AppPaths.coreExecutable,
             assetDirectory: AppPaths.assetsDirectory,
@@ -66,7 +68,10 @@ final class ConnectionController {
         )
         let states = runner.states
         let lines = runner.logs
-        lifecycle = LifecycleMonitor { [weak self] reason in self?.systemEvent(reason) }
+        lifecycle = LifecycleMonitor(
+            ignoredInterface: { [weak self] in self?.tun.interfaceName },
+            onTrigger: { [weak self] reason in self?.systemEvent(reason) }
+        )
         Task { [weak self] in
             for await state in states { self?.coreStateChanged(state) }
         }
@@ -87,6 +92,14 @@ final class ConnectionController {
         guard mode != routingMode else { return }
         routingMode = mode
         Prefs.routingMode = mode
+        reconnectIfRunning()
+    }
+
+    /// TUN mode routes all system traffic through the core. Changing it while connected
+    /// restarts the core, which needs a different config for it.
+    func setTunEnabled(_ on: Bool) {
+        guard on != tun.isEnabled else { return }
+        tun.setEnabled(on)
         reconnectIfRunning()
     }
 
@@ -123,9 +136,13 @@ final class ConnectionController {
         userWantsRunning = false
         cancelRecovery()
         portConflict = nil
+        // First, so nothing is left pointing at a core that is about to stop.
+        tun.down(clearingError: true)
         enqueue {
             self.localError = nil
             Prefs.wasRunning = false
+            // Again: a connect that was waiting for the administrator prompt may have raised it.
+            self.tun.down(clearingError: true)
             await self.runner.stop()
         }
     }
@@ -150,7 +167,8 @@ final class ConnectionController {
 
     /// Wake from sleep or a network change: restart a live connection if the setting is on.
     private func systemEvent(_ reason: String) {
-        guard Prefs.restartOnWakeOrNetwork, userWantsRunning, activeServer != nil else { return }
+        // In TUN mode the core is bound to one interface, so a network change always needs a restart.
+        guard Prefs.restartOnWakeOrNetwork || tun.isEnabled, userWantsRunning, activeServer != nil else { return }
         switch coreState {
         case .running, .failed:
             logs.append("[v2mac] Restarting core after \(reason)")
@@ -188,6 +206,7 @@ final class ConnectionController {
     func shutdown() async {
         userWantsRunning = false
         cancelRecovery()
+        tun.endSession()
         await queue?.value
         await runner.stop()
     }
@@ -206,6 +225,9 @@ final class ConnectionController {
         userWantsRunning = true
         localError = nil
         portConflict = nil
+        // Before the running core stops: the administrator prompt can stay open for a while.
+        let tunLink = tun.isEnabled ? await tun.prepare() : nil
+        if tunLink == nil { tun.down() }
         if coreState != .stopped {
             isSwitching = true
             await runner.stop()
@@ -218,7 +240,7 @@ final class ConnectionController {
         do {
             let metrics = try PortUtil.freePort()
             metricsPort = metrics
-            let options = RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: Prefs.logConnections, metricsPort: metrics)
+            let options = RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: Prefs.logConnections, metricsPort: metrics, tun: tunLink)
             let config: JSONValue
             switch server.kind {
             case .outbound:
@@ -235,7 +257,9 @@ final class ConnectionController {
             logs.append("[v2mac] Connecting to \(server.name)")
             try await runner.start(config: config, readyPort: port)
             Prefs.wasRunning = true
+            if tunLink != nil { tun.up() }
         } catch {
+            tun.down()
             if case CoreError.portInUse(let busy) = error {
                 portConflict = suggestPort(avoiding: busy)
             }
@@ -271,6 +295,8 @@ final class ConnectionController {
             if case .failed = state, userWantsRunning, portConflict == nil, previous == .running || isRecovering {
                 scheduleRestart()
             }
+            // A core that is not coming back must not keep the whole system's traffic.
+            if case .failed = state, !isRecovering { tun.down() }
             statsTask?.cancel()
             statsTask = nil
             downRate = 0

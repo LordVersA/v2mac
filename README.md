@@ -9,6 +9,7 @@
 - **Subscriptions:** import VLESS, VMess, Trojan, Shadowsocks, Hysteria2, WireGuard and plain SOCKS/HTTP links, or full Xray JSON configs. Auto-update, and shows your traffic usage and expiry date when the provider sends them.
 - **Latency tests:** real-delay and TCP ping for a whole group at once, sorted by speed.
 - **Routing:** Global, Direct, or Bypass regions (Iran included) to send local traffic direct.
+- **TUN mode:** one switch routes all traffic on the Mac through the proxy, including apps with no proxy setting. No paid developer account or system extension needed.
 - **Menu bar control:** connect, switch server, live speed, and a local address you can copy.
 - **Reliable:** restarts the core after a crash, sleep or network change, and reconnects on launch.
 - **Also:** LAN sharing with a password, QR codes, a log viewer, launch at login, and in-app Xray core updates.
@@ -25,6 +26,8 @@ Requires macOS 26 or later on Apple Silicon.
    ```
 3. Click **Add Subscription**, paste your link, and double-click a server to connect.
 4. Point your apps at `socks5://127.0.0.1:10808` or `http://127.0.0.1:10808`.
+
+To proxy the whole Mac instead, turn on the **TUN** switch next to the routing menu. macOS asks for an administrator password once each time V2Mac is opened; nothing is installed.
 
 Closing the window keeps the proxy running. Quit with ⌘Q to stop it.
 

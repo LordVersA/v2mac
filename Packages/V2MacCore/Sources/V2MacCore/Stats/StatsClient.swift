@@ -38,12 +38,12 @@ public enum StatsError: Error, Sendable, Equatable {
 /// Reads traffic counters from Xray's metrics endpoint (`/debug/vars`).
 public struct StatsClient: Sendable {
     private let url: URL
-    private let inboundTag: String
+    private let inboundTags: [String]
     private let session: URLSession
 
-    public init(port: Int, inboundTag: String = ConfigBuilder.inboundTag) {
+    public init(port: Int, inboundTags: [String] = ConfigBuilder.trafficInboundTags) {
         self.url = URL(string: "http://127.0.0.1:\(port)/debug/vars")!
-        self.inboundTag = inboundTag
+        self.inboundTags = inboundTags
         let config = URLSessionConfiguration.ephemeral
         config.connectionProxyDictionary = [:]
         config.timeoutIntervalForRequest = 2
@@ -54,15 +54,22 @@ public struct StatsClient: Sendable {
     public func snapshot() async throws -> TrafficSnapshot {
         let (data, response) = try await session.data(from: url)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw StatsError.badResponse }
-        return try Self.parse(data, inboundTag: inboundTag)
+        return try Self.parse(data, inboundTags: inboundTags)
     }
 
-    /// Missing counters (no traffic yet) read as zero.
-    public static func parse(_ data: Data, inboundTag: String, now: Date = Date()) throws -> TrafficSnapshot {
+    /// Sums the counters of `inboundTags`. Missing counters (no traffic yet) read as zero.
+    public static func parse(_ data: Data, inboundTags: [String], now: Date = Date()) throws -> TrafficSnapshot {
         guard let root = try? JSONValue.parse(data), case .object = root else { throw StatsError.badResponse }
-        let entry = root["stats"]?["inbound"]?[inboundTag]
-        let up = entry?["uplink"]?.doubleValue ?? 0
-        let down = entry?["downlink"]?.doubleValue ?? 0
+        var up = 0.0, down = 0.0
+        for tag in inboundTags {
+            let entry = root["stats"]?["inbound"]?[tag]
+            up += entry?["uplink"]?.doubleValue ?? 0
+            down += entry?["downlink"]?.doubleValue ?? 0
+        }
         return TrafficSnapshot(uplink: Int64(up), downlink: Int64(down), date: now)
+    }
+
+    public static func parse(_ data: Data, inboundTag: String, now: Date = Date()) throws -> TrafficSnapshot {
+        try parse(data, inboundTags: [inboundTag], now: now)
     }
 }
