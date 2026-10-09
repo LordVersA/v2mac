@@ -1,4 +1,10 @@
-# V2Mac — instructions for Claude
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+V2Mac is a native macOS (26+, Apple Silicon) menu bar client for Xray-core: SwiftUI + SwiftData app,
+Swift 6 with strict concurrency, no third-party Swift dependencies. Spec: `docs/SPEC.md` (code
+comments cite it as "spec 6.4" etc.; read the section before changing the behavior it describes).
 
 ## Commit after every finished task (do not forget)
 - When a change is done and builds, **commit it**. Don't leave finished work uncommitted and
@@ -25,12 +31,70 @@
   artifact and publishes nothing.
 
 ## Building and testing
-- `Scripts/fetch-core.sh` once, then `xcodegen generate` (the `.xcodeproj` is generated and git-ignored).
+- `Scripts/fetch-core.sh` once, then `xcodegen generate` (the `.xcodeproj` is generated and git-ignored;
+  rerun `xcodegen generate` after adding, moving or deleting files under `App/`, or editing `project.yml`).
 - App: `xcodebuild -project v2mac.xcodeproj -scheme v2mac -configuration Debug -destination 'platform=macOS' build`
 - Package tests: `cd Packages/V2MacCore && swift test`
+  - One suite or test: `swift test --filter RoutingTests` / `swift test --filter RoutingTests/bypassRules`
+  - Tests use Swift Testing (`@Suite`, `@Test`, `#expect`), not XCTest.
+  - Suites tagged `.integration` start the real `Vendor/core/xray` and are silently skipped when it
+    is missing, so a green run without `fetch-core.sh` has not exercised them. Some need the network.
+- There is no linter and no app-target test bundle. All testable logic belongs in the package.
+- Local DMG: `Scripts/make-dmg.sh` (ad-hoc signed, output in `dist/`).
 - The scheme and project are still named `v2mac`; the product is `V2Mac.app`. The data folder
   (`~/Library/Application Support/v2mac`) and bundle id (`io.github.lordversa.v2mac`) must not change.
-- Spec: `docs/SPEC.md`.
+- The Xray version is pinned in `Scripts/core.lock`; change `VERSION` and `SHA256` together.
+- Debug builds accept launch arguments for scripted checks (`-debugAddSubscription <url>`,
+  `-debugActivateFirst YES`, `-debugConnect YES`, `-debugTest tcp|real`, …) and print
+  `[v2mac-debug]` lines to stdout. See `AppModel.runDebugHooks`.
+
+## Architecture
+
+Two layers, with a hard rule between them:
+
+- **`Packages/V2MacCore`**: no UI, no SwiftData, no main-actor code. Only `Sendable` value types
+  and `JSONValue` (the package's own JSON tree, used for every Xray config). Everything here is
+  covered by `swift test`.
+- **`App/`**: SwiftUI views (`Features/`), `@MainActor @Observable` state objects (`State/`),
+  SwiftData `@Model`s and `@ModelActor` writers (`Models/`). It maps package value types to models
+  and never builds Xray JSON itself.
+
+**From link to running core.** `SubscriptionFetcher` downloads a body, `SubscriptionParser` detects
+its shape and hands share links to `ShareLinkParser` (`StreamBuilder` makes `streamSettings`). The
+result is a `ParsedProfile`: either one Xray *outbound* object (`.outbound`) or a whole Xray config
+(`.custom`), plus a fingerprint that ignores display names. The app stores it as a `Profile` with
+the JSON in `configJSON`; `SubscriptionStore` (a `@ModelActor`) reconciles a re-fetch against
+existing rows by fingerprint so identity, selection and the active server survive an update. On
+connect, `ConfigBuilder` wraps the outbound with the `mixed-in` inbound, routing (`Routing.swift`,
+region packs), metrics and, in TUN mode, the `tun-in` inbound (`XrayConfig/Tun.swift`); custom
+configs are patched rather than rebuilt. `CoreRunner` writes `run/config.json`, launches `xray` and
+publishes state and log lines as `AsyncStream`s.
+
+**State objects.** `AppModel` owns the `ModelContainer` and all services and wires them together
+with closures in its `init` (e.g. download routes, "reconnect if running"); services do not hold
+references to each other. `ConnectionController` is the only owner of `CoreRunner`: it derives the
+UI `Phase` from core state, serialises connect/switch/disconnect, restarts after crashes with
+backoff, reacts to sleep/network changes via `LifecycleMonitor`, and polls `StatsClient` for rates.
+Anything that needs a new config (routing mode, port, region pack, TUN switch) calls
+`reconnectIfRunning()`. Settings live in `UserDefaults` behind `Prefs` (`App/Support/AppPaths.swift`),
+whose keys must match the `@AppStorage` keys in `SettingsView`.
+
+**TUN mode** (spec 9.5) runs two Xray processes: the normal core as the user, and a root
+*forwarder* with a fixed config (TUN inbound → SOCKS to the core's `tun-in` port). The root helper
+is a shell script started once per app session through `osascript`; it only runs root-owned copies
+in `/var/run/v2mac-tun-<uid>/` and is controlled by two empty flag files in `run/`. Subscription
+and server configs must never reach the root process. Core outbounds are bound to the physical
+interface so they do not loop back into the tunnel. `TunHelper` (package) generates the script and
+config; `TunController` (app) drives the session.
+
+**Files.** The bundled core is `V2Mac.app/Contents/Helpers/xray` (copied and signed by
+`Scripts/embed-core.sh` as a build phase); an in-app core update in
+`~/Library/Application Support/v2mac/core/xray` takes precedence (`AppPaths.coreExecutable`).
+Layout of the data folder: spec section 14.
+
+**Windows.** `MenuBarExtra` panel, a `main` window, a `logs` window and Settings. The app switches
+between `.regular` and `.accessory` activation policy as windows open and close, and quitting goes
+through `applicationShouldTerminate` so the core and TUN helper are shut down first.
 
 ## Gotchas
 - The filesystem is case-insensitive: `v2mac` and `V2Mac` are the same path. Don't `rm` an "old name"
@@ -38,4 +102,5 @@
 - A running app does not pick up a rebuild. Quit it (⌘Q) and reopen it before judging a change.
 - CI uses Xcode 26.6, older than the Xcode 27 used locally. It once crashed on a Bool-taking method
   reference passed to `Binding(set:)`. Prefer closures there, and check CI after pushing.
-- Never put subscription URLs, tokens or server details in the repo, commits or tests.
+- Never put subscription URLs, tokens or server details in the repo, commits or tests. Test links
+  come from `Tests/V2MacCoreTests/Fixtures.swift` (made-up hosts and keys); add new ones there.
