@@ -293,10 +293,10 @@ private struct GroupHeader: View {
             row(compact: false)
             row(compact: true)
         }
-        .font(.caption)
+        .font(.callout)
         .foregroundStyle(.secondary)
         .padding(.horizontal, 16)
-        .padding(.vertical, 9)
+        .padding(.vertical, 12)
     }
 
     private func row(compact: Bool) -> some View {
@@ -328,12 +328,10 @@ private struct GroupHeader: View {
         let tint: Color = fraction >= 0.9 ? .red : (fraction >= 0.75 ? .orange : .accentColor)
         return HStack(spacing: 8) {
             if total > 0, !compact {
-                Capsule()
-                    .fill(.quaternary)
-                    .frame(width: 64, height: 4)
-                    .overlay(alignment: .leading) {
-                        Capsule().fill(tint).frame(width: max(4, 64 * fraction), height: 4)
-                    }
+                Gauge(value: fraction) { EmptyView() }
+                    .gaugeStyle(.accessoryLinearCapacity)
+                    .tint(tint)
+                    .frame(width: 96)
             }
             Text(total > 0 ? "\(Format.bytes(used)) of \(Format.bytes(total))" : "\(Format.bytes(used)) used")
                 .monospacedDigit()
@@ -367,6 +365,9 @@ private struct GroupHeader: View {
         return Label(text, systemImage: expired || soon ? "exclamationmark.circle" : "calendar")
             .labelStyle(CompactLabelStyle())
             .foregroundStyle(expired ? Color.red : (soon ? Color.orange : Color.secondary))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(.quaternary, in: .capsule)
             .help("Expires \(date.formatted(date: .long, time: .omitted))")
     }
 
