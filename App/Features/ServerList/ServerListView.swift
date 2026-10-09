@@ -240,10 +240,27 @@ struct DelayText: View {
             Text("invalid").foregroundStyle(.red)
         case .ok:
             let ms = row.delayMs ?? 0
-            Text("\(ms) ms")
-                .monospacedDigit()
-                .help(row.delayKind == "tcp" ? "TCP ping" : "Real delay")
-                .foregroundStyle(ms < 300 ? Color.green : (ms < 800 ? Color.orange : Color.red))
+            // Bars as well as colour, so the quality reads without relying on colour alone.
+            Label {
+                Text("\(ms) ms").monospacedDigit()
+            } icon: {
+                Image(systemName: "cellularbars", variableValue: Self.strength(ms))
+            }
+            .labelStyle(CompactLabelStyle())
+            .help(row.delayKind == "tcp" ? "TCP ping" : "Real delay")
+            .foregroundStyle(ms < 300 ? Color.green : (ms < 800 ? Color.orange : Color.red))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(ms) milliseconds")
+        }
+    }
+
+    /// How many of the bars are filled: all under 300 ms, down to one for a very slow server.
+    private static func strength(_ ms: Int) -> Double {
+        switch ms {
+        case ..<150: 1
+        case ..<300: 0.75
+        case ..<800: 0.5
+        default: 0.25
         }
     }
 }
@@ -377,7 +394,7 @@ private struct GroupHeader: View {
     }
 }
 
-private struct CompactLabelStyle: LabelStyle {
+struct CompactLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 5) {
             configuration.icon
