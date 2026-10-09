@@ -88,6 +88,13 @@ import Testing
         #expect(p.config["tag"] == nil)
     }
 
+    @Test func configsPastedOneAfterAnother() throws {
+        let second = #"{"remarks":"Has } and \" inside","outbounds":[{"protocol":"trojan","settings":{"address":"b.com","port":8443}}]}"#
+        let r = try SubscriptionParser.parse(text: "\(customConfig)\n\n\(second)\n{\"broken\": }")
+        #expect(r.profiles.map(\.name) == ["Custom A", "Has } and \" inside"])
+        #expect(r.skipped.map(\.index) == [3])
+    }
+
     @Test func singBoxJSONIsRejectedPerEntry() {
         let body = #"[{"outbounds":[{"type":"vless","tag":"a"}]}]"#
         #expect(throws: SubscriptionError.noServers(skipped: 1)) { try SubscriptionParser.parse(text: body) }

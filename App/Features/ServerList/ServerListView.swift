@@ -48,7 +48,7 @@ struct ServerListView: View {
         let isTesting = latency.isRunning
         let appModel = model
         VStack(spacing: 0) {
-            if let group = selectedGroup { GroupHeader(group: group) }
+            if let group = selectedGroup, !group.isManual { GroupHeader(group: group) }
             Table(rows, selection: $model.selectedProfileIDs, sortOrder: $sortOrder, columnCustomization: $columns) {
                 TableColumn("") { row in
                     if let flag = row.flag {
@@ -138,9 +138,9 @@ struct ServerListView: View {
     private func toolbar(model: AppModel, latency: LatencyService, isTesting: Bool) -> some ToolbarContent {
         ToolbarItem {
             Button { model.showAddSheet = true } label: {
-                Label("Add Subscription", systemImage: "plus")
+                Label("Add", systemImage: "plus")
             }
-            .help("Add Subscription (⌘N)")
+            .help("Add a subscription or custom configs (⌘N)")
         }
         ToolbarItem {
             Menu {
@@ -195,6 +195,12 @@ struct ServerListView: View {
                     NSPasteboard.general.setString(link, forType: .string)
                 }
             }
+        }
+        // Subscription servers come and go with their subscription; pasted ones are the user's to remove.
+        let selected = profiles.filter { ids.contains($0.id) }
+        if !selected.isEmpty, selected.allSatisfy({ $0.group?.isManual == true }) {
+            Divider()
+            Button(ids.count == 1 ? "Delete" : "Delete (\(ids.count))", role: .destructive) { model.deleteProfiles(ids) }
         }
     }
 }

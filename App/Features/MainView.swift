@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct MainView: View {
     @Environment(AppModel.self) private var model
@@ -31,7 +32,7 @@ struct MainView: View {
                         .frame(width: 96, height: 96)
                     Text("No Subscriptions").font(.title2.bold())
                 } description: {
-                    Text("Add a subscription URL to see its servers.")
+                    Text("Add a subscription URL, or paste configs with ⌘V.")
                 } actions: {
                     Button("Add Subscription") { model.showAddSheet = true }
                         .buttonStyle(.glassProminent)
@@ -41,6 +42,8 @@ struct MainView: View {
             }
         }
         .frame(minWidth: 760, minHeight: 440)
+        // Text fields handle their own paste; this is reached when a list has the focus.
+        .onPasteCommand(of: [.plainText]) { _ in model.pasteFromClipboard() }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 if model.updates.availableAppUpdate != nil {

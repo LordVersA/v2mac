@@ -23,6 +23,7 @@ final class AppModel {
     var selectedProfileIDs: Set<UUID> = []
     var searchText = ""
     var showAddSheet = false
+    var addDraft = AddDraft()
     var showInspector = true
     var showRegionsSheet = false
     /// The Settings tab to show; the update buttons set it before opening Settings.
@@ -124,6 +125,42 @@ final class AppModel {
         }
         if sidebarSelection == .group(group.id) { sidebarSelection = .all }
         context.delete(group)
+        try? context.save()
+    }
+
+    /// ⌘V in the main window: configs are added straight away, a subscription URL opens the Add sheet.
+    func pasteFromClipboard() {
+        guard !showAddSheet,
+              let text = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else { return }
+        if AddDraft.isSubscriptionURL(text) {
+            showAddSheet = true
+            return
+        }
+        Task {
+            do {
+                sidebarSelection = .group(try await subscriptions.addCustom(text: text))
+            } catch AddSubscriptionError.alreadyAdded {
+                if let existing = try? context.fetch(FetchDescriptor<ServerGroup>()).first(where: \.isManual) {
+                    sidebarSelection = .group(existing.id)
+                }
+            } catch {
+                addDraft = AddDraft(kind: .custom, configText: text, error: error.localizedDescription)
+                showAddSheet = true
+            }
+        }
+    }
+
+    /// Only pasted configs can be removed one by one; subscription servers follow their subscription.
+    func deleteProfiles(_ ids: Set<UUID>) {
+        let targets = ((try? context.fetch(FetchDescriptor<Profile>())) ?? [])
+            .filter { ids.contains($0.id) && $0.group?.isManual == true }
+        if let active = connection.activeServer, targets.contains(where: { $0.id == active.id }) {
+            connection.disconnect()
+            connection.setActive(nil)
+        }
+        selectedProfileIDs.subtract(ids)
+        for profile in targets { context.delete(profile) }
         try? context.save()
     }
 

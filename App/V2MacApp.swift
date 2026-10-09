@@ -50,7 +50,7 @@ struct AppCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button("Add Subscription…") { model.showAddSheet = true }
+            Button("Add Subscription or Config…") { model.showAddSheet = true }
                 .keyboardShortcut("n")
         }
         CommandMenu("Subscriptions") {

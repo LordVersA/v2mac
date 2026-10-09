@@ -36,3 +36,8 @@ final class ServerGroup {
         createdAt = Date()
     }
 }
+
+extension ServerGroup {
+    /// The group for pasted configs: it has no subscription to update from.
+    var isManual: Bool { subscriptionURL.isEmpty }
+}

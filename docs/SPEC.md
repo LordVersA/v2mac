@@ -33,8 +33,7 @@ on the Mac through the same connection.
 |---|---|
 | TUN / system-wide VPN | Excluded from v1; added later as TUN mode (section 9.5). |
 | Setting the macOS system proxy | The app only exposes local ports. |
-| Adding single share links, QR import, file import, URL schemes | Subscription URL is the only input. |
-| Manual (non-subscription) groups | Model allows them later; no UI. |
+| QR import, file import, URL schemes | Input is a subscription URL or pasted configs (section 12.3, Add Subscription sheet). |
 | Editing a server | Inspector is read-only. |
 | Custom routing rules, rule-set manager | Presets only. |
 | Viewing outbound JSON / exporting generated config | Not selected. |
@@ -840,6 +839,19 @@ off by default and disabled while disconnected. Enter fetches; a spinner
 replaces the button; errors appear inline and the sheet stays open. On success
 the group is created, selected, and the sheet closes. A URL that already exists
 offers to update that group instead.
+
+A "Type" pop-up at the top switches the sheet between "Subscription URL" and
+"Custom Config". Custom Config shows one large text box that takes one or many
+share links or Xray JSON configs (an array, or objects one after another). They
+go into a single manual group, "Custom Configs", which has an empty
+`subscriptionURL`, is never updated, and sits above the Subscriptions section
+of the sidebar. Configs already in it are not added twice. Its servers can be
+deleted one by one from the table's context menu.
+
+⌘V in the main window (outside a text field) adds configs from the clipboard
+straight to that group and selects it. An http(s) URL without credentials opens
+the sheet as a subscription instead; text that is not a config opens the sheet
+on Custom Config with the error shown.
 
 **Empty states.** No groups: centred prompt with an "Add Subscription" button.
 Empty search: "No servers match".

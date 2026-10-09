@@ -16,14 +16,22 @@ struct SidebarView: View {
                 .badge(profiles.count)
                 .tag(SidebarItem.all)
 
+            // Pasted configs live in their own group, apart from the subscriptions.
+            ForEach(groups.filter(\.isManual)) { group in
+                SidebarRow(group: group)
+                    .tag(SidebarItem.group(group.id))
+                    .contextMenu { menu(for: group) }
+            }
+
             Section("Subscriptions") {
-                ForEach(groups) { group in
+                let subscriptions = groups.filter { !$0.isManual }
+                ForEach(subscriptions) { group in
                     SidebarRow(group: group)
                         .tag(SidebarItem.group(group.id))
                         .contextMenu { menu(for: group) }
                 }
                 .onMove { source, destination in
-                    model.moveGroups(groups, from: source, to: destination)
+                    model.moveGroups(subscriptions, from: source, to: destination)
                 }
             }
         }
@@ -47,6 +55,17 @@ struct SidebarView: View {
 
     @ViewBuilder
     private func menu(for group: ServerGroup) -> some View {
+        if group.isManual {
+            Button("Rename…") { editing = group }
+        } else {
+            subscriptionMenu(for: group)
+        }
+        Divider()
+        Button("Delete…", role: .destructive) { pendingDelete = group }
+    }
+
+    @ViewBuilder
+    private func subscriptionMenu(for group: ServerGroup) -> some View {
         Button("Update without Proxy") {
             Task { await model.subscriptions.update(groupID: group.id, viaProxy: false) }
         }
@@ -64,8 +83,6 @@ struct SidebarView: View {
             get: { group.autoUpdateEnabled },
             set: { group.autoUpdateEnabled = $0; try? model.context.save() }
         ))
-        Divider()
-        Button("Delete…", role: .destructive) { pendingDelete = group }
     }
 }
 
@@ -81,7 +98,7 @@ private struct SidebarRow: View {
                 Text(group.name)
             } icon: {
                 // The sync arrows appear, turning, only while this group is being fetched.
-                Image(systemName: isUpdating ? "arrow.triangle.2.circlepath" : "dot.radiowaves.up.forward")
+                Image(systemName: isUpdating ? "arrow.triangle.2.circlepath" : (group.isManual ? "doc.on.clipboard" : "dot.radiowaves.up.forward"))
                     .symbolEffect(.rotate, isActive: isUpdating)
                     .contentTransition(.symbolEffect(.replace))
             }
@@ -108,10 +125,10 @@ struct GroupEditSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Edit Subscription").font(.headline)
+            Text(group.isManual ? "Rename Group" : "Edit Subscription").font(.headline)
             Form {
                 TextField("Name", text: $name)
-                TextField("URL", text: $url)
+                if !group.isManual { TextField("URL", text: $url) }
             }
             HStack {
                 Spacer()

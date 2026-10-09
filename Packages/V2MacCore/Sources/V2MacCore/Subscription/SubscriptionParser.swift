@@ -84,11 +84,23 @@ public enum SubscriptionParser {
     // MARK: JSON bodies
 
     static func parseJSON(_ text: String) throws -> ([ParsedProfile], [SkippedEntry]) {
-        guard let root = try? JSONValue.parse(Data(text.utf8)) else {
-            throw SubscriptionError.unrecognisedFormat
-        }
         var profiles: [ParsedProfile] = []
         var skipped: [SkippedEntry] = []
+        guard let root = try? JSONValue.parse(Data(text.utf8)) else {
+            // Several configs pasted one after another, without an enclosing array.
+            let parts = splitTopLevelObjects(text)
+            guard parts.count > 1 else { throw SubscriptionError.unrecognisedFormat }
+            for (i, part) in parts.enumerated() {
+                do {
+                    profiles.append(try JSONProfile.make(from: try JSONValue.parse(Data(part.utf8)), number: i + 1))
+                } catch let skip as LinkSkip {
+                    skipped.append(SkippedEntry(index: i + 1, reason: skip.reason))
+                } catch {
+                    skipped.append(SkippedEntry(index: i + 1, reason: "invalid JSON"))
+                }
+            }
+            return (profiles, skipped)
+        }
 
         func add(_ value: JSONValue, number: Int) {
             do {
@@ -109,6 +121,40 @@ public enum SubscriptionParser {
             throw SubscriptionError.unrecognisedFormat
         }
         return (profiles, skipped)
+    }
+
+    /// Cuts `{…} {…}` into its objects by brace depth, ignoring braces inside strings.
+    /// Text outside any object (whitespace, commas) is dropped.
+    static func splitTopLevelObjects(_ text: String) -> [String] {
+        var parts: [String] = []
+        var depth = 0
+        var inString = false
+        var escaped = false
+        var start: String.Index?
+        for index in text.indices {
+            let c = text[index]
+            if inString {
+                if escaped { escaped = false } else if c == "\\" { escaped = true } else if c == "\"" { inString = false }
+                continue
+            }
+            switch c {
+            case "\"":
+                if depth > 0 { inString = true }
+            case "{", "[":
+                if depth == 0 { start = index }
+                depth += 1
+            case "}", "]":
+                guard depth > 0 else { continue }
+                depth -= 1
+                if depth == 0, let begin = start {
+                    parts.append(String(text[begin...index]))
+                    start = nil
+                }
+            default:
+                break
+            }
+        }
+        return parts
     }
 
     // MARK: Metadata

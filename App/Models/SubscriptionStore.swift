@@ -16,6 +16,31 @@ actor SubscriptionStore {
         return group.id
     }
 
+    /// Appends pasted configs to the one group without a subscription URL, creating it on first use.
+    /// Configs the group already has are left alone. Returns the group and how many were new.
+    func addManual(_ parsed: [ParsedProfile], groupName: String) throws -> (groupID: UUID, added: Int) {
+        let all = try modelContext.fetch(FetchDescriptor<ServerGroup>())
+        let group: ServerGroup
+        if let existing = all.first(where: \.isManual) {
+            group = existing
+        } else {
+            // Kept ahead of the subscriptions, whose indexes start at 0.
+            group = ServerGroup(name: groupName, subscriptionURL: "", sortIndex: -1)
+            group.autoUpdateEnabled = false
+            modelContext.insert(group)
+        }
+        var known = Set(group.profiles.map(\.fingerprint))
+        var nextIndex = (group.profiles.map(\.sortIndex).max() ?? -1) + 1
+        var added = 0
+        for profile in parsed where known.insert(profile.fingerprint).inserted {
+            modelContext.insert(Profile(parsed: profile, sortIndex: nextIndex, group: group))
+            nextIndex += 1
+            added += 1
+        }
+        try modelContext.save()
+        return (group.id, added)
+    }
+
     func apply(_ outcome: FetchOutcome, to groupID: UUID, viaProxy: Bool, activeProfileID: UUID?) throws {
         guard let group = try fetchGroup(groupID) else { return }
         reconcile(group, with: outcome.result, viaProxy: viaProxy, activeProfileID: activeProfileID)

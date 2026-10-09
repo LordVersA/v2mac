@@ -6,9 +6,13 @@ import V2MacCore
 enum AddSubscriptionError: LocalizedError {
     case duplicate(UUID)
     case needsConnection
+    case notAConfig
+    case alreadyAdded
 
     var errorDescription: String? {
         switch self {
+        case .notAConfig: "This is not a share link or an Xray config."
+        case .alreadyAdded: "These configs are already in Custom Configs."
         case .duplicate: "This subscription is already added."
         case .needsConnection: "Connect first to fetch through the proxy."
         }
@@ -89,6 +93,19 @@ final class SubscriptionService {
         return try await store.createGroup(url: trimmed, name: groupName, outcome: outcome, viaProxy: viaProxy)
     }
 
+    /// Adds pasted share links or Xray JSON (one or many) to the Custom Configs group.
+    func addCustom(text: String) async throws -> UUID {
+        let result: SubscriptionResult
+        do {
+            result = try SubscriptionParser.parse(text: text)
+        } catch SubscriptionError.unrecognisedFormat {
+            throw AddSubscriptionError.notAConfig
+        }
+        let (groupID, added) = try await store.addManual(result.profiles, groupName: "Custom Configs")
+        guard added > 0 else { throw AddSubscriptionError.alreadyAdded }
+        return groupID
+    }
+
     func update(groupID: UUID, viaProxy: Bool) async {
         guard !updatingGroupIDs.contains(groupID) else { return }
         guard let group = try? container.mainContext.fetch(
@@ -127,7 +144,7 @@ final class SubscriptionService {
         if viaProxy && !connection.isRunning { return }
         let groups = (try? container.mainContext.fetch(FetchDescriptor<ServerGroup>())) ?? []
         let due = groups.filter { group in
-            guard group.autoUpdateEnabled else { return false }
+            guard group.autoUpdateEnabled, !group.isManual else { return false }
             guard let last = group.lastUpdatedAt else { return true }
             let hours = group.serverIntervalHours ?? Prefs.defaultIntervalHours
             return now.timeIntervalSince(last) >= Double(hours) * 3600
