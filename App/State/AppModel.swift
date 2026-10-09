@@ -33,7 +33,12 @@ final class AppModel {
     init() {
         Prefs.registerDefaults()
         AppPaths.prepare()
+        #if DEBUG
+        let demo = UserDefaults.standard.bool(forKey: "debugDemoData")
+        let configuration = demo ? ModelConfiguration(isStoredInMemoryOnly: true) : ModelConfiguration(url: AppPaths.storeURL)
+        #else
         let configuration = ModelConfiguration(url: AppPaths.storeURL)
+        #endif
         do {
             container = try ModelContainer(for: ServerGroup.self, Profile.self, configurations: configuration)
         } catch {
@@ -58,6 +63,9 @@ final class AppModel {
         updates.startScheduler()
         let packs = regionPacks
         connection.regionRoutes = { packs.usableRoutes }
+        #if DEBUG
+        if demo { seedDemoData(); AppDelegate.model = self; return }
+        #endif
         restoreActiveServer()
         if Prefs.reconnectOnLaunch, Prefs.wasRunning, connection.activeServer != nil {
             connection.connectActive()
@@ -162,6 +170,48 @@ final class AppModel {
     // MARK: Debug
 
     #if DEBUG
+    /// `-debugDemoData YES`: in-memory store with made-up servers, for README screenshots.
+    private func seedDemoData() {
+        let uuid = "b831381d-6324-4d53-ad4f-8cda48b30811"
+        let key = "jmsHqm9I9NJN3d3cZmhU6iM3sFM0q9D9p1tBvXkQm2E"
+        let groups: [(String, Int64, Int64, Int, [(String, String, Int?)])] = [
+            ("Example Cloud", 38, 100, 21, [
+                ("🇩🇪 Frankfurt 01", "reality", 86), ("🇳🇱 Amsterdam 02", "ws", 112),
+                ("🇫🇮 Helsinki 01", "reality", 143), ("🇹🇷 Istanbul 03", "ws", 61),
+                ("🇦🇪 Dubai 01", "reality", 204), ("🇸🇪 Stockholm 01", "ws", nil),
+                ("🇺🇸 New York 02", "ws", 267), ("🇬🇧 London 01", "reality", 98),
+            ]),
+            ("Demo VPN", 12, 50, 48, [
+                ("🇫🇷 Paris 01", "ws", 121), ("🇯🇵 Tokyo 01", "reality", 231), ("🇨🇦 Toronto 01", "ws", 189),
+            ]),
+        ]
+        for (gi, g) in groups.enumerated() {
+            let group = ServerGroup(name: g.0, subscriptionURL: "https://sub.example.com/\(gi)", sortIndex: gi)
+            group.usedBytes = g.1 * 1_073_741_824
+            group.totalBytes = g.2 * 1_073_741_824
+            group.expiresAt = Date().addingTimeInterval(Double(g.3) * 86_400)
+            group.lastUpdatedAt = Date().addingTimeInterval(-1_800)
+            context.insert(group)
+            for (i, s) in g.4.enumerated() {
+                let host = "node\(gi)\(i).example.com"
+                let link = s.1 == "ws"
+                    ? "vless://\(uuid)@\(host):443?type=ws&security=tls&sni=\(host)&path=%2Fws#\(s.0)"
+                    : "vless://\(uuid)@\(host):443?type=tcp&security=reality&encryption=none&flow=xtls-rprx-vision&sni=www.microsoft.com&fp=chrome&pbk=\(key)&sid=ab12#\(s.0)"
+                guard let parsed = try? ShareLinkParser.parse(link) else { continue }
+                let p = Profile(parsed: parsed, sortIndex: i, group: group)
+                if let ms = s.2 {
+                    p.delayState = .ok; p.delayMs = ms; p.delayKindRaw = "real"
+                    p.speedBps = Double(40 + (i * 37) % 90) * 125_000
+                } else {
+                    p.delayState = .timeout; p.delayKindRaw = "real"
+                }
+                p.delayTestedAt = Date()
+                context.insert(p)
+            }
+        }
+        try? context.save()
+    }
+
     /// `-debugAddSubscription <url> -debugActivateFirst YES` for scripted verification.
     private func runDebugHooks() {
         setvbuf(stdout, nil, _IOLBF, 0)

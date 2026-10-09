@@ -17,6 +17,18 @@
 - **Also:** LAN sharing with a password, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
 - **Private:** no analytics or telemetry.
 
+## Screenshots
+
+Shown with made-up demo servers.
+
+<p align="center"><img src="docs/images/screenshots/main.png" alt="V2Mac main window: subscription groups, servers with delay and speed, inspector and connection bar" width="720"></p>
+
+The main window lists each subscription with its traffic usage and days left, plus every server's delay and top download speed. Select a server to see its details and copy its share link or QR code. The bar at the bottom shows the connection, the TUN switch, the routing mode and the local proxy address.
+
+<p align="center"><img src="docs/images/screenshots/settings.png" alt="V2Mac settings: launch at login, reconnect, restart after sleep and app updates" width="420"></p>
+
+Settings cover launch at login, reconnecting, restarting the core after sleep or a network change, and one-click app updates. More tabs hold the proxy, routing, subscriptions, latency, core and advanced options.
+
 ## Install
 
 Requires macOS 26 or later on Apple Silicon.
