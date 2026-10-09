@@ -60,12 +60,20 @@ struct ConnectionBar: View {
 
     @ViewBuilder
     private func rateLabels(_ layout: RateLayout) -> some View {
-        let down = Label(Format.rate(connection.downRate), systemImage: "arrow.down")
-        let up = Label(Format.rate(connection.upRate), systemImage: "arrow.up")
+        let down = rateLabel(connection.downRate, systemImage: "arrow.down")
+        let up = rateLabel(connection.upRate, systemImage: "arrow.up")
         switch layout {
         case .inline: HStack(spacing: 10) { down; up }
         case .stacked: VStack(alignment: .leading, spacing: 1) { down; up }
         }
+    }
+
+    /// Reserves the width of the widest rate, so the graph and its neighbours hold still
+    /// while the numbers change.
+    private func rateLabel(_ rate: Double, systemImage: String) -> some View {
+        Label("1,023 KB/s", systemImage: systemImage)
+            .hidden()
+            .overlay(alignment: .leading) { Label(Format.rate(rate), systemImage: systemImage) }
     }
 
     private var connectButton: some View {
