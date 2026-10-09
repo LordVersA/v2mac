@@ -17,18 +17,6 @@ struct LogView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                TextField("Filter", text: $filter)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 260)
-                Toggle("Warnings and errors only", isOn: $problemsOnly)
-                Toggle("Follow", isOn: $follow)
-                Spacer()
-                Button("Copy") { copy() }
-                Button("Clear") { model.logs.clear() }
-            }
-            .padding(10)
-            Divider()
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 1) {
@@ -52,6 +40,19 @@ struct LogView: View {
             }
         }
         .frame(minWidth: 520, minHeight: 280)
+        .searchable(text: $filter, prompt: "Filter")
+        .toolbar {
+            ToolbarItemGroup {
+                Toggle("Warnings and Errors Only", systemImage: "exclamationmark.triangle", isOn: $problemsOnly)
+                    .help("Show only warnings and errors")
+                Toggle("Follow", systemImage: "arrow.down.to.line", isOn: $follow)
+                    .help("Keep the newest line in view")
+            }
+            ToolbarItemGroup {
+                Button("Copy", systemImage: "doc.on.doc") { copy() }
+                Button("Clear", systemImage: "trash") { model.logs.clear() }
+            }
+        }
         .overlay {
             if model.logs.lines.isEmpty {
                 ContentUnavailableView("No Log Output", systemImage: "text.alignleft",
