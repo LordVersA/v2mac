@@ -109,12 +109,19 @@ struct ServerListView: View {
                 if let id = ids.first { model.activate(profileID: id) }
             }
             .overlay {
-                if rows.isEmpty {
-                    if !model.searchText.isEmpty {
-                        ContentUnavailableView.search
-                    } else if selectedGroupID != nil {
-                        ContentUnavailableView("No Servers", systemImage: "server.rack")
+                if rows.isEmpty, !model.searchText.isEmpty || selectedGroupID != nil {
+                    // On a glass card, so the empty table's row stripes don't run through the text.
+                    Group {
+                        if !model.searchText.isEmpty {
+                            ContentUnavailableView.search
+                        } else {
+                            ContentUnavailableView("No Servers", systemImage: "server.rack")
+                        }
                     }
+                    .fixedSize()
+                    .padding(.horizontal, 36)
+                    .padding(.vertical, 28)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 28))
                 }
             }
         }
