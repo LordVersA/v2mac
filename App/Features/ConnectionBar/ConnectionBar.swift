@@ -58,7 +58,7 @@ struct ConnectionBar: View {
     private var connectButton: some View {
         Button { connection.toggle() } label: {
             Image(systemName: "power")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(connection.phase == .off ? Color.primary : Color.white)
                 .symbolEffect(.pulse, isActive: isBusy)
                 .symbolEffect(.bounce, value: connection.phase == .connected)

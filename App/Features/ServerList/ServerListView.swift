@@ -61,7 +61,7 @@ struct ServerListView: View {
 
                 TableColumn("") { row in
                     if let flag = row.flag {
-                        Text(flag).font(.system(size: 15)).accessibilityLabel("Flag")
+                        Text(flag).font(.title3).accessibilityLabel("Flag")
                     }
                 }
                 .width(24)
@@ -208,7 +208,7 @@ private struct ActiveMarker: View {
     var body: some View {
         if isActive {
             Image(systemName: "circle.fill")
-                .font(.system(size: 8))
+                .font(.caption2)
                 .foregroundStyle(isConnected ? Color.green : Color.secondary)
                 .accessibilityLabel(isConnected ? "Active server, connected" : "Active server")
         }

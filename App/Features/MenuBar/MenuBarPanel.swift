@@ -147,7 +147,7 @@ struct MenuBarPanel: View {
                 connection.phase == .off || isFailed ? connection.connectActive() : connection.disconnect()
             } label: {
                 Image(systemName: "power")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(connection.phase == .off ? Color.primary : Color.white)
                     .symbolEffect(.pulse, isActive: isBusy)
                     .frame(width: 40, height: 40)
