@@ -152,6 +152,7 @@ public enum AppInstaller {
       fi
     fi
     rm -rf "$WORK"
+    rm -f "$0"
     "$OPEN" "$APP"
 
     """
