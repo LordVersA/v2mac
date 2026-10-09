@@ -274,6 +274,17 @@ struct SpeedText: View {
     }
 }
 
+private struct BadgeLabelStyle: LabelStyle {
+    let iconOnly: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            configuration.icon
+            if !iconOnly { configuration.title }
+        }
+    }
+}
+
 private struct GroupHeader: View {
     let group: ServerGroup
 
@@ -295,19 +306,31 @@ private struct GroupHeader: View {
             if let expires = group.expiresAt { expiry(expires, compact: compact) }
             Spacer(minLength: 8)
             if let url = group.supportURL.flatMap(URL.init(string:)) {
-                Link(destination: url) { Image(systemName: "bubble.left") }
-                    .help("Support")
-                    .accessibilityLabel("Open support")
+                linkBadge("Support", systemImage: "bubble.left", url: url, compact: compact)
+                    .help("Open support")
             }
             if let url = group.webPageURL.flatMap(URL.init(string:)) {
-                Link(destination: url) { Image(systemName: "person.crop.circle") }
-                    .help("Account page")
-                    .accessibilityLabel("Open account page")
+                linkBadge("Account", systemImage: "person.crop.circle", url: url, compact: compact)
+                    .help("Open account page")
             }
             updateStatus(compact: compact)
         }
         .lineLimit(1)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Small capsule link; the narrow row keeps only the icon.
+    private func linkBadge(_ title: String, systemImage: String, url: URL, compact: Bool) -> some View {
+        Link(destination: url) {
+            Label(title, systemImage: systemImage)
+                .labelStyle(BadgeLabelStyle(iconOnly: compact))
+                .font(.caption)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(.quaternary, in: .capsule)
+                .contentShape(.capsule)
+        }
+        .accessibilityLabel("Open \(title.lowercased()) page")
     }
 
     // MARK: Traffic
