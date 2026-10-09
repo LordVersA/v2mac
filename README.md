@@ -46,12 +46,22 @@ Requires Xcode 26+ and XcodeGen.
 
 ### Release
 
+Releases are made by CI. Commit messages are the changelog (see [CLAUDE.md](CLAUDE.md)), and pushing a version tag publishes the release:
+
+```sh
+Scripts/release.sh 0.2.0
+```
+
+It checks that `main` is clean and pushed, shows the notes (the commit messages since the previous tag), then tags `v0.2.0` and pushes the tag. CI runs the tests, builds `V2Mac-0.2.0.dmg` with that version, and creates the GitHub Release with the DMG, its `.sha256` and the notes. **Actions → Release → Run workflow** does a dry run that publishes nothing.
+
+To build a DMG locally:
+
 ```sh
 Scripts/make-dmg.sh                    # ad-hoc signed DMG and .sha256 in dist/
 SIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=profile Scripts/make-dmg.sh
 ```
 
-To enable the app update check, set `V2MAC_REPOSITORY` (`owner/name` of the GitHub repository that hosts the releases) in `project.yml`.
+The app update check reads the latest release of `V2MAC_REPOSITORY` (`owner/name`, set in `project.yml`).
 
 ## Licence
 

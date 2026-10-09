@@ -1,0 +1,87 @@
+name: Release
+
+# Push a tag like v0.2.0 (Scripts/release.sh 0.2.0 does it) to publish a release.
+# "Run workflow" builds everything but publishes nothing (dry run).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Dry run - version to build (nothing is published)
+        default: 0.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - run: brew install xcodegen
+
+      - name: Resolve version
+        id: v
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            TAG="v${{ inputs.version }}"
+          fi
+          VERSION="${TAG#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::$TAG is not vX.Y.Z"; exit 1; }
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # The app's version comes from the tag.
+          sed -i '' "s/MARKETING_VERSION: .*/MARKETING_VERSION: \"$VERSION\"/" project.yml
+          sed -i '' "s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: \"$GITHUB_RUN_NUMBER\"/" project.yml
+
+      - run: Scripts/fetch-core.sh
+
+      - name: Package tests
+        run: swift test
+        working-directory: Packages/V2MacCore
+
+      - name: Build DMG
+        run: Scripts/make-dmg.sh
+
+      - name: Release notes
+        run: |
+          TAG="${{ steps.v.outputs.tag }}"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            TO="$TAG"; PREVIOUS="$(git describe --tags --abbrev=0 --match 'v*' "$TAG^" 2>/dev/null || true)"
+          else
+            TO=HEAD; PREVIOUS="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
+          fi
+          {
+            echo "## What's changed"
+            echo
+            Scripts/changelog.sh "$PREVIOUS" "$TO"
+            echo
+            echo "## Install"
+            echo
+            echo "Download \`V2Mac-${{ steps.v.outputs.version }}.dmg\`, check it against the \`.sha256\` file, and follow the first-launch steps in the README (the app is ad-hoc signed)."
+            [[ -n "$PREVIOUS" ]] && echo && echo "Full changelog: https://github.com/${{ github.repository }}/compare/$PREVIOUS...$TAG"
+          } > notes.md
+          cat notes.md
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.v.outputs.tag }}" dist/*.dmg dist/*.sha256 \
+            --title "V2Mac ${{ steps.v.outputs.version }}" --notes-file notes.md
+
+      - name: Dry run output
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dry-run-${{ steps.v.outputs.version }}
+          path: |
+            dist/*
+            notes.md
