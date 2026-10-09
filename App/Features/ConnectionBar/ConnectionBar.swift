@@ -9,36 +9,129 @@ struct ConnectionBar: View {
     private var connection: ConnectionController { model.connection }
 
     var body: some View {
+        let tier = tier
         GlassEffectContainer(spacing: 14) {
-            // Narrow detail columns drop the extras instead of forcing the window wider. The
-            // rates go last: they first stack to save room, then the address gives way.
-            ViewThatFits(in: .horizontal) {
-                content(rates: .inline, showAddress: true)
-                content(rates: .stacked, showAddress: true)
-                content(rates: .stacked, showAddress: false)
-                content(rates: nil, showAddress: true)
-                content(rates: nil, showAddress: false)
-            }
-            .glassEffect(barGlass, in: .capsule)
+            content(rates: tier.rates, showAddress: tier.showsAddress)
+                // The bar must not ask for the width of the layout it is showing: the split
+                // view would then widen the column, a larger layout would fit and ask for
+                // more, and the window's layout would never settle (it crashed in narrow windows).
+                .frame(minWidth: 0, maxWidth: .infinity)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { widthChanged(to: $0) }
+                .background { rulers }
+                .glassEffect(barGlass, in: .capsule)
         }
         .animation(.smooth(duration: 0.35), value: connection.phase)
         .padding(.horizontal, 16)
         .padding(.bottom, 12)
     }
 
+    // MARK: Fitting the width
+
     private enum RateLayout { case inline, stacked }
 
-    private func content(rates: RateLayout?, showAddress: Bool) -> some View {
-        HStack(spacing: 14) {
-            connectButton
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline).lineLimit(1)
-                subtitle
+    /// What the bar shows, widest first. Narrow detail columns drop the extras instead of
+    /// forcing the window wider: the rates stack to save room, then the address gives way,
+    /// and the rates go last.
+    private enum Tier: CaseIterable {
+        case full, stackedRates, stackedRatesNoAddress, addressOnly, minimal
+
+        var rates: RateLayout? {
+            switch self {
+            case .full: .inline
+            case .stackedRates, .stackedRatesNoAddress: .stacked
+            case .addressOnly, .minimal: nil
             }
-            Spacer(minLength: 12)
+        }
+
+        var showsAddress: Bool {
+            switch self {
+            case .full, .stackedRates, .addressOnly: true
+            case .stackedRatesNoAddress, .minimal: false
+            }
+        }
+    }
+
+    private static let spacing: CGFloat = 14
+    private static let buttonWidth: CGFloat = 38
+    private static let leadingPadding: CGFloat = 8
+    private static let trailingPadding: CGFloat = 16
+    private static let minimumGap: CGFloat = 12
+
+    // Measured once and when they change. The bar is laid out a single time and its tier is
+    // worked out from these numbers; it used to lay out five complete copies of itself on
+    // every pass to see which one fitted, which made resizing the window slow.
+    @State private var barWidth: CGFloat = 0
+    @State private var pendingWidth: Task<Void, Never>?
+    @State private var titleWidth: CGFloat = 120
+    @State private var inlineRatesWidth: CGFloat = 150
+    @State private var stackedRatesWidth: CGFloat = 72
+    @State private var tunWidth: CGFloat = 66
+    @State private var routingWidth: CGFloat = 70
+    @State private var addressWidth: CGFloat = 132
+
+    /// While a window is being resized the split view lays the column out at its minimum
+    /// width for a moment on every step. Following that would tear down and rebuild the
+    /// graph, rates and address each time, so a width too small for even the smallest tier
+    /// only counts once it has lasted.
+    private func widthChanged(to width: CGFloat) {
+        pendingWidth?.cancel()
+        guard width < self.width(of: .minimal), barWidth >= self.width(of: .minimal) else {
+            barWidth = width
+            return
+        }
+        pendingWidth = Task {
+            try? await Task.sleep(for: .milliseconds(150))
+            if !Task.isCancelled { barWidth = width }
+        }
+    }
+
+    private var tier: Tier {
+        Tier.allCases.first { width(of: $0) <= barWidth } ?? .minimal
+    }
+
+    private func width(of tier: Tier) -> CGFloat {
+        let gap = Self.spacing
+        var width = Self.leadingPadding + Self.buttonWidth + gap + titleWidth + gap + Self.minimumGap + gap + tunWidth + Self.trailingPadding
+        if !connection.activeIsCustom { width += gap + routingWidth }
+        if let rates = tier.rates, connection.phase == .connected {
+            width += gap + sparklineWidth(rates) + gap + (rates == .inline ? inlineRatesWidth : stackedRatesWidth)
+        }
+        if tier.showsAddress { width += gap + addressWidth }
+        return width
+    }
+
+    private func sparklineWidth(_ rates: RateLayout) -> CGFloat { rates == .inline ? 70 : 48 }
+
+    /// Invisible copies of the pieces whose natural width is not known in advance.
+    private var rulers: some View {
+        ZStack {
+            titleBlock.fixedSize()
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { titleWidth = $0 }
+            rateLabels(.inline).font(.caption.monospacedDigit()).fixedSize()
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { inlineRatesWidth = $0 }
+            rateLabels(.stacked).font(.caption.monospacedDigit()).fixedSize()
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { stackedRatesWidth = $0 }
+        }
+        .hidden()
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+    }
+
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.headline).lineLimit(1)
+            subtitle
+        }
+    }
+
+    private func content(rates: RateLayout?, showAddress: Bool) -> some View {
+        HStack(spacing: Self.spacing) {
+            connectButton
+            titleBlock
+            Spacer(minLength: Self.minimumGap)
             if let rates, connection.phase == .connected {
                 TrafficSparkline(samples: connection.rateHistory)
-                    .frame(width: rates == .inline ? 70 : 48, height: 26)
+                    .frame(width: sparklineWidth(rates), height: 26)
                 rateLabels(rates)
                     .font(.caption.monospacedDigit())
                     .contentTransition(.numericText())
@@ -48,14 +141,19 @@ struct ConnectionBar: View {
                     .fixedSize()
             }
             TunToggle(connection: connection)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { tunWidth = $0 }
             // A custom config has no mode to pick; the status line says so instead.
             if !connection.activeIsCustom {
                 RoutingModeMenu(connection: connection, packs: model.regionPacks) { model.showRegionsSheet = true }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { routingWidth = $0 }
             }
-            if showAddress { addressMenu }
+            if showAddress {
+                addressMenu
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { addressWidth = $0 }
+            }
         }
-        .padding(.leading, 8)
-        .padding(.trailing, 16)
+        .padding(.leading, Self.leadingPadding)
+        .padding(.trailing, Self.trailingPadding)
         .padding(.vertical, 8)
     }
 
@@ -86,7 +184,7 @@ struct ConnectionBar: View {
                 .foregroundStyle(connection.phase == .off ? Color.primary : Color.white)
                 .symbolEffect(.pulse, isActive: isBusy)
                 .symbolEffect(.bounce, value: connection.phase == .connected)
-                .frame(width: 38, height: 38)
+                .frame(width: Self.buttonWidth, height: Self.buttonWidth)
         }
         .buttonStyle(.plain)
         .glassEffect(.regular.tint(stateColor).interactive(), in: .circle)

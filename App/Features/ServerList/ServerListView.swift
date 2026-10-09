@@ -7,7 +7,6 @@ struct ServerListView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var sortOrder = [KeyPathComparator(\ServerRow.sortIndex)]
-    @State private var columns = TableColumnCustomization<ServerRow>()
 
     private var selectedGroupID: UUID? {
         if case .group(let id) = model.sidebarSelection { return id }
@@ -56,70 +55,7 @@ struct ServerListView: View {
                 GroupHeader(group: group)
                     .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
-            Table(rows, selection: $model.selectedProfileIDs, sortOrder: $sortOrder, columnCustomization: $columns) {
-                TableColumn("") { row in
-                    if let flag = row.flag {
-                        Text(flag).font(.title3).accessibilityLabel("Flag")
-                    }
-                }
-                .width(24)
-                .customizationID("flag")
-
-                TableColumn("Name", value: \.displayName) { row in
-                    let isActive = model.connection.activeServer?.id == row.id
-                    let tint: Color = model.connection.phase == .connected ? .green : .secondary
-                    HStack(spacing: 6) {
-                        if isActive {
-                            Image(systemName: "circle.fill").font(.caption2).foregroundStyle(tint)
-                                .accessibilityLabel(model.connection.phase == .connected ? "Active server, connected" : "Active server")
-                                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-                        }
-                        Text(row.displayName).lineLimit(1)
-                            .fontWeight(isActive ? .semibold : .regular)
-                            .foregroundStyle(isActive ? tint : .primary)
-                        if row.hasWarnings {
-                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                                .accessibilityLabel("Has warnings")
-                        }
-                        if row.isStale {
-                            Text("Removed from subscription").font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .animation(.snappy, value: isActive)
-                    .animation(.smooth, value: model.connection.phase == .connected)
-                }
-                .customizationID("name")
-
-                TableColumn("Type", value: \.typeSummary) { row in
-                    Text(row.typeSummary).foregroundStyle(.secondary).lineLimit(1)
-                }
-                .customizationID("type")
-
-                TableColumn("Address", value: \.address) { row in
-                    Text(row.address).foregroundStyle(.secondary).lineLimit(1)
-                }
-                .defaultVisibility(.hidden)
-                .customizationID("address")
-
-                TableColumn("Delay", value: \.delaySortKey) { row in
-                    DelayText(row: row, isTesting: model.latency.testingIDs.contains(row.id))
-                }
-                .width(min: 70, ideal: 80)
-                .customizationID("delay")
-
-                TableColumn("Speed", value: \.speedSortKey) { row in
-                    SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id))
-                }
-                .width(min: 70, ideal: 80)
-                .customizationID("speed")
-            }
-            // Sideways swipes move the table only when its columns are wider than the list.
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-            .contextMenu(forSelectionType: UUID.self) { ids in
-                contextMenu(for: ids)
-            } primaryAction: { ids in
-                if let id = ids.first { model.activate(profileID: id) }
-            }
+            ServerTable(rows: rows, profiles: profiles, sortOrder: $sortOrder)
             .overlay {
                 ZStack {
                     if showsEmptyState {
@@ -156,6 +92,9 @@ struct ServerListView: View {
                 .inspectorColumnWidth(min: 220, ideal: 260, max: 360)
         }
         .navigationTitle(selectedGroup?.name ?? "All Servers")
+        #if DEBUG
+        .navigationSubtitle("Dev build")
+        #endif
         .onChange(of: rows.map(\.id), initial: true) { _, ids in model.visibleProfileIDs = ids }
     }
 
@@ -207,6 +146,86 @@ struct ServerListView: View {
                 Label("Inspector", systemImage: "sidebar.right")
             }
             .help("Toggle Inspector (⌘I)")
+        }
+    }
+}
+
+/// The table on its own, so that what only it needs (column widths change on every step of a
+/// window resize) does not rebuild the whole list view with its toolbar and inspector.
+private struct ServerTable: View {
+    let rows: [ServerRow]
+    let profiles: [Profile]
+    @Binding var sortOrder: [KeyPathComparator<ServerRow>]
+
+    @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var columns = TableColumnCustomization<ServerRow>()
+
+    var body: some View {
+        @Bindable var model = model
+        Table(rows, selection: $model.selectedProfileIDs, sortOrder: $sortOrder, columnCustomization: $columns) {
+            TableColumn("") { row in
+                if let flag = row.flag {
+                    Text(flag).font(.title3).accessibilityLabel("Flag")
+                }
+            }
+            .width(24)
+            .customizationID("flag")
+
+            TableColumn("Name", value: \.displayName) { row in
+                let isActive = model.connection.activeServer?.id == row.id
+                let tint: Color = model.connection.phase == .connected ? .green : .secondary
+                HStack(spacing: 6) {
+                    if isActive {
+                        Image(systemName: "circle.fill").font(.caption2).foregroundStyle(tint)
+                            .accessibilityLabel(model.connection.phase == .connected ? "Active server, connected" : "Active server")
+                            .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+                    }
+                    Text(row.displayName).lineLimit(1)
+                        .fontWeight(isActive ? .semibold : .regular)
+                        .foregroundStyle(isActive ? tint : .primary)
+                    if row.hasWarnings {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                            .accessibilityLabel("Has warnings")
+                    }
+                    if row.isStale {
+                        Text("Removed from subscription").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .animation(.snappy, value: isActive)
+                .animation(.smooth, value: model.connection.phase == .connected)
+            }
+            .customizationID("name")
+
+            TableColumn("Type", value: \.typeSummary) { row in
+                Text(row.typeSummary).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .customizationID("type")
+
+            TableColumn("Address", value: \.address) { row in
+                Text(row.address).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .defaultVisibility(.hidden)
+            .customizationID("address")
+
+            TableColumn("Delay", value: \.delaySortKey) { row in
+                DelayText(row: row, isTesting: model.latency.testingIDs.contains(row.id))
+            }
+            .width(min: 70, ideal: 80)
+            .customizationID("delay")
+
+            TableColumn("Speed", value: \.speedSortKey) { row in
+                SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id))
+            }
+            .width(min: 70, ideal: 80)
+            .customizationID("speed")
+        }
+        // Sideways swipes move the table only when its columns are wider than the list.
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .contextMenu(forSelectionType: UUID.self) { ids in
+            contextMenu(for: ids)
+        } primaryAction: { ids in
+            if let id = ids.first { model.activate(profileID: id) }
         }
     }
 
