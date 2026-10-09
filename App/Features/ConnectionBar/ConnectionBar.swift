@@ -10,11 +10,14 @@ struct ConnectionBar: View {
 
     var body: some View {
         GlassEffectContainer(spacing: 14) {
-            // Narrow detail columns drop the extras instead of forcing the window wider.
+            // Narrow detail columns drop the extras instead of forcing the window wider. The
+            // rates go last: they first stack to save room, then the address gives way.
             ViewThatFits(in: .horizontal) {
-                content(showRates: true, showAddress: true)
-                content(showRates: false, showAddress: true)
-                content(showRates: false, showAddress: false)
+                content(rates: .inline, showAddress: true)
+                content(rates: .stacked, showAddress: true)
+                content(rates: .stacked, showAddress: false)
+                content(rates: nil, showAddress: true)
+                content(rates: nil, showAddress: false)
             }
             .glassEffect(barGlass, in: .capsule)
         }
@@ -23,7 +26,9 @@ struct ConnectionBar: View {
         .padding(.bottom, 12)
     }
 
-    private func content(showRates: Bool, showAddress: Bool) -> some View {
+    private enum RateLayout { case inline, stacked }
+
+    private func content(rates: RateLayout?, showAddress: Bool) -> some View {
         HStack(spacing: 14) {
             connectButton
             VStack(alignment: .leading, spacing: 2) {
@@ -31,19 +36,16 @@ struct ConnectionBar: View {
                 subtitle
             }
             Spacer(minLength: 12)
-            if showRates, connection.phase == .connected {
+            if let rates, connection.phase == .connected {
                 TrafficSparkline(samples: connection.rateHistory)
-                    .frame(width: 70, height: 26)
-                HStack(spacing: 10) {
-                    Label(Format.rate(connection.downRate), systemImage: "arrow.down")
-                    Label(Format.rate(connection.upRate), systemImage: "arrow.up")
-                }
-                .font(.caption.monospacedDigit())
-                .contentTransition(.numericText())
-                .animation(.smooth, value: connection.downRate)
-                .animation(.smooth, value: connection.upRate)
-                .foregroundStyle(.secondary)
-                .fixedSize()
+                    .frame(width: rates == .inline ? 70 : 48, height: 26)
+                rateLabels(rates)
+                    .font(.caption.monospacedDigit())
+                    .contentTransition(.numericText())
+                    .animation(.smooth, value: connection.downRate)
+                    .animation(.smooth, value: connection.upRate)
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
             }
             TunToggle(connection: connection)
             RoutingModeMenu(connection: connection, packs: model.regionPacks) { model.showRegionsSheet = true }
@@ -55,6 +57,16 @@ struct ConnectionBar: View {
     }
 
     // MARK: Pieces
+
+    @ViewBuilder
+    private func rateLabels(_ layout: RateLayout) -> some View {
+        let down = Label(Format.rate(connection.downRate), systemImage: "arrow.down")
+        let up = Label(Format.rate(connection.upRate), systemImage: "arrow.up")
+        switch layout {
+        case .inline: HStack(spacing: 10) { down; up }
+        case .stacked: VStack(alignment: .leading, spacing: 1) { down; up }
+        }
+    }
 
     private var connectButton: some View {
         Button { connection.toggle() } label: {
