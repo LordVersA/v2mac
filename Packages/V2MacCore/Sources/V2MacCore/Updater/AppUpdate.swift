@@ -8,11 +8,34 @@ public struct AppRelease: Sendable, Equatable {
 
 /// Reads the latest release of the app's own repository (spec 11.3). Never installs anything.
 public enum AppUpdateChecker {
+    /// Falls back to the Atom feed when the API cannot be read. It is often rate limited
+    /// (HTTP 403/429) behind a proxy server's shared address.
     public static func latest(repository: String, downloader: FileDownloader) async throws -> AppRelease {
-        guard let url = URL(string: "https://api.github.com/repos/\(repository)/releases/latest") else {
+        guard let url = URL(string: "https://api.github.com/repos/\(repository)/releases/latest"),
+              let atomURL = URL(string: "https://github.com/\(repository)/releases.atom") else {
             throw CoreUpdateError.malformedResponse
         }
-        return try parse(try await downloader.download(url))
+        do {
+            return try parse(try await downloader.download(url))
+        } catch is DownloadError {
+            return try parseAtom(try await downloader.download(atomURL))
+        }
+    }
+
+    /// The highest version among the feed's release links.
+    static func parseAtom(_ data: Data) throws -> AppRelease {
+        let text = String(decoding: data, as: UTF8.self)
+        var best: AppRelease?
+        for entry in text.components(separatedBy: "<entry>").dropFirst() {
+            guard let link = CoreUpdater.firstMatch(#"href="([^"]+/releases/tag/[^"]+)""#, in: entry),
+                  let pageURL = URL(string: link) else { continue }
+            let tag = pageURL.lastPathComponent.removingPercentEncoding ?? pageURL.lastPathComponent
+            if best == nil || VersionCompare.isNewer(tag, than: best?.tag ?? "") {
+                best = AppRelease(tag: tag, pageURL: pageURL)
+            }
+        }
+        guard let best else { throw CoreUpdateError.noRelease }
+        return best
     }
 
     static func parse(_ data: Data) throws -> AppRelease {

@@ -117,7 +117,7 @@ public enum CoreUpdater {
         )
     }
 
-    private static func firstMatch(_ pattern: String, in text: String) -> String? {
+    static func firstMatch(_ pattern: String, in text: String) -> String? {
         guard let regex = try? NSRegularExpression(pattern: pattern),
               let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
               match.numberOfRanges > 1, let range = Range(match.range(at: 1), in: text)

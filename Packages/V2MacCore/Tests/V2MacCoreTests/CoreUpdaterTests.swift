@@ -57,6 +57,19 @@ import Testing
         #expect(VersionCompare.isNewer(release.tag, than: "0.1.0"))
     }
 
+    @Test func parsesAppReleaseAtomFallback() throws {
+        let atom = """
+        <feed><updated>2026-09-01T00:00:00Z</updated>
+        <entry><id>2</id><updated>2026-09-01T00:00:00Z</updated><link rel="alternate" type="text/html" href="https://github.com/o/r/releases/tag/v0.2.1"/></entry>
+        <entry><id>3</id><updated>2026-09-02T00:00:00Z</updated><link rel="alternate" type="text/html" href="https://github.com/o/r/releases/tag/v0.10.0"/></entry>
+        <entry><id>1</id><updated>2026-08-01T00:00:00Z</updated><link rel="alternate" type="text/html" href="https://github.com/o/r/releases/tag/v0.2.0"/></entry></feed>
+        """
+        let release = try AppUpdateChecker.parseAtom(Data(atom.utf8))
+        #expect(release.tag == "v0.10.0")
+        #expect(release.pageURL.absoluteString == "https://github.com/o/r/releases/tag/v0.10.0")
+        #expect(throws: CoreUpdateError.noRelease) { try AppUpdateChecker.parseAtom(Data("<feed></feed>".utf8)) }
+    }
+
     // MARK: Install with a stand-in binary
 
     private func makeZip(script: String) throws -> Data {
