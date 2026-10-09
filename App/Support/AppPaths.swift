@@ -85,6 +85,12 @@ enum Prefs {
             "logConnections": false,
         ])
         if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
+        // macOS puts a new menu bar icon at the far left, where a notch hides it first. This is
+        // AppKit's own (undocumented) key for a dragged icon, in points from the right edge of
+        // the screen; seeding it starts the icon beside the system ones. A position the user
+        // chose by ⌘-dragging is already stored here and is left alone.
+        let iconPosition = "NSStatusItem Preferred Position Item-0"
+        if defaults.object(forKey: iconPosition) == nil { defaults.set(350, forKey: iconPosition) }
     }
 
     static var lastCoreUpdateCheck: Date? {
