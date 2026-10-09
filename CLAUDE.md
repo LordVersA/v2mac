@@ -20,6 +20,18 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     `chore:` and are left out of the release notes.
   - End with the `Co-Authored-By` trailer given in the session.
 
+## Never close the installed app
+- The V2Mac in `/Applications` (bundle id `io.github.lordversa.v2mac`) is the user's own running VPN.
+  **Never quit, kill or restart it, or its `xray` core**, not even "just to test a rebuild".
+- Test only with the dev instance: every Debug build is a separate app, **`V2MacDev.app`**
+  (bundle id `io.github.lordversa.v2mac.dev`, data folder `~/Library/Application Support/v2mac-dev`,
+  default port 10818, "Dev build" under the window title). Open and close only that one.
+- Address it by its own name or bundle id: `pkill -f "V2MacDev.app/Contents/"`,
+  `osascript -e 'tell application id "io.github.lordversa.v2mac.dev" to quit'`, System Events
+  `process "V2MacDev"`. Never `pkill V2Mac`, `tell application "V2Mac"`, or the release bundle id.
+- If a check really needs the installed app restarted, ask the user to do it.
+- The dev instance shares `/var/run/v2mac-tun-<uid>` with the installed app: do not turn TUN mode on in it.
+
 ## Releasing
 - A release is made by pushing a tag, not by a normal commit. The user says when:
   `Scripts/release.sh X.Y.Z` (checks main is clean and pushed, shows the notes, tags `vX.Y.Z`,
@@ -41,11 +53,13 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     is missing, so a green run without `fetch-core.sh` has not exercised them. Some need the network.
 - There is no linter and no app-target test bundle. All testable logic belongs in the package.
 - Local DMG: `Scripts/make-dmg.sh` (ad-hoc signed, output in `dist/`).
-- The scheme and project are still named `v2mac`; the product is `V2Mac.app`. The data folder
+- The scheme and project are still named `v2mac`; the Release product is `V2Mac.app`. Its data folder
   (`~/Library/Application Support/v2mac`) and bundle id (`io.github.lordversa.v2mac`) must not change.
+  The Debug product is `V2MacDev.app` (see "Never close the installed app"); it starts with an empty
+  data folder, so copy `default.store*` into `v2mac-dev` when a check needs real servers.
 - The Xray version is pinned in `Scripts/core.lock`; change `VERSION` and `SHA256` together.
 - Debug builds accept launch arguments for scripted checks (`-debugAddSubscription <url>`,
-  `-debugActivateFirst YES`, `-debugConnect YES`, `-debugTest tcp|real`, …) and print
+  `-debugActivateFirst YES`, `-debugConnect YES`, `-debugTest tcp|real`, `-debugSwitchTest YES`, …) and print
   `[v2mac-debug]` lines to stdout. See `AppModel.runDebugHooks`.
 
 ## Architecture
@@ -69,6 +83,12 @@ connect, `ConfigBuilder` wraps the outbound with the `mixed-in` inbound, routing
 region packs), metrics and, in TUN mode, the `tun-in` inbound (`XrayConfig/Tun.swift`); custom
 configs are patched rather than rebuilt. `CoreRunner` writes `run/config.json`, launches `xray` and
 publishes state and log lines as `AsyncStream`s.
+
+**Connection settings** (spec 8.4). `RunOptions` also carries `dialer` (TLS fragment and noise:
+a `v2mac-dialer` freedom outbound that proxy outbounds reach through `sockopt.dialerProxy`), `dns`
+(the core's own resolver) and `apiPort`. With an API port, picking another share-link server swaps
+the `proxy` outbound in the running core (`CoreRunner.replaceOutbound`, which shells out to
+`xray api rmo/ado`) instead of restarting it; any other change, and every full config, restarts.
 
 **State objects.** `AppModel` owns the `ModelContainer` and all services and wires them together
 with closures in its `init` (e.g. download routes, "reconnect if running"); services do not hold
@@ -97,6 +117,12 @@ between `.regular` and `.accessory` activation policy as windows open and close,
 through `applicationShouldTerminate` so the core and TUN helper are shut down first.
 
 ## Gotchas
+- A view in the detail column must not report a minimum width that depends on how much room it was
+  given (a `ViewThatFits` in a `safeAreaInset` did): with the inspector open the split view then
+  never settles, resizing crawls, and narrow windows crash with "needing another Update Constraints
+  pass". `ConnectionBar` takes `minWidth: 0` and picks its tier from measured widths for this reason.
+- The table's column state changes on every step of a window resize. Keep it inside `ServerTable`,
+  not in `ServerListView`, or the whole list view is rebuilt several times per step.
 - The filesystem is case-insensitive: `v2mac` and `V2Mac` are the same path. Don't `rm` an "old name"
   after a rename. It deletes the new file.
 - A running app does not pick up a rebuild. Quit it (⌘Q) and reopen it before judging a change.

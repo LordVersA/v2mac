@@ -40,3 +40,10 @@ targets:
         ENABLE_HARDENED_RUNTIME: NO
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        # Debug builds are a separate app ("V2MacDev") with their own bundle id, settings and
+        # data folder, so they can run next to an installed V2Mac without touching it.
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac.dev
+          PRODUCT_NAME: V2MacDev
+          PRODUCT_MODULE_NAME: V2Mac

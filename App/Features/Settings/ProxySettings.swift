@@ -3,7 +3,7 @@ import V2MacCore
 
 struct ProxySettings: View {
     @Environment(AppModel.self) private var model
-    @AppStorage("proxyPort") private var port = 10808
+    @AppStorage("proxyPort") private var port = Prefs.defaultPort
     @AppStorage("allowLAN") private var allowLAN = false
     @AppStorage("proxyUsername") private var username = ""
     @AppStorage("proxyPassword") private var password = ""
