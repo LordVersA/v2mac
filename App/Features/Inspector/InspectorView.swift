@@ -2,51 +2,71 @@ import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 struct InspectorView: View {
+    @Environment(AppModel.self) private var model
     let profile: Profile?
     @State private var showQR = false
 
     var body: some View {
         Group {
             if let profile {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text(profile.name).font(.title3.bold()).textSelection(.enabled)
-
-                        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 8) {
-                            field("Protocol", profile.protocolName)
-                            if !profile.transport.isEmpty { field("Transport", profile.transport) }
-                            field("Security", profile.security.isEmpty ? "—" : profile.security)
-                            if !profile.address.isEmpty { field("Address", "\(profile.address):\(profile.port)") }
-                            if let sni = sni(of: profile) { field("SNI / Host", sni) }
-                            field("Delay", delayText(profile))
-                        }
-
-                        if !profile.warnings.isEmpty {
-                            VStack(alignment: .leading, spacing: 6) {
-                                ForEach(profile.warnings, id: \.self) { warning in
-                                    Label(warning, systemImage: "exclamationmark.triangle.fill")
-                                        .font(.callout)
-                                        .foregroundStyle(.orange)
-                                }
+                let name = ServerName(profile.name)
+                let isActive = model.connection.activeServer?.id == profile.id
+                Form {
+                    Section {
+                        HStack(spacing: 10) {
+                            if let flag = name.flag { Text(flag).font(.largeTitle) }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(name.title).font(.title3.bold()).textSelection(.enabled)
+                                Text(profile.typeSummary).font(.caption).foregroundStyle(.secondary)
                             }
                         }
+                        Button(isActive ? "Active Server" : "Connect", systemImage: isActive ? "checkmark.circle.fill" : "power") {
+                            model.activate(profile)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .disabled(isActive)
+                        .frame(maxWidth: .infinity)
+                    }
 
-                        HStack {
-                            Button("Copy Share Link") {
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(profile.originalLink ?? "", forType: .string)
-                            }
-                            .disabled(profile.originalLink == nil)
-                            Button("QR Code", systemImage: "qrcode") { showQR = true }
-                                .disabled(profile.originalLink == nil)
-                                .popover(isPresented: $showQR, arrowEdge: .bottom) {
-                                    QRPopover(name: profile.name, link: profile.originalLink ?? "")
-                                }
+                    Section("Connection") {
+                        LabeledContent("Protocol", value: profile.protocolName)
+                        if !profile.transport.isEmpty { LabeledContent("Transport", value: profile.transport) }
+                        LabeledContent("Security", value: profile.security.isEmpty ? "—" : profile.security)
+                        if !profile.address.isEmpty { field("Address", "\(profile.address):\(profile.port)") }
+                        if let sni = sni(of: profile) { field("SNI / Host", sni) }
+                    }
+
+                    Section("Performance") {
+                        LabeledContent("Delay", value: delayText(profile))
+                        if let speed = profile.speedBps, speed > 0 {
+                            LabeledContent("Speed", value: Format.rate(speed))
                         }
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if !profile.warnings.isEmpty {
+                        Section("Warnings") {
+                            ForEach(profile.warnings, id: \.self) { warning in
+                                Label(warning, systemImage: "exclamationmark.triangle.fill")
+                                    .font(.callout)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+                    }
+
+                    Section {
+                        Button("Copy Share Link", systemImage: "link") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(profile.originalLink ?? "", forType: .string)
+                        }
+                        .disabled(profile.originalLink == nil)
+                        Button("QR Code", systemImage: "qrcode") { showQR = true }
+                            .disabled(profile.originalLink == nil)
+                            .popover(isPresented: $showQR, arrowEdge: .bottom) {
+                                QRPopover(name: profile.name, link: profile.originalLink ?? "")
+                            }
+                    }
                 }
+                .formStyle(.grouped)
             } else {
                 ContentUnavailableView("No Selection", systemImage: "sidebar.right", description: Text("Select a server to see its details."))
             }
@@ -54,10 +74,7 @@ struct InspectorView: View {
     }
 
     private func field(_ title: String, _ value: String) -> some View {
-        GridRow {
-            Text(title).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
-            Text(value).textSelection(.enabled)
-        }
+        LabeledContent(title) { Text(value).textSelection(.enabled) }
     }
 
     private func sni(of profile: Profile) -> String? {
