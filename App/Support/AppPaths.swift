@@ -84,6 +84,7 @@ enum Prefs {
             "logLevel": XrayLogLevel.warning.rawValue,
             "logConnections": false,
         ])
+        if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
     }
 
     static var lastCoreUpdateCheck: Date? {
@@ -163,7 +164,10 @@ enum Prefs {
         set { defaults.set(Array(newValue).sorted(), forKey: "enabledRegionPacks") }
     }
 
-    static let defaultSpeedURL = "https://speed.cloudflare.com/__down?bytes=100000000"
+    /// Cloudflare answers 403 to requests of 100 MB or more, so stay well under that.
+    static let defaultSpeedURL = "https://speed.cloudflare.com/__down?bytes=50000000"
+    /// The old default, which Cloudflare now refuses; a saved copy is dropped on launch.
+    static let retiredSpeedURL = "https://speed.cloudflare.com/__down?bytes=100000000"
 
     static var speedURL: URL {
         defaults.string(forKey: "speedTestURL").flatMap(URL.init(string:)) ?? URL(string: defaultSpeedURL)!
