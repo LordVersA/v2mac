@@ -40,6 +40,13 @@ struct ServerListView: View {
         selectedGroupID.flatMap { model.group(id: $0) }
     }
 
+    private func tinted<V: View>(_ row: ServerRow, @ViewBuilder _ content: () -> V) -> some View {
+        content().modifier(ActiveRowBackground(
+            isActive: model.connection.activeServer?.id == row.id,
+            isConnected: model.connection.phase == .connected
+        ))
+    }
+
     var body: some View {
         @Bindable var model = model
         let rows = rows
@@ -51,55 +58,50 @@ struct ServerListView: View {
             if let group = selectedGroup { GroupHeader(group: group) }
             Table(rows, selection: $model.selectedProfileIDs, sortOrder: $sortOrder, columnCustomization: $columns) {
                 TableColumn("") { row in
-                    ActiveMarker(
-                        isActive: model.connection.activeServer?.id == row.id,
-                        isConnected: model.connection.phase == .connected
-                    )
-                }
-                .width(14)
-                .customizationID("active")
-
-                TableColumn("") { row in
-                    if let flag = row.flag {
-                        Text(flag).font(.title3).accessibilityLabel("Flag")
+                    tinted(row) {
+                        if let flag = row.flag {
+                            Text(flag).font(.title3).accessibilityLabel("Flag")
+                        }
                     }
                 }
                 .width(24)
                 .customizationID("flag")
 
                 TableColumn("Name", value: \.displayName) { row in
-                    HStack(spacing: 6) {
-                        Text(row.displayName).lineLimit(1)
-                        if row.hasWarnings {
-                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                                .accessibilityLabel("Has warnings")
-                        }
-                        if row.isStale {
-                            Text("Removed from subscription").font(.caption).foregroundStyle(.secondary)
+                    tinted(row) {
+                        HStack(spacing: 6) {
+                            Text(row.displayName).lineLimit(1)
+                            if row.hasWarnings {
+                                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                                    .accessibilityLabel("Has warnings")
+                            }
+                            if row.isStale {
+                                Text("Removed from subscription").font(.caption).foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
                 .customizationID("name")
 
                 TableColumn("Type", value: \.typeSummary) { row in
-                    Text(row.typeSummary).foregroundStyle(.secondary).lineLimit(1)
+                    tinted(row) { Text(row.typeSummary).foregroundStyle(.secondary).lineLimit(1) }
                 }
                 .customizationID("type")
 
                 TableColumn("Address", value: \.address) { row in
-                    Text(row.address).foregroundStyle(.secondary).lineLimit(1)
+                    tinted(row) { Text(row.address).foregroundStyle(.secondary).lineLimit(1) }
                 }
                 .defaultVisibility(.hidden)
                 .customizationID("address")
 
                 TableColumn("Delay", value: \.delaySortKey) { row in
-                    DelayText(row: row, isTesting: model.latency.testingIDs.contains(row.id))
+                    tinted(row) { DelayText(row: row, isTesting: model.latency.testingIDs.contains(row.id)) }
                 }
                 .width(min: 70, ideal: 80)
                 .customizationID("delay")
 
                 TableColumn("Speed", value: \.speedSortKey) { row in
-                    SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id))
+                    tinted(row) { SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id)) }
                 }
                 .width(min: 70, ideal: 80)
                 .customizationID("speed")
@@ -200,18 +202,18 @@ struct ServerListView: View {
     }
 }
 
-/// Takes plain values: table cells do not reliably receive environment objects.
-private struct ActiveMarker: View {
+/// Tints the whole row of the active server. Takes plain values: table cells do not reliably
+/// receive environment objects.
+private struct ActiveRowBackground: ViewModifier {
     let isActive: Bool
     let isConnected: Bool
 
-    var body: some View {
-        if isActive {
-            Image(systemName: "circle.fill")
-                .font(.caption2)
-                .foregroundStyle(isConnected ? Color.green : Color.secondary)
-                .accessibilityLabel(isConnected ? "Active server, connected" : "Active server")
-        }
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .background {
+                if isActive { (isConnected ? Color.green : Color.secondary).opacity(0.18) }
+            }
     }
 }
 
