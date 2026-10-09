@@ -1,0 +1,42 @@
+name: v2mac
+options:
+  bundleIdPrefix: io.github.lordversa
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: NO
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # "owner/name" of the app's GitHub repository; enables the app update check.
+    V2MAC_REPOSITORY: "LordVersA/v2mac"
+packages:
+  V2MacCore:
+    path: Packages/V2MacCore
+targets:
+  v2mac:
+    type: application
+    platform: macOS
+    sources:
+      - App
+    dependencies:
+      - package: V2MacCore
+    preBuildScripts:
+      - name: Embed Xray core
+        script: '"$SRCROOT/Scripts/embed-core.sh"'
+        basedOnDependencyAnalysis: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac
+        PRODUCT_NAME: v2mac
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: App/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/Resources/v2mac.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: NO
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

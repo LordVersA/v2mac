@@ -1,0 +1,73 @@
+import Foundation
+import SwiftData
+import V2MacCore
+
+/// Background writer for subscription data (spec 6.4 reconcile).
+@ModelActor
+actor SubscriptionStore {
+    func createGroup(url: String, name: String, result: SubscriptionResult, viaProxy: Bool) throws -> UUID {
+        let all = try modelContext.fetch(FetchDescriptor<ServerGroup>())
+        let group = ServerGroup(name: name, subscriptionURL: url, sortIndex: (all.map(\.sortIndex).max() ?? -1) + 1)
+        modelContext.insert(group)
+        reconcile(group, with: result, viaProxy: viaProxy, activeProfileID: nil)
+        try modelContext.save()
+        return group.id
+    }
+
+    func apply(_ result: SubscriptionResult, to groupID: UUID, viaProxy: Bool, activeProfileID: UUID?) throws {
+        guard let group = try fetchGroup(groupID) else { return }
+        reconcile(group, with: result, viaProxy: viaProxy, activeProfileID: activeProfileID)
+        try modelContext.save()
+    }
+
+    /// A failed fetch never touches the group's servers.
+    func recordFailure(groupID: UUID, message: String) throws {
+        guard let group = try fetchGroup(groupID) else { return }
+        group.lastUpdateError = message
+        try modelContext.save()
+    }
+
+    private func fetchGroup(_ id: UUID) throws -> ServerGroup? {
+        try modelContext.fetch(FetchDescriptor<ServerGroup>(predicate: #Predicate { $0.id == id })).first
+    }
+
+    private func reconcile(_ group: ServerGroup, with result: SubscriptionResult, viaProxy: Bool, activeProfileID: UUID?) {
+        let existing = group.profiles.sorted { $0.sortIndex < $1.sortIndex }
+        var byFingerprint: [String: [Profile]] = [:]
+        for p in existing { byFingerprint[p.fingerprint, default: []].append(p) }
+
+        var reused = Set<UUID>()
+        for (index, parsed) in result.profiles.enumerated() {
+            if let match = byFingerprint[parsed.fingerprint]?.first {
+                byFingerprint[parsed.fingerprint]?.removeFirst()
+                match.update(from: parsed, sortIndex: index)
+                reused.insert(match.id)
+            } else {
+                modelContext.insert(Profile(parsed: parsed, sortIndex: index, group: group))
+            }
+        }
+
+        for old in existing where !reused.contains(old.id) {
+            if old.id == activeProfileID {
+                old.isStale = true
+                old.sortIndex = result.profiles.count + 1000
+            } else {
+                modelContext.delete(old)
+            }
+        }
+
+        let m = result.metadata
+        group.serverIntervalHours = m.updateIntervalHours
+        group.usedBytes = m.usedBytes
+        group.totalBytes = m.totalBytes
+        group.expiresAt = m.expiresAt
+        group.uploadBytes = m.uploadBytes
+        group.downloadBytes = m.downloadBytes
+        group.supportURL = m.supportURL?.absoluteString
+        group.webPageURL = m.webPageURL?.absoluteString
+        group.lastUpdatedAt = Date()
+        group.lastUpdateViaProxy = viaProxy
+        group.lastSkippedCount = result.skipped.count
+        group.lastUpdateError = nil
+    }
+}

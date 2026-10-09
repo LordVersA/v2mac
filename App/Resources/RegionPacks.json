@@ -1,0 +1,17 @@
+[
+  {
+    "id": "ir",
+    "name": "Iran",
+    "attribution": "Chocolate4U/Iran-v2ray-rules (GPL-3.0)",
+    "geosite": {
+      "url": "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/latest/download/geosite-lite.dat",
+      "file": "region-ir-geosite.dat",
+      "tags": ["ir"]
+    },
+    "geoip": {
+      "url": "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/latest/download/geoip-lite.dat",
+      "file": "region-ir-geoip.dat",
+      "tags": ["ir"]
+    }
+  }
+]

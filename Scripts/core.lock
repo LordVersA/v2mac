@@ -1,0 +1,4 @@
+# Pinned Xray-core release. Update version and sha256 together.
+VERSION=v26.9.30
+ASSET=Xray-macos-arm64-v8a.zip
+SHA256=4b363bd924df5bf09f87bd445755ff8e5742b9a8a0480cda261061416c3c7dce

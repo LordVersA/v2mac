@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20.15pt" height="18pt" viewBox="-30 -30 966 863">
+  <!-- Two crossing bars of the v2mac "V". The right bar is cut out of the left one for the crossing effect. -->
+  <defs>
+    <mask id="gap" maskUnits="userSpaceOnUse" x="-30" y="-30" width="966" height="863">
+      <rect x="-30" y="-30" width="966" height="863" fill="white"/>
+      <polygon points="906,0 661,0 223,803 473,803" fill="black" stroke="black" stroke-width="64" stroke-linejoin="miter"/>
+    </mask>
+  </defs>
+  <polygon points="0,0 245,0 683,803 433,803" fill="black" mask="url(#gap)"/>
+  <polygon points="906,0 661,0 223,803 473,803" fill="black"/>
+</svg>

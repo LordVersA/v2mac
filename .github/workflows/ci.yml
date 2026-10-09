@@ -1,0 +1,17 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: Scripts/fetch-core.sh
+      - name: Package tests
+        run: swift test
+        working-directory: Packages/V2MacCore
+      - name: Build app
+        run: |
+          xcodegen generate
+          xcodebuild -project v2mac.xcodeproj -scheme v2mac -configuration Debug \
+            CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO build
