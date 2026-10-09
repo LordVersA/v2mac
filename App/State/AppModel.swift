@@ -223,6 +223,17 @@ final class AppModel {
                 if defaults.bool(forKey: "debugActivateFirst") { connection.connectActive() }
             }
         }
+        if defaults.bool(forKey: "debugAppUpdate") {
+            Task {
+                await updates.checkApp(manual: true)
+                print("[v2mac-debug] app check: \(updates.appStatus)")
+                if case .available(let release) = updates.appStatus {
+                    await updates.installApp(release)
+                    // Only reached when the install failed; a successful one quits the app.
+                    print("[v2mac-debug] app install: \(updates.appStatus)")
+                }
+            }
+        }
         if let mode = defaults.string(forKey: "debugCoreUpdate") {
             Task {
                 await updates.refreshCoreInfo()
