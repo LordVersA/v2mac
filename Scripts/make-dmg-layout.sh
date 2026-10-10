@@ -4,6 +4,8 @@
 # or the numbers below, and commit the two files. Scripts/make-dmg.sh only copies them, so a
 # release build (also in CI) never has to script Finder.
 #
+# Do not hide the path bar here: that switch is the user's own Finder setting, not the window's.
+#
 # The .DS_Store is written by Finder itself, so this needs a desktop session and, the first
 # time, permission for the terminal to control Finder.
 set -euo pipefail
@@ -20,7 +22,11 @@ TITLE_BAR=28
 ICON_SIZE=128
 APP_X=130
 APPS_X=530
-ICON_Y=200   # the arrow in the picture is at half height
+# The arrow in the picture is at half height (200). Finder draws a 128-point icon with its
+# centre 45 points below the position it is given, hence 155.
+ICON_Y=155
+# Hidden items show up for people who have hidden files turned on: park them below the window.
+HIDDEN_Y=$(( HEIGHT + 300 ))
 
 [[ -d "/Volumes/$VOLUME" ]] && { echo "error: /Volumes/$VOLUME is mounted; eject it first" >&2; exit 1; }
 
@@ -58,12 +64,20 @@ tell application "Finder"
     set arrangement of opts to not arranged
     set icon size of opts to $ICON_SIZE
     set text size of opts to 13
+    -- Finder picks black or white icon names from this colour, also under a picture.
+    set background color of opts to {2000, 3000, 6000}
     set background picture of opts to file ".background:background.tiff"
     delay 1
     -- Last, and once the window has settled: Finder moves the icons when the toolbar goes.
     set the bounds of container window to {200, 120, $(( 200 + WIDTH )), $(( 120 + HEIGHT + TITLE_BAR ))}
     set position of item "V2Mac.app" of container window to {$APP_X, $ICON_Y}
     set position of item "Applications" of container window to {$APPS_X, $ICON_Y}
+    try
+      set position of item ".background" of container window to {$APP_X, $HIDDEN_Y}
+    end try
+    try
+      set position of item ".fseventsd" of container window to {$APPS_X, $HIDDEN_Y}
+    end try
     update without registering applications
     delay 2
     close
