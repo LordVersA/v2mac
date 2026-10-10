@@ -564,8 +564,6 @@ connections already open finish on the old server. If either command fails the c
 as before. Custom configs, and any change of port, mode, TUN, log or the settings above, always
 restart. The API port is loopback-only and unauthenticated, like the metrics port.
 
----
-
 ### 8.5 Servers that ask for `allowInsecure`
 
 Xray has no way left to skip the certificate check, only to pin a certificate.
