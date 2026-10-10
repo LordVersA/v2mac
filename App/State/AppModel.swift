@@ -75,6 +75,7 @@ final class AppModel {
         connection.regionRoutes = { packs.usableRoutes }
         #if DEBUG
         if demo {
+            snapshotHook()
             seedDemoData()
             if UserDefaults.standard.bool(forKey: "debugFakeUpdates") { updates.fakeUpdates() }
             AppDelegate.model = self
@@ -365,10 +366,31 @@ final class AppModel {
         try? context.save()
     }
 
+    /// `-debugSnapshot <path prefix>`: after `-debugSnapshotDelay` seconds (default 4) each open
+    /// window draws itself, title bar and toolbar included, into `<prefix>-<n>.png`. The app
+    /// renders its own views, so this needs no screen recording permission. Works with demo data.
+    private func snapshotHook() {
+        let defaults = UserDefaults.standard
+        guard let prefix = defaults.string(forKey: "debugSnapshot") else { return }
+        let delay = max(defaults.integer(forKey: "debugSnapshotDelay"), 4)
+        Task {
+            try? await Task.sleep(for: .seconds(delay))
+            let windows = NSApp.windows.filter { $0.isVisible && $0.styleMask.contains(.titled) }
+            for (index, window) in windows.enumerated() {
+                guard let view = window.contentView?.superview,
+                      let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { continue }
+                view.cacheDisplay(in: view.bounds, to: rep)
+                try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "\(prefix)-\(index).png"))
+            }
+            print("[v2mac-debug] snapshot: \(windows.count) windows")
+        }
+    }
+
     /// `-debugAddSubscription <url> -debugActivateFirst YES` for scripted verification.
     private func runDebugHooks() {
         setvbuf(stdout, nil, _IOLBF, 0)
         let defaults = UserDefaults.standard
+        snapshotHook()
         if let packID = defaults.string(forKey: "debugEnablePack"), let pack = regionPacks.packs.first(where: { $0.id == packID }) {
             Task {
                 await regionPacks.enable(pack)

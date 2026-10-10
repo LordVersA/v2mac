@@ -66,6 +66,10 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     `~/Library/Developer/Xcode/DerivedData/v2mac-*/Build/Products/Debug/V2MacDev.app/Contents/MacOS/V2MacDev -debugConnect YES`
   - `-debugDemoData YES` uses an in-memory store filled with made-up servers. Use it for UI checks
     and README screenshots, so no real server ever appears on screen.
+  - `-debugSnapshot <path prefix>` makes the app draw each of its open windows, toolbar included,
+    into `<prefix>-<n>.png` after 4 seconds (`-debugSnapshotDelay` for longer). Use it to look at a
+    UI change: it needs no screen recording permission and works with `-debugDemoData YES`. Glass
+    effects are not drawn, but layout, sizes and spacing are exact (2 pixels per point).
 - CI (`.github/workflows/ci.yml`, every push) runs the package tests and an unsigned Debug build on
   `macos-26`. Watch it with `gh run watch` after pushing.
 - The menu bar glyph PDFs in the asset catalog are generated: edit the SVGs in `Design/` and run
@@ -143,6 +147,11 @@ through `applicationShouldTerminate` so the core and TUN helper are shut down fi
   pass". `ConnectionBar` takes `minWidth: 0` and picks its tier from measured widths for this reason.
 - The table's column state changes on every step of a window resize. Keep it inside `ServerTable`,
   not in `ServerListView`, or the whole list view is rebuilt several times per step.
+- A toolbar `Menu` draws its own indicator off-centre and at a different size in a split button, and
+  keeps a minimum width whatever its label's frame says. `ToolbarSplitButton` (`ServerListView`)
+  lays out icon, divider and chevron by hand for this reason; reuse it for any new toolbar menu.
+  Items next to a custom toolbar view merge into one glass capsule unless a `ToolbarSpacer(.fixed)`
+  separates them.
 - The filesystem is case-insensitive: `v2mac` and `V2Mac` are the same path. Don't `rm` an "old name"
   after a rename. It deletes the new file.
 - A running app does not pick up a rebuild. Quit it (⌘Q) and reopen it before judging a change.

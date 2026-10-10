@@ -114,39 +114,85 @@ struct ServerListView: View {
             }
             .help("Add a subscription or custom configs (⌘N)")
         }
+        ToolbarSpacer(.fixed)
         ToolbarItem {
-            Menu {
+            ToolbarSplitButton(
+                title: "Update", systemImage: "arrow.clockwise", isSpinning: isUpdating,
+                help: "Update subscriptions without the proxy (⌘R)", menuHelp: "Choose how to update"
+            ) {
+                model.updateSelection(viaProxy: false)
+            } menu: {
                 Button("Update without Proxy") { model.updateSelection(viaProxy: false) }
                 Button("Update via Proxy") { model.updateSelection(viaProxy: true) }
                     .disabled(!model.connection.isRunning)
-            } label: {
-                Label("Update", systemImage: "arrow.clockwise")
-                    .symbolEffect(.rotate, isActive: isUpdating)
             }
-            .help("Update subscriptions")
         }
+        ToolbarSpacer(.fixed)
         ToolbarItem {
             if isTesting {
                 StopTestingButton(latency: latency)
             } else {
-                Menu {
+                ToolbarSplitButton(
+                    title: "Test", systemImage: "speedometer", isSpinning: false,
+                    help: "Test delay (⌘T)", menuHelp: "Choose a test"
+                ) {
+                    model.testReal()
+                } menu: {
                     Button("Real Delay") { model.testReal() }
                     Button("Speed Test") { model.testSpeed() }
                     Button("TCP Ping") { model.testTCP() }
-                } label: {
-                    Label("Test", systemImage: "speedometer")
-                } primaryAction: {
-                    model.testReal()
                 }
-                .help("Test delay (⌘T)")
             }
         }
+        ToolbarSpacer(.fixed)
         ToolbarItem {
             Button { model.showInspector.toggle() } label: {
                 Label("Inspector", systemImage: "sidebar.right")
             }
             .help("Toggle Inspector (⌘I)")
         }
+    }
+}
+
+/// A toolbar button with a menu beside it, laid out by hand so every one of them is identical:
+/// the system's own menu indicator sits off-centre and changes size between a plain menu and a
+/// split button.
+private struct ToolbarSplitButton<MenuContent: View>: View {
+    let title: String
+    let systemImage: String
+    let isSpinning: Bool
+    let help: String
+    let menuHelp: String
+    let action: () -> Void
+    @ViewBuilder let menu: () -> MenuContent
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button(action: action) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .medium))
+                    .symbolEffect(.rotate, isActive: isSpinning)
+                    .frame(width: 33, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(title)
+            .help(help)
+            Divider().frame(height: 16)
+            Menu(content: menu) {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .menuIndicator(.hidden)
+            .focusable(false)
+            // A menu keeps a minimum width of its own; this trims it to the width of the icon half.
+            .padding(.horizontal, -1.5)
+            .accessibilityLabel("\(title) options")
+            .help(menuHelp)
+        }
+        .buttonStyle(.plain)
     }
 }
 
