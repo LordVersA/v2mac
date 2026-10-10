@@ -30,6 +30,11 @@ struct InspectorView: View {
                         .contentTransition(.symbolEffect(.replace))
                         .animation(.snappy, value: isActive)
                         .frame(maxWidth: .infinity)
+                        Button(profile.isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: profile.isFavorite ? "star.fill" : "star") {
+                            model.setFavorite([profile.id], !profile.isFavorite)
+                        }
+                        .contentTransition(.symbolEffect(.replace))
+                        .frame(maxWidth: .infinity)
                     }
 
                     Section("Connection") {

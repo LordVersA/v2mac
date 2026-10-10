@@ -320,7 +320,9 @@ public struct ParsedProfile: Sendable, Hashable {
     var originalLink: String?
     var fingerprint: String
     var warnings: [String]
-    var isStale: Bool                    // removed upstream but still active
+    var isStale: Bool                    // removed upstream but still active or a favorite
+    var isFavorite: Bool
+    var keptAfterRemoval: Bool           // a favorite the user chose to keep (6.6)
     var delayMs: Int?
     var delayStateRaw: String            // untested | ok | timeout | invalid
     var delayKindRaw: String?            // real | tcp
@@ -389,9 +391,10 @@ Given the new ordered list for a group:
 2. For each new entry, in order: reuse the first unused existing profile with
    the same fingerprint (update `name`, `sortIndex`, `originalLink`, `warnings`,
    clear `isStale`; keep `id` and delay fields); otherwise insert a new one.
-3. Existing profiles not reused are deleted, except the active one, which is
-   kept with `isStale = true`, sorted last and badged "Removed from
-   subscription". It is deleted as soon as another server is activated.
+3. Existing profiles not reused are deleted, except the active one and the
+   favorites (6.6), which are kept with `isStale = true`, sorted last and
+   badged "Removed from subscription". The active one is deleted as soon as
+   another server is activated, unless it is a favorite.
 4. Update the group's metadata, `lastUpdatedAt`, `lastUpdateViaProxy`,
    `lastSkippedCount`, and clear `lastUpdateError`.
 
@@ -411,6 +414,28 @@ On any failure the group's profiles are left untouched and only
   update is skipped silently and retried at the next check (every 15 min).
 
 ---
+
+### 6.6 Favorites
+
+Any server can be marked as a favorite, from the table's context menu or the
+inspector ("Add to Favorites" / "Remove from Favorites"). The sidebar row
+"Favorites" lists them across all groups; a star marks them in every list.
+
+A favorite is never deleted by an update. When its subscription no longer
+lists it, it stays in its group as a stale row:
+
+- **Automatic update:** nothing else happens.
+- **Manual update:** the main window shows a message, "N favorite servers are
+  no longer in their subscriptions", with **Remove** and **Keep**. Remove
+  deletes them (the active one only loses its star and goes when another
+  server is activated). Keep sets `keptAfterRemoval`, and later updates do not
+  ask about them again. Favorites that went missing in an automatic update are
+  asked about at the next manual update of their group.
+
+A stale favorite that comes back in a later update is an ordinary favorite
+again. Removing the star from a stale favorite deletes it, unless it is the
+active server. The store is told which profiles are favorites by the caller:
+the flag is written on the main context.
 
 ## 7. Share-link parsing
 
@@ -870,7 +895,7 @@ Panel, top to bottom:
 Structure: `NavigationSplitView` (sidebar, content) with `.inspector` on the
 content column.
 
-**Sidebar.** "All" plus one row per group: name, server count, a spinner while
+**Sidebar.** "All", "Favorites" (6.6) plus one row per group: name, server count, a spinner while
 updating, a warning glyph when the last update failed (tooltip shows the
 error). Drag to reorder. Context menu: Update via Proxy, Update without Proxy,
 Rename, Edit URL…, Copy URL, Auto-update (toggle), Delete…. Deleting the group

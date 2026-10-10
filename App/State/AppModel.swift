@@ -8,6 +8,7 @@ import V2MacCore
 
 enum SidebarItem: Hashable {
     case all
+    case favorites
     case group(UUID)
 }
 
@@ -35,6 +36,9 @@ final class AppModel {
     var windowRequest: WindowRequest?
     /// Rows currently shown in the server table (after search); the default test target.
     var visibleProfileIDs: [UUID] = []
+    /// Favorites a manual update found missing from their subscription; the main window asks
+    /// whether to remove or keep them (spec 6.6).
+    var missingFavoriteIDs: Set<UUID> = []
 
     var context: ModelContext { container.mainContext }
 
@@ -56,6 +60,7 @@ final class AppModel {
         subscriptions = SubscriptionService(container: container, connection: connection)
         latency = LatencyService(container: container)
         ensureManualGroup()
+        subscriptions.onMissingFavorites = { [weak self] ids in self?.missingFavoriteIDs.formUnion(ids) }
         let connection = self.connection
         latency.physicalInterface = { connection.tun.physicalInterface }
         let routes: () -> [FetchRoute] = {
@@ -193,8 +198,8 @@ final class AppModel {
 
     func activate(_ profile: Profile) {
         guard let server = ActiveServer(profile) else { return }
-        // A removed-upstream server is kept only while it is active (spec 6.4).
-        let staleDescriptor = FetchDescriptor<Profile>(predicate: #Predicate { $0.isStale })
+        // A removed-upstream server is kept only while it is active or a favorite (spec 6.4).
+        let staleDescriptor = FetchDescriptor<Profile>(predicate: #Predicate { $0.isStale && !$0.isFavorite })
         for stale in (try? context.fetch(staleDescriptor)) ?? [] where stale.id != profile.id {
             context.delete(stale)
         }
@@ -272,6 +277,46 @@ final class AppModel {
         try? context.save()
     }
 
+    // MARK: Favorites
+
+    func setFavorite(_ ids: Set<UUID>, _ favorite: Bool) {
+        let targets = ((try? context.fetch(FetchDescriptor<Profile>())) ?? []).filter { ids.contains($0.id) }
+        for profile in targets {
+            profile.isFavorite = favorite
+            if !favorite { releaseFavorite(profile) }
+        }
+        try? context.save()
+    }
+
+    /// Answers the question about favorites their subscription dropped: remove them, or keep
+    /// them and stop asking.
+    func resolveMissingFavorites(remove: Bool) {
+        let ids = missingFavoriteIDs
+        missingFavoriteIDs = []
+        // One that came back in a later update is no longer part of the question.
+        let targets = ((try? context.fetch(FetchDescriptor<Profile>(predicate: #Predicate { $0.isFavorite && $0.isStale }))) ?? [])
+            .filter { ids.contains($0.id) }
+        for profile in targets {
+            if remove {
+                profile.isFavorite = false
+                releaseFavorite(profile)
+            } else {
+                profile.keptAfterRemoval = true
+            }
+        }
+        try? context.save()
+    }
+
+    /// A server its subscription dropped was only there as a favorite: it goes with the star,
+    /// unless it is the one in use (spec 6.4).
+    private func releaseFavorite(_ profile: Profile) {
+        profile.keptAfterRemoval = false
+        missingFavoriteIDs.remove(profile.id)
+        guard profile.isStale, profile.id != connection.activeServer?.id else { return }
+        selectedProfileIDs.remove(profile.id)
+        context.delete(profile)
+    }
+
     func moveGroups(_ groups: [ServerGroup], from source: IndexSet, to destination: Int) {
         var reordered = groups
         reordered.move(fromOffsets: source, toOffset: destination)
@@ -283,7 +328,7 @@ final class AppModel {
         let selection = sidebarSelection
         Task {
             switch selection {
-            case .all: await subscriptions.updateAll(viaProxy: viaProxy)
+            case .all, .favorites: await subscriptions.updateAll(viaProxy: viaProxy)
             case .group(let id): await subscriptions.update(groupID: id, viaProxy: viaProxy)
             }
         }
@@ -360,9 +405,16 @@ final class AppModel {
                     p.delayState = .timeout; p.delayKindRaw = "real"
                 }
                 p.delayTestedAt = Date()
+                p.isFavorite = i == 0 || (gi == 0 && i == 3)
                 context.insert(p)
+                // `-debugMissingFavorites YES`: one favorite its subscription dropped, with the question showing.
+                if gi == 1, i == 0, UserDefaults.standard.bool(forKey: "debugMissingFavorites") {
+                    p.isStale = true
+                    missingFavoriteIDs.insert(p.id)
+                }
             }
         }
+        if UserDefaults.standard.bool(forKey: "debugShowFavorites") { sidebarSelection = .favorites }
         try? context.save()
     }
 

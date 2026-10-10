@@ -15,8 +15,11 @@ struct ServerListView: View {
 
     private var rows: [ServerRow] {
         var items = profiles.filter { p in
-            guard let id = selectedGroupID else { return true }
-            return p.group?.id == id
+            switch model.sidebarSelection {
+            case .all: true
+            case .favorites: p.isFavorite
+            case .group(let id): p.group?.id == id
+            }
         }.map(ServerRow.init)
 
         let query = model.searchText.trimmingCharacters(in: .whitespaces)
@@ -51,7 +54,8 @@ struct ServerListView: View {
         // Looked up once: it is a database fetch.
         let selectedGroup = selectedGroup
         let showsHeader = selectedGroup.map { !$0.isManual } ?? false
-        let showsEmptyState = rows.isEmpty && (!model.searchText.isEmpty || selectedGroupID != nil)
+        let showsFavorites = model.sidebarSelection == .favorites
+        let showsEmptyState = rows.isEmpty && (!model.searchText.isEmpty || model.sidebarSelection != .all)
         HStack(spacing: 0) {
             VStack(spacing: 0) {
                 if let group = selectedGroup, showsHeader {
@@ -66,6 +70,11 @@ struct ServerListView: View {
                             Group {
                                 if !model.searchText.isEmpty {
                                     ContentUnavailableView.search
+                                } else if showsFavorites {
+                                    ContentUnavailableView(
+                                        "No Favorites", systemImage: "star",
+                                        description: Text("Right-click a server and choose Add to Favorites.")
+                                    )
                                 } else if selectedGroup?.isManual == true {
                                     ContentUnavailableView(
                                         "No Custom Configs", systemImage: "doc.on.clipboard",
@@ -84,6 +93,7 @@ struct ServerListView: View {
                     }
                     .animation(.smooth(duration: 0.25), value: showsEmptyState)
                 }
+                .overlay(alignment: .bottom) { MissingFavoritesToast(profiles: profiles) }
             }
             // Only when the header comes or goes, so switching between subscriptions stays instant.
             .animation(.snappy(duration: 0.25), value: showsHeader)
@@ -99,7 +109,7 @@ struct ServerListView: View {
         }
         .searchable(text: $model.searchText, prompt: "Search")
         .toolbar { toolbar(model: appModel, latency: latency, isTesting: isTesting, isUpdating: isUpdating) }
-        .navigationTitle(selectedGroup?.name ?? "All Servers")
+        .navigationTitle(showsFavorites ? "Favorites" : (selectedGroup?.name ?? "All Servers"))
         #if DEBUG
         .navigationSubtitle("Dev build")
         #endif
@@ -211,6 +221,47 @@ private struct InspectorPane: View {
     }
 }
 
+/// Asks what to do with favorites a manual update no longer found in their subscription
+/// (spec 6.6). Reads the list of them itself, so that it does not rebuild the server list.
+private struct MissingFavoritesToast: View {
+    let profiles: [Profile]
+    @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let ids = model.missingFavoriteIDs
+        // Counted from what is still there: a favorite can be removed by hand while this shows.
+        let count = ids.isEmpty ? 0 : profiles.count { ids.contains($0.id) && $0.isFavorite && $0.isStale }
+        ZStack {
+            if count > 0 {
+                HStack(spacing: 10) {
+                    Image(systemName: "star.slash.fill").foregroundStyle(.yellow)
+                    Text(count == 1
+                        ? "1 favorite server is no longer in its subscription."
+                        : "\(count) favorite servers are no longer in their subscriptions.")
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Keep") { withAnimation { model.resolveMissingFavorites(remove: false) } }
+                        .help("Keep them in Favorites")
+                    Button("Remove", role: .destructive) { withAnimation { model.resolveMissingFavorites(remove: true) } }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.red)
+                        .help("Remove them from Favorites and from the list")
+                }
+                .font(.callout)
+                .padding(.leading, 14)
+                .padding(.trailing, 10)
+                .padding(.vertical, 8)
+                .glassEffect(.regular, in: .capsule)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 10)
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy(duration: 0.3), value: count > 0)
+    }
+}
+
 /// Reads the progress itself: read in the list's toolbar it rebuilt the whole list on every result.
 private struct StopTestingButton: View {
     let latency: LatencyService
@@ -260,6 +311,10 @@ private struct ServerTable: View {
                     if row.hasWarnings {
                         Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                             .accessibilityLabel("Has warnings")
+                    }
+                    if row.isFavorite {
+                        Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow)
+                            .accessibilityLabel("Favorite")
                     }
                     if row.isStale {
                         Text("Removed from subscription").font(.caption).foregroundStyle(.secondary)
@@ -319,8 +374,16 @@ private struct ServerTable: View {
                 }
             }
         }
-        // Subscription servers come and go with their subscription; pasted ones are the user's to remove.
         let selected = profiles.filter { ids.contains($0.id) }
+        if !selected.isEmpty {
+            // With a mixed selection the rest are added first.
+            if selected.allSatisfy(\.isFavorite) {
+                Button(ids.count == 1 ? "Remove from Favorites" : "Remove from Favorites (\(ids.count))") { model.setFavorite(ids, false) }
+            } else {
+                Button(ids.count == 1 ? "Add to Favorites" : "Add to Favorites (\(ids.count))") { model.setFavorite(ids, true) }
+            }
+        }
+        // Subscription servers come and go with their subscription; pasted ones are the user's to remove.
         if !selected.isEmpty, selected.allSatisfy({ $0.group?.isManual == true }) {
             Divider()
             Button(ids.count == 1 ? "Delete" : "Delete (\(ids.count))", role: .destructive) { model.deleteProfiles(ids) }

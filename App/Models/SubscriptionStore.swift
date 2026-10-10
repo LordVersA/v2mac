@@ -9,7 +9,7 @@ actor SubscriptionStore {
         let all = try modelContext.fetch(FetchDescriptor<ServerGroup>())
         let group = ServerGroup(name: name, subscriptionURL: url, sortIndex: (all.map(\.sortIndex).max() ?? -1) + 1)
         modelContext.insert(group)
-        reconcile(group, with: outcome.result, viaProxy: viaProxy, activeProfileID: nil)
+        reconcile(group, with: outcome.result, viaProxy: viaProxy, activeProfileID: nil, favoriteIDs: [])
         group.userAgent = outcome.userAgent
         group.userAgentProbed = outcome.probed
         try modelContext.save()
@@ -47,15 +47,19 @@ actor SubscriptionStore {
         var added = 0
         var removed = 0
         var activeRemoved = false
+        /// Favorites the subscription no longer lists; they were kept, marked as removed.
+        var missingFavorites: [UUID] = []
         var usedBytes: Int64?
         var totalBytes: Int64?
         var expiresAt: Date?
     }
 
+    /// `favoriteIDs` comes from the caller: favorites are set on the main context, and this one
+    /// must not decide what to delete from a copy that may not have caught up.
     @discardableResult
-    func apply(_ outcome: FetchOutcome, to groupID: UUID, viaProxy: Bool, activeProfileID: UUID?) throws -> Summary? {
+    func apply(_ outcome: FetchOutcome, to groupID: UUID, viaProxy: Bool, activeProfileID: UUID?, favoriteIDs: Set<UUID>) throws -> Summary? {
         guard let group = try fetchGroup(groupID) else { return nil }
-        var summary = reconcile(group, with: outcome.result, viaProxy: viaProxy, activeProfileID: activeProfileID)
+        var summary = reconcile(group, with: outcome.result, viaProxy: viaProxy, activeProfileID: activeProfileID, favoriteIDs: favoriteIDs)
         group.userAgent = outcome.userAgent
         group.userAgentProbed = outcome.probed
         try modelContext.save()
@@ -76,7 +80,8 @@ actor SubscriptionStore {
         try modelContext.fetch(FetchDescriptor<ServerGroup>(predicate: #Predicate { $0.id == id })).first
     }
 
-    private func reconcile(_ group: ServerGroup, with result: SubscriptionResult, viaProxy: Bool, activeProfileID: UUID?) -> Summary {
+    @discardableResult
+    private func reconcile(_ group: ServerGroup, with result: SubscriptionResult, viaProxy: Bool, activeProfileID: UUID?, favoriteIDs: Set<UUID>) -> Summary {
         var summary = Summary(groupName: group.name)
         let existing = group.profiles.sorted { $0.sortIndex < $1.sortIndex }
         var byFingerprint: [String: [Profile]] = [:]
@@ -97,8 +102,11 @@ actor SubscriptionStore {
         for old in existing where !reused.contains(old.id) {
             // A server already marked as removed upstream is not removed a second time.
             if !old.isStale { summary.removed += 1 }
-            if old.id == activeProfileID {
-                if !old.isStale { summary.activeRemoved = true }
+            let isFavorite = favoriteIDs.contains(old.id)
+            // A favorite is never deleted here: only the user removes it (spec 6.6).
+            if old.id == activeProfileID || isFavorite {
+                if old.id == activeProfileID, !old.isStale { summary.activeRemoved = true }
+                if isFavorite { summary.missingFavorites.append(old.id) }
                 old.isStale = true
                 old.sortIndex = result.profiles.count + 1000
             } else {

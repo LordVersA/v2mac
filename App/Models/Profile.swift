@@ -25,6 +25,9 @@ final class Profile {
     var fingerprint: String
     var warnings: [String] = []
     var isStale: Bool = false
+    var isFavorite: Bool = false
+    /// The user chose to keep this favorite after its subscription dropped it, so they are not asked again.
+    var keptAfterRemoval: Bool = false
     var delayMs: Int?
     var delayStateRaw: String = DelayState.untested.rawValue
     var delayKindRaw: String?
@@ -63,6 +66,7 @@ final class Profile {
         originalLink = parsed.originalLink
         warnings = parsed.warnings
         isStale = false
+        keptAfterRemoval = false
         // Results measured before the refresh no longer describe this server.
         delayMs = nil
         delayState = .untested
@@ -101,6 +105,7 @@ struct ServerRow: Identifiable, Hashable, Sendable {
     let speedBps: Double?
     let hasWarnings: Bool
     let isStale: Bool
+    let isFavorite: Bool
     let groupOrder: Int
     let sortIndex: Int
 
@@ -118,6 +123,7 @@ struct ServerRow: Identifiable, Hashable, Sendable {
         speedBps = p.speedBps
         hasWarnings = !p.warnings.isEmpty
         isStale = p.isStale
+        isFavorite = p.isFavorite
         groupOrder = p.group?.sortIndex ?? 0
         sortIndex = p.sortIndex
     }

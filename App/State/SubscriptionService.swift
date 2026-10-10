@@ -47,6 +47,9 @@ final class SubscriptionService {
         case traffic(group: String, level: UsageAlert.Traffic, used: Int64, total: Int64)
     }
     @ObservationIgnored var onNotice: @MainActor (Notice) -> Void = { _ in }
+    /// Favorites a manual update found missing from their subscription (spec 6.6). An automatic
+    /// update keeps them without asking.
+    @ObservationIgnored var onMissingFavorites: @MainActor ([UUID]) -> Void = { _ in }
 
     private let container: ModelContainer
     private let store: SubscriptionStore
@@ -130,8 +133,18 @@ final class SubscriptionService {
                 url: url, route: try route(viaProxy: viaProxy),
                 rememberedAgent: group.userAgent, alreadyProbed: group.userAgentProbed
             )
-            let summary = try await store.apply(outcome, to: groupID, viaProxy: viaProxy, activeProfileID: connection.activeServer?.id)
+            let favorites = (try? container.mainContext.fetch(FetchDescriptor<Profile>(predicate: #Predicate { $0.isFavorite }))) ?? []
+            let summary = try await store.apply(
+                outcome, to: groupID, viaProxy: viaProxy, activeProfileID: connection.activeServer?.id,
+                favoriteIDs: Set(favorites.map(\.id))
+            )
             guard let summary else { return }
+            if !scheduled {
+                // Those the user already chose to keep are not asked about again.
+                let kept = Set(favorites.filter(\.keptAfterRemoval).map(\.id))
+                let missing = summary.missingFavorites.filter { !kept.contains($0) }
+                if !missing.isEmpty { onMissingFavorites(missing) }
+            }
             if scheduled, summary.added + summary.removed > 0 {
                 onNotice(.serversChanged(group: summary.groupName, added: summary.added, removed: summary.removed, activeRemoved: summary.activeRemoved))
             }
