@@ -257,9 +257,10 @@ public enum ShareLinkParser {
         }
 
         guard !method.isEmpty, !password.isEmpty else { throw LinkSkip("invalid shadowsocks credentials") }
-        if let plugin = query["plugin"], !plugin.isEmpty { throw LinkSkip("shadowsocks plugins are not supported") }
+        var params = StreamParams(query: query)
+        if let plugin = query["plugin"] { try applyShadowsocksPlugin(plugin, to: &params) }
 
-        let stream = try StreamBuilder.build(StreamParams(query: query), defaultSecurity: "none")
+        let stream = try StreamBuilder.build(params, defaultSecurity: "none")
         let settings: JSONValue = [
             "address": .string(address),
             "port": .number(Double(port)),
@@ -271,6 +272,49 @@ public enum ShareLinkParser {
             protocolName: "shadowsocks", address: address, port: port, stream: stream,
             config: outbound("shadowsocks", settings: settings, stream: stream)
         )
+    }
+
+    /// Xray runs no SIP003 plugins, but the common ones are transports it has itself: v2ray-plugin
+    /// is WebSocket (or gRPC) with optional TLS, simple-obfs in HTTP mode is the raw HTTP header.
+    /// `plugin` is `name;key=value;flag` (SIP002).
+    private static func applyShadowsocksPlugin(_ plugin: String, to p: inout StreamParams) throws {
+        var parts = plugin.split(separator: ";").map(String.init)
+        guard !parts.isEmpty else { return }
+        let name = parts.removeFirst().lowercased()
+        var options: [String: String] = [:]
+        for part in parts {
+            let pair = part.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            options[pair[0].lowercased()] = pair.count > 1 ? String(pair[1]) : ""
+        }
+
+        switch name {
+        case "v2ray-plugin", "xray-plugin":
+            let mode = options["mode"]?.lowercased() ?? "websocket"
+            switch mode {
+            case "websocket":
+                p.network = "ws"
+                p.path = options["path"] ?? "/"
+            case "grpc":
+                p.network = "grpc"
+                p.serviceName = options["servicename"] ?? "GunService"
+            default:
+                throw LinkSkip("shadowsocks plugin mode \"\(mode)\" is not supported")
+            }
+            p.host = options["host"]
+            if options["tls"] != nil {
+                p.security = "tls"
+                p.sni = options["host"]
+            }
+        case "obfs-local", "simple-obfs":
+            let obfs = options["obfs"]?.lowercased() ?? ""
+            guard obfs == "http" else { throw LinkSkip("shadowsocks plugin obfs \"\(obfs)\" is not supported") }
+            p.network = "raw"
+            p.headerType = "http"
+            p.host = options["obfs-host"]
+            p.path = options["obfs-uri"]
+        default:
+            throw LinkSkip("shadowsocks plugin \"\(name)\" is not supported")
+        }
     }
 
     // MARK: Hysteria 2
@@ -296,10 +340,17 @@ public enum ShareLinkParser {
         guard (1...65535).contains(port) else { throw LinkSkip("invalid or missing port") }
         if let mport = u.query["mport"] { segments += csv(mport) }
 
-        if u.query["pinsha256"] != nil { throw LinkSkip("pinSHA256 is not supported") }
+        // Hysteria's pin is the leaf certificate's SHA-256 in hex, usually written with colons.
+        var pin: String?
+        if let raw = u.query["pinsha256"] {
+            let hex = raw.lowercased().filter { $0 != ":" }
+            guard hex.count == 64, hex.allSatisfy(\.isHexDigit) else { throw LinkSkip("invalid pinSHA256") }
+            pin = hex
+        }
 
+        // A pinned certificate is accepted whoever issued it, so `insecure` changes nothing then.
         var warnings: [String] = []
-        if u.query.flag("insecure", "allowinsecure") { warnings.append(StreamBuilder.insecureWarning) }
+        if pin == nil, u.query.flag("insecure", "allowinsecure") { warnings.append(StreamBuilder.insecureWarning) }
 
         var hysteria: [String: JSONValue] = [
             "version": 2,
@@ -316,6 +367,7 @@ public enum ShareLinkParser {
             "tlsSettings": compact([
                 "serverName": u.query["sni"].map { .string($0) },
                 "alpn": .array((alpn.isEmpty ? ["h3"] : alpn).map { .string($0) }),
+                "pinnedPeerCertSha256": pin.map { .string($0) },
             ]),
             "hysteriaSettings": .object(hysteria),
         ]

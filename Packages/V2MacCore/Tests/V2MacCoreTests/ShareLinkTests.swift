@@ -90,6 +90,28 @@ import Testing
         #expect(try parse(Fixtures.hy2Insecure).warnings == [StreamBuilder.insecureWarning])
     }
 
+    @Test func hysteriaPinBecomesXrayPin() throws {
+        let p = try parse(Fixtures.hy2Pinned)
+        #expect(p.config["streamSettings"]?["tlsSettings"]?["pinnedPeerCertSha256"]?.stringValue == Fixtures.sha)
+        #expect(p.warnings.isEmpty)
+    }
+
+    @Test func shadowsocksPluginsBecomeTransports() throws {
+        let ws = try parse(Fixtures.ssV2rayPlugin)
+        #expect(ws.transport == "ws" && ws.security == "tls")
+        let stream = ws.config["streamSettings"]
+        #expect(stream?["wsSettings"]?["path"]?.stringValue == "/ss")
+        #expect(stream?["wsSettings"]?["host"]?.stringValue == "cdn.example.com")
+        #expect(stream?["tlsSettings"]?["serverName"]?.stringValue == "cdn.example.com")
+        #expect(ws.config["settings"]?["method"]?.stringValue == "aes-256-gcm")
+
+        let obfs = try parse(Fixtures.ssObfsHTTP)
+        #expect(obfs.transport == "raw" && obfs.security == "none")
+        let header = obfs.config["streamSettings"]?["rawSettings"]?["header"]
+        #expect(header?["type"]?.stringValue == "http")
+        #expect(header?["request"]?["headers"]?["Host"]?[0]?.stringValue == "a.example.com")
+    }
+
     // MARK: VMess
 
     @Test func vmessBase64WebSocket() throws {

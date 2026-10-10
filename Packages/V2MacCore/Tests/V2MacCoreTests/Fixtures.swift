@@ -59,9 +59,22 @@ enum Fixtures {
         "ss://2022-blake3-aes-128-gcm:MTIzNDU2Nzg5MDEyMzQ1Ng%3D%3D@1.2.3.4:8388#SS2022"
     static var ssLegacy: String { "ss://\(b64("aes-256-gcm:pa55word@1.2.3.4:8388"))#SS%20Legacy" }
 
+    static var ssV2rayPlugin: String {
+        "ss://\(b64url("aes-256-gcm:pa55word"))@1.2.3.4:443/?plugin=v2ray-plugin%3Btls%3Bhost%3Dcdn.example.com%3Bpath%3D%2Fss#SS%20WS"
+    }
+    static var ssObfsHTTP: String {
+        "ss://\(b64url("aes-256-gcm:pa55word"))@1.2.3.4:80/?plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Da.example.com#SS%20Obfs"
+    }
+
     static let hy2 = "hysteria2://pw@srv.example.com:443/?sni=a.example.com#HY2"
     static let hy2Hop =
         "hy2://pw@srv.example.com:443,5000-6000/?sni=a.example.com&obfs=salamander&obfs-password=ob&alpn=h3#HY2%20Hop"
+    static var hy2Pinned: String {
+        let colons = stride(from: 0, to: sha.count, by: 2).map { i in
+            String(sha.dropFirst(i).prefix(2)).uppercased()
+        }.joined(separator: ":")
+        return "hysteria2://pw@srv.example.com:443/?sni=a.example.com&insecure=1&pinSHA256=\(colons)#HY2%20Pinned"
+    }
     static let hy2Insecure = "hysteria2://pw@srv.example.com:443/?sni=a.example.com&insecure=1#HY2%20Insecure"
 
     static var socksB64: String { "socks://\(b64("user:pass"))@1.2.3.4:1080#Socks" }
@@ -85,7 +98,8 @@ enum Fixtures {
             ("vmessKCP", vmessKCP), ("vmessURL", vmessURL),
             ("trojanWS", trojanWS), ("trojanPlain", trojanPlain),
             ("ssSIP002", ssSIP002), ("ss2022", ss2022), ("ssLegacy", ssLegacy),
-            ("hy2", hy2), ("hy2Hop", hy2Hop), ("hy2Insecure", hy2Insecure),
+            ("ssV2rayPlugin", ssV2rayPlugin), ("ssObfsHTTP", ssObfsHTTP),
+            ("hy2", hy2), ("hy2Hop", hy2Hop), ("hy2Insecure", hy2Insecure), ("hy2Pinned", hy2Pinned),
             ("socksB64", socksB64), ("socksPlain", socksPlain), ("socksNoAuth", socksNoAuth),
             ("httpProxy", httpProxy), ("httpsProxy", httpsProxy),
             ("wireguard", wireguard),
@@ -105,7 +119,9 @@ enum Fixtures {
             ("vlessNoPort", "vless://\(uuid)@srv.example.com?security=tls#x", "port"),
             ("vmessH2", vmessJSON(#"{"add":"a.com","port":"443","id":"\#(uuid)","net":"h2","tls":"tls"}"#), "removed from Xray"),
             ("vmessGarbage", "vmess://!!!notbase64!!!", "invalid vmess"),
-            ("ssPlugin", "ss://\(b64url("aes-256-gcm:pw"))@1.2.3.4:8388/?plugin=v2ray-plugin%3Btls#x", "plugin"),
+            ("ssPlugin", "ss://\(b64url("aes-256-gcm:pw"))@1.2.3.4:8388/?plugin=kcptun%3Bmode%3Dfast#x", "plugin"),
+            ("ssPluginQuic", "ss://\(b64url("aes-256-gcm:pw"))@1.2.3.4:8388/?plugin=v2ray-plugin%3Bmode%3Dquic#x", "plugin mode"),
+            ("ssObfsTLS", "ss://\(b64url("aes-256-gcm:pw"))@1.2.3.4:8388/?plugin=obfs-local%3Bobfs%3Dtls#x", "obfs"),
             ("hy2Pin", "hysteria2://pw@srv.example.com:443/?pinSHA256=AA:BB#x", "pinSHA256"),
             ("hy2OtherObfs", "hysteria2://pw@srv.example.com:443/?obfs=foo#x", "obfs"),
             ("wgNoPublicKey", "wireguard://\(wgPrivate)@1.2.3.4:51820?address=10.0.0.2#x", "public key"),

@@ -181,7 +181,11 @@ and is not needed. Only an "Apple Development" signing identity is present.
 
 - TLS pinning fields are strings, not arrays: `tlsSettings.pinnedPeerCertSha256`
   (comma-separated 64-hex hashes) and `verifyPeerCertByName` (comma-separated
-  names). `echConfigList` is a string.
+  names). `echConfigList` is a string. The hash is the SHA-256 of the leaf
+  certificate's DER bytes (`xray tls hash --cert`). Checked 2026-10-10 against a
+  self-signed server over TLS and Hysteria 2: the right pin connects, with any
+  `serverName`; no pin fails with "unknown authority"; a wrong pin fails with
+  "peer cert is unrecognized".
 - Hysteria 2 port hopping: `hysteriaSettings.udphop {port: "5000-6000",
   interval: 30}`; Salamander obfuscation: `streamSettings.finalmask.udp =
   [{type: "salamander", settings: {password}}]`.
@@ -419,8 +423,8 @@ the flat settings form listed in section 3.
 | `vmess://<base64 JSON>` | v2rayN form: `v, ps, add, port, id, aid, scy, net, type, host, path, tls, sni, alpn, fp`. Not in libXray; implement from the v2rayN format description. |
 | `vmess://uuid@host:port?...` | URL form, same query handling as VLESS. |
 | `trojan://password@host:port?...#name` | `security` defaults to `tls`. |
-| `ss://` | SIP002 (`base64(method:password)@host:port`, plain userinfo for 2022 ciphers) and legacy fully-base64 form. `plugin` parameter → skipped as unsupported. |
-| `hysteria2://`, `hy2://` | `auth@host:port[,port-range]`, `sni`, `alpn`, `obfs`; multi-port authority as in libXray. `pinSHA256` → skipped as unsupported. |
+| `ss://` | SIP002 (`base64(method:password)@host:port`, plain userinfo for 2022 ciphers) and legacy fully-base64 form. `plugin`: `v2ray-plugin` / `xray-plugin` become the `ws` (or `grpc`) transport with optional TLS, `obfs-local` / `simple-obfs` with `obfs=http` becomes the raw HTTP header; any other plugin or mode → skipped as unsupported. |
+| `hysteria2://`, `hy2://` | `auth@host:port[,port-range]`, `sni`, `alpn`, `obfs`; multi-port authority as in libXray. `pinSHA256` (hex, colons allowed) → `tlsSettings.pinnedPeerCertSha256`; a malformed value → skipped. |
 | `socks://`, `socks5://` | `base64(user:pass)@host:port` or plain userinfo. |
 | `http://`, `https://` (as a server line) | `user:pass@host:port`; `https` implies TLS. Only recognised inside a subscription body. |
 | `wireguard://privkey@host:port?publickey=&address=&mtu=&reserved=&presharedkey=#name` | Maps to the `wireguard` outbound (`secretKey`, `address`, `peers`, `mtu`, `reserved`). |
@@ -431,7 +435,8 @@ Rules that apply to all schemes:
 - IPv6 hosts in brackets; ports validated to 1–65535.
 - `allowInsecure=1` / `insecure=1`: flag dropped, warning
   "allowInsecure is not supported by this Xray version; the server must present
-  a valid certificate" added.
+  a valid certificate" added. No warning when the link also pins the certificate
+  (`pcs`, Hysteria 2 `pinSHA256`): a pinned certificate is accepted whoever issued it.
 - `type=h2`, `type=http`, `type=quic`: skipped with reason "transport removed
   from Xray".
 - `type=tcp` is written as `raw`; `splithttp` as `xhttp`.

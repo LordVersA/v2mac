@@ -71,7 +71,7 @@ enum StreamBuilder {
         default:
             break
         }
-        if p.insecure { warnings.append(insecureWarning) }
+        if p.insecure, p.pcs == nil { warnings.append(insecureWarning) }
 
         switch transport {
         case "raw":
