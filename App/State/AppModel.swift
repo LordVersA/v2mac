@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import ServiceManagement
 import SwiftData
 import SwiftUI
 import V2MacCore
@@ -286,6 +287,17 @@ final class AppModel {
                 await regionPacks.enable(pack)
                 print("[v2mac-debug] pack \(packID): \(regionPacks.status(pack))")
                 if defaults.bool(forKey: "debugActivateFirst") { connection.connectActive() }
+            }
+        }
+        // `-debugLoginItem on|off|status`: the same calls as the "Launch at login" toggle.
+        if let action = defaults.string(forKey: "debugLoginItem") {
+            let service = SMAppService.mainApp
+            do {
+                if action == "on" { try service.register() }
+                if action == "off" { try service.unregister() }
+                print("[v2mac-debug] login item \(action): status \(service.status.rawValue)")
+            } catch {
+                print("[v2mac-debug] login item \(action) failed: \(error)")
             }
         }
         if defaults.bool(forKey: "debugAppUpdate") {

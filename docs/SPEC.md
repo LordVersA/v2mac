@@ -1138,7 +1138,7 @@ connected state.
 | Item | When |
 |---|---|
 | Exact text Xray prints when the port is taken (pre-check should make it rare) | M1 |
-| `SMAppService.mainApp` registration works for an ad-hoc signed build. **Open (M5):** the Settings toggle calls `register()` and surfaces errors and the "requires approval" state, but I have not toggled it in a running GUI session. | M5 |
+| `SMAppService.mainApp` registration works for an ad-hoc signed build. **Checked 2026-10-10** with the ad-hoc signed Debug build (`-debugLoginItem on|off|status`): status starts as `notFound`, `register()` succeeds without an approval prompt and gives `enabled`, which survives a relaunch; `unregister()` gives `notRegistered`. Not checked: that macOS actually starts the app after a logout and login. | M5 |
 | ~~DoH-through-proxy DNS in Bypass mode adds acceptable first-connection latency; routing log shows the expected outbound per domain~~ **Done (M4):** a single DoH server cost ~4 s per domain on this network; two servers in parallel cost 0.8 s first lookup, 0.3 s after. Routing log confirmed. | M4 |
 | Liquid Glass modifier signatures in the Xcode 27 SDK | M3 |
 | `wireguard://` and `vmess://` base64-JSON field coverage against real provider output | M2 |
