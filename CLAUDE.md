@@ -61,6 +61,15 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
 - Debug builds accept launch arguments for scripted checks (`-debugAddSubscription <url>`,
   `-debugActivateFirst YES`, `-debugConnect YES`, `-debugTest tcp|real`, `-debugSwitchTest YES`, …) and print
   `[v2mac-debug]` lines to stdout. See `AppModel.runDebugHooks`.
+  - To see that output, run the binary itself instead of `open`:
+    `~/Library/Developer/Xcode/DerivedData/v2mac-*/Build/Products/Debug/V2MacDev.app/Contents/MacOS/V2MacDev -debugConnect YES`
+  - `-debugDemoData YES` uses an in-memory store filled with made-up servers. Use it for UI checks
+    and README screenshots, so no real server ever appears on screen.
+- CI (`.github/workflows/ci.yml`, every push) runs the package tests and an unsigned Debug build on
+  `macos-26`. Watch it with `gh run watch` after pushing.
+- The menu bar glyph PDFs in the asset catalog are generated: edit the SVGs in `Design/` and run
+  `Scripts/make-glyphs.sh` (needs `rsvg-convert`).
+- `README.fa.md` is the Persian translation of `README.md`. Change both together.
 
 ## Architecture
 
@@ -97,7 +106,9 @@ UI `Phase` from core state, serialises connect/switch/disconnect, restarts after
 backoff, reacts to sleep/network changes via `LifecycleMonitor`, and polls `StatsClient` for rates.
 Anything that needs a new config (routing mode, port, region pack, TUN switch) calls
 `reconnectIfRunning()`. Settings live in `UserDefaults` behind `Prefs` (`App/Support/AppPaths.swift`),
-whose keys must match the `@AppStorage` keys in `SettingsView`.
+whose keys must match the `@AppStorage` keys in the settings views (`Features/Settings/`). A new
+setting also needs its default in `Prefs.registerDefaults`, or the view and the getter disagree
+until the user first changes it.
 
 **TUN mode** (spec 9.5) runs two Xray processes: the normal core as the user, and a root
 *forwarder* with a fixed config (TUN inbound → SOCKS to the core's `tun-in` port). The root helper
