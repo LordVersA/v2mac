@@ -87,6 +87,13 @@ struct AddSubscriptionSheet: View {
             }
 
             HStack {
+                if kind == .custom {
+                    Button("Enter Details Manually…") {
+                        model.opensEditorAfterAddSheet = true
+                        dismiss()
+                    }
+                    .help("Fill in a server's protocol, address and options yourself")
+                }
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
                 if isFetching {

@@ -34,6 +34,10 @@ final class AppModel {
     var settingsTab: SettingsTab = .general
     /// A window a notification click asked for; `WindowRequestHandler` opens it.
     var windowRequest: WindowRequest?
+    /// The server editor's sheet (spec 12.7).
+    var serverEditor: ServerEditorRequest?
+    /// The Add sheet's "Enter Details Manually": the editor opens once that sheet has closed.
+    var opensEditorAfterAddSheet = false
     /// A server the table should scroll to; `ServerTable` clears it once it has.
     var revealProfileID: UUID?
     /// Rows currently shown in the server table (after search); the default test target.
@@ -85,6 +89,7 @@ final class AppModel {
             snapshotHook()
             seedDemoData()
             revealHook()
+            editorHook()
             if UserDefaults.standard.bool(forKey: "debugFakeUpdates") { updates.fakeUpdates() }
             AppDelegate.model = self
             return
@@ -277,6 +282,37 @@ final class AppModel {
         }
     }
 
+    // MARK: Server editor
+
+    /// Pasted configs are changed in place. A subscription's server would be replaced by the
+    /// next update, so the editor saves a copy of it instead.
+    func editServer(_ id: UUID) {
+        guard let profile = profile(id: id) else { return }
+        serverEditor = ServerEditorRequest(target: profile.group?.isManual == true ? .edit(id) : .copy(id))
+    }
+
+    func saveServer(_ parsed: ParsedProfile, target: ServerEditorRequest.Target) {
+        switch target {
+        case .edit(let id):
+            guard let profile = profile(id: id) else { return }
+            profile.edit(from: parsed)
+            try? context.save()
+            if connection.activeServer?.id == id, let server = ActiveServer(profile) {
+                connection.setActive(server)
+                connection.reconnectIfRunning()
+            }
+        case .new, .copy:
+            guard let group = (try? context.fetch(FetchDescriptor<ServerGroup>()))?.first(where: \.isManual) else { return }
+            let profile = Profile(parsed: parsed, sortIndex: (group.profiles.map(\.sortIndex).max() ?? -1) + 1, group: group)
+            context.insert(profile)
+            try? context.save()
+            searchText = ""
+            sidebarSelection = .group(group.id)
+            selectedProfileIDs = [profile.id]
+            revealProfileID = profile.id
+        }
+    }
+
     /// Only pasted configs can be removed one by one; subscription servers follow their subscription.
     func deleteProfiles(_ ids: Set<UUID>) {
         let targets = ((try? context.fetch(FetchDescriptor<Profile>())) ?? [])
@@ -454,6 +490,38 @@ final class AppModel {
             connection.setActive(last.flatMap(ActiveServer.init))
             revealActiveServer()
             print("[v2mac-debug] reveal: sidebar \(sidebarSelection), selected \(selectedProfileIDs.count)")
+        }
+    }
+
+    /// `-debugDemoData YES -debugEditServer new|<row>`: opens the server editor empty, or on that
+    /// row of the first subscription.
+    private func editorHook() {
+        guard let target = UserDefaults.standard.string(forKey: "debugEditServer") else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            let groups = (try? context.fetch(FetchDescriptor<ServerGroup>(sortBy: [SortDescriptor(\.sortIndex)]))) ?? []
+            let rows = groups.first { !$0.profiles.isEmpty }?.profiles.sorted { $0.sortIndex < $1.sortIndex } ?? []
+            if let index = Int(target), rows.indices.contains(index) {
+                editServer(rows[index].id)
+            } else if target == "save", let first = rows.first, let config = first.config,
+                      var draft = ServerDraft(outbound: config, name: first.name) {
+                // What Save does with a subscription's server, then with the copy it made.
+                setvbuf(stdout, nil, _IOLBF, 0)
+                draft.name = "Edited Copy"
+                draft.muxEnabled = true
+                guard let parsed = try? draft.profile() else { return }
+                saveServer(parsed, target: .copy(first.id))
+                guard let copyID = selectedProfileIDs.first, let copy = profile(id: copyID) else { return }
+                print("[v2mac-debug] editor: copy in \(copy.group?.name ?? "?"), mux \(copy.config?["mux"]?["enabled"]?.boolValue == true), link \(copy.originalLink != nil)")
+                draft.name = "Edited Twice"
+                draft.transport = "ws"
+                draft.path = "/edited"
+                guard let again = try? draft.profile() else { return }
+                saveServer(again, target: .edit(copyID))
+                print("[v2mac-debug] editor: now \(copy.name), \(copy.typeSummary), same row \(copy.id == copyID), rows \(copy.group?.profiles.count ?? 0)")
+            } else {
+                serverEditor = ServerEditorRequest(target: .new)
+            }
         }
     }
 

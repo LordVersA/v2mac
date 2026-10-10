@@ -69,6 +69,8 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   `[v2mac-debug]` lines to stdout. See `AppModel.runDebugHooks`.
   - To see that output, run the binary itself instead of `open`:
     `~/Library/Developer/Xcode/DerivedData/v2mac-*/Build/Products/Debug/V2MacDev.app/Contents/MacOS/V2MacDev -debugConnect YES`
+  - `-debugEditServer new|<row>|save` (with demo data) opens the server editor, or runs a save;
+    `-debugEditProtocol <protocol>` and `-debugEditorHeight <points>` show a whole form in a snapshot.
   - `-debugDemoData YES` uses an in-memory store filled with made-up servers. Use it for UI checks
     and README screenshots, so no real server ever appears on screen.
   - `-debugSnapshot <path prefix>` makes the app draw each of its open windows, toolbar included,

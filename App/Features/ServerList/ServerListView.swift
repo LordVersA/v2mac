@@ -390,6 +390,9 @@ private struct ServerTable: View {
             }
         }
         let selected = profiles.filter { ids.contains($0.id) }
+        if let only = selected.first, selected.count == 1 {
+            Button(only.group?.isManual == true ? "Edit…" : "Edit a Copy…") { model.editServer(only.id) }
+        }
         if !selected.isEmpty {
             // With a mixed selection the rest are added first.
             if selected.allSatisfy(\.isFavorite) {

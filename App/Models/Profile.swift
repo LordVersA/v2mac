@@ -74,6 +74,13 @@ final class Profile {
         delayTestedAt = nil
         speedBps = nil
     }
+
+    /// Takes what the editor made of this server (spec 12.7). It stays the same row.
+    func edit(from parsed: ParsedProfile) {
+        kindRaw = parsed.kind.rawValue
+        fingerprint = parsed.fingerprint
+        update(from: parsed, sortIndex: sortIndex)
+    }
 }
 
 extension Profile {

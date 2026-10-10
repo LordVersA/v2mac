@@ -78,6 +78,8 @@ struct AppCommands: Commands {
         CommandGroup(replacing: .newItem) {
             Button("Add Subscription or Config…") { model.showAddSheet = true }
                 .keyboardShortcut("n")
+            Button("New Server…") { model.serverEditor = ServerEditorRequest(target: .new) }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
         }
         CommandMenu("Subscriptions") {
             Button("Update without Proxy") { model.updateSelection(viaProxy: false) }
@@ -87,6 +89,12 @@ struct AppCommands: Commands {
                 .disabled(!model.connection.isRunning)
         }
         CommandMenu("Servers") {
+            Button("Edit Server…") {
+                if let id = model.selectedProfileIDs.first { model.editServer(id) }
+            }
+            .keyboardShortcut("e")
+            .disabled(model.selectedProfileIDs.count != 1)
+            Divider()
             Button("Test Real Delay") { model.testReal() }
                 .keyboardShortcut("t")
             Button("Speed Test") { model.testSpeed() }

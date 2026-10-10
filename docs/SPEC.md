@@ -34,7 +34,7 @@ on the Mac through the same connection.
 | TUN / system-wide VPN | Excluded from v1; added later as TUN mode (section 9.5). |
 | Setting the macOS system proxy | The app only exposes local ports. |
 | QR import, file import, URL schemes | Input is a subscription URL or pasted configs (section 12.3, Add Subscription sheet). |
-| Editing a server | Inspector is read-only. |
+| Editing a server | Not in v1; added later as the server editor (section 12.7). |
 | Custom routing rules, rule-set manager | Presets only. |
 | Viewing outbound JSON / exporting generated config | Not selected. |
 | Per-server usage history, speed text in the menu bar | Not selected. |
@@ -926,7 +926,7 @@ rates. In a failed state it turns red and shows the one-line cause with
 (its subscription or Custom Configs), clears the search, selects its row and
 scrolls it into view.
 
-**Inspector** (read-only). Name, protocol, transport, security, address and
+**Inspector** (read-only; "Edit…" opens the server editor, section 12.7). Name, protocol, transport, security, address and
 port, SNI/host when present, last delay with its time and kind, any warnings.
 Buttons: Copy Share Link, Show QR Code (popover rendered with CoreImage's QR
 generator). Both are disabled for profiles without an original link (custom
@@ -1037,6 +1037,46 @@ Rules:
 - A click opens the main window, or Settings on the tab that fits (updates,
   subscriptions). The click sets `AppModel.windowRequest`; `WindowRequestHandler`, a
   view in the menu bar label, opens the window, because only a view has `openWindow`.
+
+### 12.7 Server editor
+
+A sheet that adds a server by hand or changes one, field by field.
+
+- **Opened from:** "Enter Details Manually…" in the Add sheet, File → New Server… (⇧⌘N),
+  "Edit…" in a row's menu and in the inspector, Servers → Edit Server… (⌘E).
+- **Where it saves.** A new server goes to Custom Configs. A pasted server is changed in
+  place and stays the same row; when it is the active server, the core is restarted with
+  the new details. A subscription's server is replaced by the next update, so its menu
+  item reads "Edit a Copy…" and the result is saved in Custom Configs.
+- **Fields.** Name, protocol, address and port for every server, then per protocol:
+
+  | Protocol | Fields |
+  |---|---|
+  | VLESS | User ID (with a button for a random UUID), flow, encryption |
+  | VMess | User ID, encryption |
+  | Trojan | Password |
+  | Shadowsocks | Method, password |
+  | Hysteria 2 | Password, Salamander obfuscation, port hopping (ports, interval), SNI, ALPN, certificate pin, allow insecure |
+  | WireGuard | Private key, addresses, MTU, reserved; peer public key, pre-shared key, allowed IPs, keep-alive |
+  | SOCKS5, HTTP | Username, password; HTTP also TLS with its SNI |
+
+  VLESS, VMess, Trojan and Shadowsocks also have **Transport** (raw with an optional HTTP
+  header, WebSocket, gRPC, HTTPUpgrade, XHTTP with mode and extra JSON, mKCP with header and
+  seed), **Security** (none; TLS with SNI, fingerprint, ALPN, allow insecure, certificate
+  pin, name to verify, ECH; REALITY with SNI, fingerprint, public key, short ID, spider X,
+  ML-DSA-65 key) and **Mux** (connections, XUDP connections, what to do with UDP port 443).
+- **`ServerDraft`** (package) is the form's model. It reads a stored outbound, also in
+  Xray's older `vnext` / `servers` layout, and builds the outbound in the layout the link
+  parser writes. Opening a server and saving it untouched leaves it byte for byte the same.
+  Keys the form has no field for (`sockopt`, other transport options) are kept as long as
+  the protocol does not change.
+- **Share link.** `ShareLinkWriter` writes the link of the result, so Copy Share Link and
+  the QR code work for edited servers. The link is kept only when `ShareLinkParser` reads
+  it back as the same outbound (Mux aside, which no link carries); otherwise the server has
+  no link. VMess uses the v2rayN base64 form when it can hold the server.
+- **Checks.** Save lists what is missing or malformed under the form and saves nothing.
+- **JSON.** A full Xray config, and an outbound of a protocol the form does not know, are
+  edited as text and read back through `SubscriptionParser`.
 
 ---
 

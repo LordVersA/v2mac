@@ -19,6 +19,13 @@ struct MainView: View {
         .tint(.blue)
     }
 
+    private func profile(for request: ServerEditorRequest) -> Profile? {
+        switch request.target {
+        case .new: nil
+        case .edit(let id), .copy(let id): model.profile(id: id)
+        }
+    }
+
     var body: some View {
         @Bindable var model = model
         NavigationSplitView {
@@ -55,7 +62,15 @@ struct MainView: View {
             }
         }
         .sheet(isPresented: $model.showAddSheet) {
+            if model.opensEditorAfterAddSheet {
+                model.opensEditorAfterAddSheet = false
+                model.serverEditor = ServerEditorRequest(target: .new)
+            }
+        } content: {
             AddSubscriptionSheet()
+        }
+        .sheet(item: $model.serverEditor) { request in
+            ServerEditorSheet(request: request, profile: profile(for: request))
         }
         .sheet(isPresented: $model.showRegionsSheet) {
             RegionPacksView()

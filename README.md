@@ -9,6 +9,7 @@
 ## Features
 
 - **Subscriptions:** import VLESS, VMess, Trojan, Shadowsocks, Hysteria2, WireGuard and plain SOCKS/HTTP links, or full Xray JSON configs. Auto-update, and shows your traffic usage and expiry date when the provider sends them.
+- **Add and edit servers by hand:** fill in every option of a VLESS, VMess, Trojan, Shadowsocks, Hysteria2, WireGuard, SOCKS or HTTP server yourself (transport, TLS or REALITY, Mux), or change one you imported.
 - **Favorites:** star the servers you like and find them in one list. A subscription update never removes them without asking.
 - **Latency tests:** real-delay and TCP ping for a whole group at once, sorted by speed.
 - **Routing:** Global, Direct, or Bypass regions (Iran included) to send local traffic direct.

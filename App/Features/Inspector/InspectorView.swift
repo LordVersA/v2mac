@@ -63,6 +63,12 @@ struct InspectorView: View {
                     }
 
                     Section {
+                        Button(profile.group?.isManual == true ? "Edit…" : "Edit a Copy…", systemImage: "pencil") {
+                            model.editServer(profile.id)
+                        }
+                        .help(profile.group?.isManual == true
+                            ? "Change this server's details"
+                            : "Change the details in a copy saved in Custom Configs")
                         CopyButton("Copy Share Link", systemImage: "link") { profile.originalLink ?? "" }
                             .disabled(profile.originalLink == nil)
                         Button("QR Code", systemImage: "qrcode") { showQR = true }
