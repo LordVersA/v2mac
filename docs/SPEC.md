@@ -96,8 +96,9 @@ change without affecting the rest.
    checks the port before starting and, if busy, shows an error with a one-click
    "Use <next free port>" action.
 2. **`allowInsecure` links.** Xray v26.9.30 refuses to start with
-   `allowInsecure: true`. The parser drops the flag and attaches a warning to the
-   server instead of rejecting it.
+   `allowInsecure: true`. The parser keeps the flag as a marker and attaches a
+   warning to the server instead of rejecting it; the flag never reaches the core
+   (section 8.5).
 3. **Unsupported entries** (removed transports `h2`/`http`/`quic`, unknown
    schemes) are skipped and counted; the group shows "N skipped".
 4. **DNS in Bypass mode.** `IPIfNonMatch` with two DoH servers
@@ -433,9 +434,10 @@ Rules that apply to all schemes:
 
 - Name: URL fragment, percent-decoded; fallback `host:port`.
 - IPv6 hosts in brackets; ports validated to 1–65535.
-- `allowInsecure=1` / `insecure=1`: flag dropped, warning
-  "allowInsecure is not supported by this Xray version; the server must present
-  a valid certificate" added. No warning when the link also pins the certificate
+- `allowInsecure=1` / `insecure=1`: kept as `tlsSettings.allowInsecure: true` in
+  the stored outbound (a marker for section 8.5, left out of the fingerprint) and
+  a warning is added that points at the "Allow insecure servers" setting. No
+  marker and no warning when the link also pins the certificate
   (`pcs`, Hysteria 2 `pinSHA256`): a pinned certificate is accepted whoever issued it.
 - `type=h2`, `type=http`, `type=quic`: skipped with reason "transport removed
   from Xray".
@@ -561,6 +563,30 @@ outbound (tagged, dialled and bound as above). The core, its ports and the traff
 connections already open finish on the old server. If either command fails the core is restarted
 as before. Custom configs, and any change of port, mode, TUN, log or the settings above, always
 restart. The API port is loopback-only and unauthenticated, like the metrics port.
+
+---
+
+### 8.5 Servers that ask for `allowInsecure`
+
+Xray has no way left to skip the certificate check, only to pin a certificate.
+`InsecureTLS` (package) handles outbounds that carry the marker:
+
+- **Setting off (default):** the marker is removed and the certificate is checked
+  normally, so a self-signed server fails with "unknown authority".
+- **Setting on ("Allow insecure servers"):** before connecting, switching live or
+  testing delay, the app opens a TLS (or QUIC, for Hysteria 2 and `alpn: h3`)
+  handshake to the server's address with the outbound's `serverName` and ALPN,
+  reads the leaf certificate, refuses the handshake, and sets
+  `pinnedPeerCertSha256` to its SHA-256. Nothing is stored: the pin is taken
+  again on every connect, which is what the flag means (accept whatever the
+  server shows). If the server cannot be asked, the marker is only removed.
+
+`ConfigBuilder.proxyOutbound` and the latency config remove the marker in every
+case, so it cannot reach the core. Limits: the extra handshake comes from the
+system TLS stack and does not go through the TLS fragment dialer; Hysteria 2
+with Salamander obfuscation cannot be asked; full Xray configs are not touched.
+Checked 2026-10-10 in the Debug app against a local self-signed Trojan and
+Hysteria 2 server: both connect with the setting on, Trojan fails with it off.
 
 ---
 
@@ -954,6 +980,7 @@ Empty search: "No servers match".
 | | Timeout | 8 s |
 | | Concurrency | 8 |
 | Connection | Switch servers without restarting | On |
+| Connection | Allow insecure servers | Off |
 | | TLS fragment: split (TLS hello / first packets), piece size, pause | Off; `100-200` bytes, `10-20` ms |
 | | Noise packets: packet size, pause | Off; `10-20` bytes, `10-16` ms |
 | | Use custom DNS: servers, addresses (IPv4 and IPv6 / IPv4 only / IPv6 only) | Off; Cloudflare and Google DoH |

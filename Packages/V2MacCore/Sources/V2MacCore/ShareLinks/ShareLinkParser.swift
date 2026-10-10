@@ -349,8 +349,8 @@ public enum ShareLinkParser {
         }
 
         // A pinned certificate is accepted whoever issued it, so `insecure` changes nothing then.
-        var warnings: [String] = []
-        if pin == nil, u.query.flag("insecure", "allowinsecure") { warnings.append(StreamBuilder.insecureWarning) }
+        let insecure = pin == nil && u.query.flag("insecure", "allowinsecure")
+        let warnings = insecure ? [StreamBuilder.insecureWarning] : []
 
         var hysteria: [String: JSONValue] = [
             "version": 2,
@@ -368,6 +368,7 @@ public enum ShareLinkParser {
                 "serverName": u.query["sni"].map { .string($0) },
                 "alpn": .array((alpn.isEmpty ? ["h3"] : alpn).map { .string($0) }),
                 "pinnedPeerCertSha256": pin.map { .string($0) },
+                InsecureTLS.flag: insecure ? true : nil,
             ]),
             "hysteriaSettings": .object(hysteria),
         ]

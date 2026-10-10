@@ -53,7 +53,8 @@ final class Profile {
     func update(from parsed: ParsedProfile, sortIndex: Int) {
         self.sortIndex = sortIndex
         name = parsed.name
-        // Same fingerprint, same config; these only change when the app learns to describe it better.
+        // Same fingerprint, same server; these only change when the app learns to describe it better.
+        if let data = try? parsed.config.data() { configJSON = data }
         protocolName = parsed.protocolName
         address = parsed.address
         port = parsed.port

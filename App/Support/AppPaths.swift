@@ -89,6 +89,7 @@ enum Prefs {
             "latencyConcurrency": 8,
             "speedTestURL": Prefs.defaultSpeedURL,
             "liveSwitch": true,
+            "allowInsecure": false,
             "fragmentEnabled": false,
             "fragmentPackets": FragmentSettings.Packets.tlsHello.rawValue,
             "fragmentLength": FragmentSettings.defaultLength,
@@ -155,6 +156,9 @@ enum Prefs {
 
     /// Changing servers swaps the outbound in the running core instead of restarting it.
     static var liveSwitch: Bool { defaults.bool(forKey: "liveSwitch") }
+
+    /// Servers whose link says `allowInsecure` get the certificate they present pinned (spec 8.5).
+    static var allowInsecure: Bool { defaults.bool(forKey: "allowInsecure") }
 
     /// TLS fragment and noise packets, each only while its switch is on.
     static var dialer: DialerSettings {

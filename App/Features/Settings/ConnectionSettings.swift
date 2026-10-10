@@ -5,6 +5,7 @@ import V2MacCore
 struct ConnectionSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage("liveSwitch") private var liveSwitch = true
+    @AppStorage("allowInsecure") private var allowInsecure = false
     @AppStorage("fragmentEnabled") private var fragmentEnabled = false
     @AppStorage("fragmentPackets") private var fragmentPackets = FragmentSettings.Packets.tlsHello.rawValue
     @AppStorage("fragmentLength") private var fragmentLength = FragmentSettings.defaultLength
@@ -19,7 +20,7 @@ struct ConnectionSettings: View {
 
     /// Everything here that needs a new core config.
     private var coreSettings: [String] {
-        ["\(fragmentEnabled)", fragmentPackets, fragmentLength, fragmentInterval,
+        ["\(allowInsecure)", "\(fragmentEnabled)", fragmentPackets, fragmentLength, fragmentInterval,
          "\(noiseEnabled)", noisePacket, noiseDelay, "\(dnsEnabled)", dnsServers, dnsQueryStrategy]
     }
 
@@ -29,6 +30,11 @@ struct ConnectionSettings: View {
                 Toggle("Switch servers without restarting", isOn: $liveSwitch)
             } footer: {
                 note("Picking another server replaces it inside the running core, so the local port stays up. Full Xray configs always restart.")
+            }
+            Section {
+                Toggle("Allow insecure servers", isOn: $allowInsecure)
+            } footer: {
+                note("For servers whose link says allowInsecure, usually ones with a self-signed certificate. V2Mac asks such a server for its certificate each time it connects and accepts that one without checking who issued it, so someone between you and the server could pose as it. Other servers are not affected.")
             }
             Section {
                 Toggle("TLS fragment", isOn: $fragmentEnabled)

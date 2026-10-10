@@ -83,11 +83,25 @@ import Testing
         #expect(e?["echConfigList"]?.stringValue == "AEX+DQBB")
     }
 
-    @Test func allowInsecureIsDroppedWithWarning() throws {
+    @Test func allowInsecureIsKeptAsAMarkerWithWarning() throws {
         let p = try parse(Fixtures.vlessInsecure)
         #expect(p.warnings == [StreamBuilder.insecureWarning])
-        #expect(p.config["streamSettings"]?["tlsSettings"]?["allowInsecure"] == nil)
-        #expect(try parse(Fixtures.hy2Insecure).warnings == [StreamBuilder.insecureWarning])
+        #expect(InsecureTLS.isRequested(by: p.config))
+        let hy2 = try parse(Fixtures.hy2Insecure)
+        #expect(hy2.warnings == [StreamBuilder.insecureWarning])
+        #expect(InsecureTLS.isRequested(by: hy2.config))
+        // A link that pins its certificate needs no flag.
+        #expect(!InsecureTLS.isRequested(by: try parse(Fixtures.hy2Pinned).config))
+        #expect(!InsecureTLS.isRequested(by: try parse(Fixtures.vlessPinned.replacingOccurrences(of: "#", with: "&allowInsecure=1#")).config))
+    }
+
+    @Test func allowInsecureNeverReachesTheCoreAndDoesNotChangeTheFingerprint() throws {
+        let p = try parse(Fixtures.vlessInsecure)
+        let plain = try parse(Fixtures.vlessInsecure.replacingOccurrences(of: "&allowInsecure=1", with: ""))
+        #expect(p.fingerprint == plain.fingerprint)
+        #expect(InsecureTLS.stripping(p.config) == plain.config)
+        let built = try ConfigBuilder.buildGlobal(outbound: p.config, options: RunOptions(metricsPort: 19998))
+        #expect(built["outbounds"]?[0]?["streamSettings"]?["tlsSettings"]?["allowInsecure"] == nil)
     }
 
     @Test func hysteriaPinBecomesXrayPin() throws {

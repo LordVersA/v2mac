@@ -151,7 +151,7 @@ extension ConfigBuilder {
     /// A server's outbound as it runs: tagged `proxy`, dialled as the settings say, and in TUN
     /// mode bound to the physical interface. Also what a live switch puts in place of the old one.
     public static func proxyOutbound(_ outbound: JSONValue, options: RunOptions) -> JSONValue {
-        let proxy = dialing(outbound.setting("tag", to: .string(proxyTag)), through: options.dialer)
+        let proxy = dialing(InsecureTLS.stripping(outbound).setting("tag", to: .string(proxyTag)), through: options.dialer)
         return options.tun.map { binding(proxy, to: $0.outboundInterface) } ?? proxy
     }
 

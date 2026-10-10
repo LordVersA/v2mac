@@ -54,7 +54,8 @@ final class LatencyService {
             assetDirectory: AppPaths.assetsDirectory,
             options: Prefs.latencyOptions,
             outboundInterface: physicalInterface(),
-            dialer: Prefs.dialer
+            dialer: Prefs.dialer,
+            allowInsecure: Prefs.allowInsecure
         )
         let latencyTargets = targets.map { LatencyTarget(id: $0.id, config: $0.config, kind: $0.kind) }
         task = Task { [weak self] in
@@ -80,7 +81,8 @@ final class LatencyService {
             assetDirectory: AppPaths.assetsDirectory,
             options: options,
             outboundInterface: physicalInterface(),
-            dialer: Prefs.dialer
+            dialer: Prefs.dialer,
+            allowInsecure: Prefs.allowInsecure
         )
         let latencyTargets = targets.map { LatencyTarget(id: $0.id, config: $0.config, kind: $0.kind) }
         task = Task { [weak self] in

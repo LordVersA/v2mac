@@ -71,7 +71,7 @@ enum LatencyConfig {
                 "protocol": "socks",
                 "settings": ["auth": "noauth", "udp": false],
             ])
-            let bound = ConfigBuilder.dialing(outbound.setting("tag", to: .string("out-\(i)")), through: dialer)
+            let bound = ConfigBuilder.dialing(InsecureTLS.stripping(outbound).setting("tag", to: .string("out-\(i)")), through: dialer)
             tagged.append(interface.map { ConfigBuilder.binding(bound, to: $0) } ?? bound)
             rules.append(["type": "field", "inboundTag": [.string("in-\(i)")], "outboundTag": .string("out-\(i)")])
         }
@@ -96,9 +96,12 @@ public struct RealDelayTester: Sendable {
     private let outboundInterface: String?
     /// Fragment and noise settings, so a test dials the server the way a connection would.
     private let dialer: DialerSettings
+    /// Pin the certificate of servers whose link says `allowInsecure`, as a connection would.
+    private let allowInsecure: Bool
 
-    public init(executable: URL, assetDirectory: URL, options: LatencyOptions = LatencyOptions(), outboundInterface: String? = nil, dialer: DialerSettings = DialerSettings()) {
+    public init(executable: URL, assetDirectory: URL, options: LatencyOptions = LatencyOptions(), outboundInterface: String? = nil, dialer: DialerSettings = DialerSettings(), allowInsecure: Bool = false) {
         self.dialer = dialer
+        self.allowInsecure = allowInsecure
         self.executable = executable
         self.assetDirectory = assetDirectory
         self.options = options
@@ -119,7 +122,12 @@ public struct RealDelayTester: Sendable {
         while index < outbounds.count {
             if Task.isCancelled { return }
             let end = min(index + options.batchSize, outbounds.count)
-            await testBatch(Array(outbounds[index..<end]), onResult: onResult, onSpeed: onSpeed)
+            var batch = Array(outbounds[index..<end])
+            if allowInsecure {
+                let pinned = await InsecureTLS.pinning(batch.map(\.config), timeout: min(options.timeout, 4))
+                for i in batch.indices { batch[i].config = pinned[i] }
+            }
+            await testBatch(batch, onResult: onResult, onSpeed: onSpeed)
             index = end
         }
         for target in customs {

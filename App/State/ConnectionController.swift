@@ -256,13 +256,24 @@ final class ConnectionController {
                        tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api)
         }
 
+        // Before the core stops as well: asking a server for its certificate takes a moment.
+        var outboundConfig = server.config
+        if server.kind == .outbound, Prefs.allowInsecure, InsecureTLS.isRequested(by: outboundConfig) {
+            outboundConfig = await InsecureTLS.pinning(outboundConfig)
+            if outboundConfig["streamSettings"]?["tlsSettings"]?["pinnedPeerCertSha256"] != nil {
+                logs.append("[v2mac] \(server.name): accepting the certificate the server presents (allowInsecure)")
+            } else {
+                logs.append("[v2mac] \(server.name): could not read the server's certificate, so it will be checked normally")
+            }
+        }
+
         // Same settings, only the server differs: swap the outbound and keep the core.
         if mayLiveSwitch, Prefs.liveSwitch, coreState == .running, server.kind == .outbound,
            let running, let api = running.options.apiPort,
            options(metrics: running.options.metricsPort, api: api) == running.options, plan == running.plan {
             isSwitching = true
             do {
-                let outbound = ConfigBuilder.proxyOutbound(server.config, options: running.options)
+                let outbound = ConfigBuilder.proxyOutbound(outboundConfig, options: running.options)
                 try await runner.replaceOutbound(tag: ConfigBuilder.proxyTag, with: outbound, apiPort: api)
                 logs.append("[v2mac] Switched to \(server.name) without restarting the core")
                 #if DEBUG
@@ -292,7 +303,7 @@ final class ConnectionController {
             switch server.kind {
             case .outbound:
                 let options = options(metrics: metrics, api: Prefs.liveSwitch ? try PortUtil.freePort() : nil)
-                config = try ConfigBuilder.build(outbound: server.config, options: options, routing: plan)
+                config = try ConfigBuilder.build(outbound: outboundConfig, options: options, routing: plan)
                 started = options
             case .custom:
                 config = try ConfigBuilder.buildCustom(config: server.config, options: options(metrics: metrics, api: nil))

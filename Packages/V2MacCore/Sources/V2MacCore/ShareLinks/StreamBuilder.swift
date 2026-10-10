@@ -44,7 +44,7 @@ struct StreamResult: Sendable {
 
 enum StreamBuilder {
     static let insecureWarning =
-        "allowInsecure is not supported by this Xray version; the server must present a valid certificate"
+        "The link asks to skip the certificate check (allowInsecure). This server connects only while \"Allow insecure servers\" is on in Settings → Connection, unless its certificate is valid"
 
     static func build(_ p: StreamParams, defaultSecurity: String) throws -> StreamResult {
         var warnings: [String] = []
@@ -163,6 +163,8 @@ enum StreamBuilder {
             "fingerprint": p.fp.map { .string($0) },
             "alpn": alpn.isEmpty ? nil : .array(alpn.map { .string($0) }),
             "pinnedPeerCertSha256": p.pcs.map { .string($0) },
+            // Kept for `InsecureTLS`; it is removed before the core sees the outbound.
+            InsecureTLS.flag: p.insecure && p.pcs == nil ? true : nil,
             "verifyPeerCertByName": p.vcn.map { .string($0) },
             "echConfigList": p.ech.map { .string($0) },
         ])

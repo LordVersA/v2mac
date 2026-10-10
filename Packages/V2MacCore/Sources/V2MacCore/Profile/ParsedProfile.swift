@@ -51,11 +51,12 @@ public struct ParsedProfile: Sendable, Hashable {
 
     /// SHA-256 (hex) of the config with sorted keys and naming fields removed,
     /// so two entries that differ only in display name share a fingerprint.
+    /// The `allowInsecure` marker is left out too: servers stored before it was kept stay the same rows.
     public static func fingerprint(kind: ProfileKind, config: JSONValue) -> String {
         var normalised = config
         switch kind {
         case .outbound:
-            normalised = normalised.removing("tag")
+            normalised = InsecureTLS.stripping(normalised).removing("tag")
         case .custom:
             normalised = normalised.removing("remarks")
             if case .array(var outbounds)? = normalised["outbounds"], !outbounds.isEmpty {
