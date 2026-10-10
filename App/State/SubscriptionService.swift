@@ -39,6 +39,15 @@ final class SubscriptionService {
 
     private(set) var updatingGroupIDs: Set<UUID> = []
 
+    /// Events worth a notification (spec 12.8); `AppModel` turns them into one.
+    enum Notice {
+        case updateFailed(group: String, message: String)
+        case serversChanged(group: String, added: Int, removed: Int, activeRemoved: Bool)
+        case expiry(group: String, level: UsageAlert.Expiry, expiresAt: Date)
+        case traffic(group: String, level: UsageAlert.Traffic, used: Int64, total: Int64)
+    }
+    @ObservationIgnored var onNotice: @MainActor (Notice) -> Void = { _ in }
+
     private let container: ModelContainer
     private let store: SubscriptionStore
     private let connection: ConnectionController
@@ -106,7 +115,9 @@ final class SubscriptionService {
         return groupID
     }
 
-    func update(groupID: UUID, viaProxy: Bool) async {
+    /// `scheduled` marks an automatic update: only those announce a failure or changed servers,
+    /// since a manual update shows both in the window.
+    func update(groupID: UUID, viaProxy: Bool, scheduled: Bool = false) async {
         guard !updatingGroupIDs.contains(groupID) else { return }
         guard let group = try? container.mainContext.fetch(
             FetchDescriptor<ServerGroup>(predicate: #Predicate { $0.id == groupID })
@@ -119,9 +130,47 @@ final class SubscriptionService {
                 url: url, route: try route(viaProxy: viaProxy),
                 rememberedAgent: group.userAgent, alreadyProbed: group.userAgentProbed
             )
-            try await store.apply(outcome, to: groupID, viaProxy: viaProxy, activeProfileID: connection.activeServer?.id)
+            let summary = try await store.apply(outcome, to: groupID, viaProxy: viaProxy, activeProfileID: connection.activeServer?.id)
+            guard let summary else { return }
+            if scheduled, summary.added + summary.removed > 0 {
+                onNotice(.serversChanged(group: summary.groupName, added: summary.added, removed: summary.removed, activeRemoved: summary.activeRemoved))
+            }
+            checkUsage(groupID: groupID, name: summary.groupName, used: summary.usedBytes, total: summary.totalBytes, expiresAt: summary.expiresAt)
         } catch {
+            // Announced for the first failure only; the scheduler retries every 15 minutes.
+            if scheduled, group.lastUpdateError == nil {
+                onNotice(.updateFailed(group: group.name, message: error.localizedDescription))
+            }
             try? await store.recordFailure(groupID: groupID, message: error.localizedDescription)
+        }
+    }
+
+    /// Announces an expiry or traffic level the first time a subscription reaches it.
+    private func checkUsage(groupID: UUID, name: String, used: Int64?, total: Int64?, expiresAt: Date?, now: Date = Date()) {
+        if let expiresAt {
+            let level = UsageAlert.expiry(expiresAt: expiresAt, now: now)
+            let step = UsageAlert.step(
+                level: level.rawValue, subject: "\(Int(expiresAt.timeIntervalSince1970))",
+                marker: Prefs.usageMarker("notifiedExpiry", group: groupID)
+            )
+            Prefs.setUsageMarker(step.marker, "notifiedExpiry", group: groupID)
+            if step.notify { onNotice(.expiry(group: name, level: level, expiresAt: expiresAt)) }
+        }
+        if let used, let total, total > 0 {
+            let level = UsageAlert.traffic(used: used, total: total)
+            let step = UsageAlert.step(
+                level: level.rawValue, subject: "\(total)",
+                marker: Prefs.usageMarker("notifiedTraffic", group: groupID)
+            )
+            Prefs.setUsageMarker(step.marker, "notifiedTraffic", group: groupID)
+            if step.notify { onNotice(.traffic(group: name, level: level, used: used, total: total)) }
+        }
+    }
+
+    /// An expiry date comes closer without any update, so every group is looked at on each tick.
+    func checkAllUsage() {
+        for group in (try? container.mainContext.fetch(FetchDescriptor<ServerGroup>())) ?? [] where !group.isManual {
+            checkUsage(groupID: group.id, name: group.name, used: group.usedBytes, total: group.totalBytes, expiresAt: group.expiresAt)
         }
     }
 
@@ -138,6 +187,7 @@ final class SubscriptionService {
     }
 
     func updateDueGroups(now: Date = Date()) async {
+        checkAllUsage()
         guard Prefs.autoUpdateSubscriptions else { return }
         let viaProxy = Prefs.subscriptionUpdateViaProxy
         // Via-proxy updates wait silently for a running core.
@@ -149,7 +199,7 @@ final class SubscriptionService {
             let hours = group.serverIntervalHours ?? Prefs.defaultIntervalHours
             return now.timeIntervalSince(last) >= Double(hours) * 3600
         }
-        for group in due { await update(groupID: group.id, viaProxy: viaProxy) }
+        for group in due { await update(groupID: group.id, viaProxy: viaProxy, scheduled: true) }
     }
 
     func updateAll(viaProxy: Bool) async {

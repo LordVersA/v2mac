@@ -17,6 +17,7 @@ struct V2MacApp: App {
                 .modelContainer(model.container)
         } label: {
             MenuBarIcon(phase: model.connection.phase)
+                .background(WindowRequestHandler(model: model))
         }
         .menuBarExtraStyle(.window)
 
@@ -41,6 +42,26 @@ struct V2MacApp: App {
                 .environment(model)
                 .modelContainer(model.container)
         }
+    }
+}
+
+/// Opens the window a notification click asked for. It lives in the menu bar label, the one
+/// view that exists whichever windows are open.
+struct WindowRequestHandler: View {
+    let model: AppModel
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some View {
+        Color.clear
+            .onChange(of: model.windowRequest) { _, request in
+                guard let request else { return }
+                model.windowRequest = nil
+                switch request {
+                case .main: model.openMainWindow(openWindow)
+                case .settings(let tab): model.openSettings(openSettings, tab: tab)
+                }
+            }
     }
 }
 

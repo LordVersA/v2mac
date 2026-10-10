@@ -41,12 +41,28 @@ actor SubscriptionStore {
         return (group.id, added)
     }
 
-    func apply(_ outcome: FetchOutcome, to groupID: UUID, viaProxy: Bool, activeProfileID: UUID?) throws {
-        guard let group = try fetchGroup(groupID) else { return }
-        reconcile(group, with: outcome.result, viaProxy: viaProxy, activeProfileID: activeProfileID)
+    /// What an update changed, and the account figures it left the group with.
+    struct Summary: Sendable {
+        var groupName: String
+        var added = 0
+        var removed = 0
+        var activeRemoved = false
+        var usedBytes: Int64?
+        var totalBytes: Int64?
+        var expiresAt: Date?
+    }
+
+    @discardableResult
+    func apply(_ outcome: FetchOutcome, to groupID: UUID, viaProxy: Bool, activeProfileID: UUID?) throws -> Summary? {
+        guard let group = try fetchGroup(groupID) else { return nil }
+        var summary = reconcile(group, with: outcome.result, viaProxy: viaProxy, activeProfileID: activeProfileID)
         group.userAgent = outcome.userAgent
         group.userAgentProbed = outcome.probed
         try modelContext.save()
+        summary.usedBytes = group.usedBytes
+        summary.totalBytes = group.totalBytes
+        summary.expiresAt = group.expiresAt
+        return summary
     }
 
     /// A failed fetch never touches the group's servers.
@@ -60,7 +76,8 @@ actor SubscriptionStore {
         try modelContext.fetch(FetchDescriptor<ServerGroup>(predicate: #Predicate { $0.id == id })).first
     }
 
-    private func reconcile(_ group: ServerGroup, with result: SubscriptionResult, viaProxy: Bool, activeProfileID: UUID?) {
+    private func reconcile(_ group: ServerGroup, with result: SubscriptionResult, viaProxy: Bool, activeProfileID: UUID?) -> Summary {
+        var summary = Summary(groupName: group.name)
         let existing = group.profiles.sorted { $0.sortIndex < $1.sortIndex }
         var byFingerprint: [String: [Profile]] = [:]
         for p in existing { byFingerprint[p.fingerprint, default: []].append(p) }
@@ -73,11 +90,15 @@ actor SubscriptionStore {
                 reused.insert(match.id)
             } else {
                 modelContext.insert(Profile(parsed: parsed, sortIndex: index, group: group))
+                summary.added += 1
             }
         }
 
         for old in existing where !reused.contains(old.id) {
+            // A server already marked as removed upstream is not removed a second time.
+            if !old.isStale { summary.removed += 1 }
             if old.id == activeProfileID {
+                if !old.isStale { summary.activeRemoved = true }
                 old.isStale = true
                 old.sortIndex = result.profiles.count + 1000
             } else {
@@ -101,5 +122,6 @@ actor SubscriptionStore {
         group.lastUpdateViaProxy = viaProxy
         group.lastSkippedCount = result.skipped.count
         group.lastUpdateError = nil
+        return summary
     }
 }

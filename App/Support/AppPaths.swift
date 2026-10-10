@@ -103,6 +103,7 @@ enum Prefs {
             "logLevel": XrayLogLevel.warning.rawValue,
             "logConnections": false,
         ])
+        defaults.register(defaults: Dictionary(uniqueKeysWithValues: NotificationKind.allCases.map { ($0.key, $0.defaultOn) }))
         if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
         // macOS puts a new menu bar icon at the far left, where a notch hides it first. This is
         // AppKit's own (undocumented) key for a dragged icon, in points from the right edge of
@@ -156,6 +157,23 @@ enum Prefs {
 
     /// Changing servers swaps the outbound in the running core instead of restarting it.
     static var liveSwitch: Bool { defaults.bool(forKey: "liveSwitch") }
+
+    static func notify(_ kind: NotificationKind) -> Bool { defaults.bool(forKey: kind.key) }
+
+    /// What the last expiry or traffic warning was about, per subscription (`UsageAlert.step`).
+    static func usageMarker(_ name: String, group: UUID) -> String? {
+        (defaults.dictionary(forKey: name) as? [String: String])?[group.uuidString]
+    }
+
+    static func setUsageMarker(_ marker: String, _ name: String, group: UUID) {
+        var all = (defaults.dictionary(forKey: name) as? [String: String]) ?? [:]
+        all[group.uuidString] = marker
+        defaults.set(all, forKey: name)
+    }
+
+    /// The release tag the last "update available" notification was about.
+    static func announcedTag(_ name: String) -> String? { defaults.string(forKey: name) }
+    static func setAnnouncedTag(_ tag: String, _ name: String) { defaults.set(tag, forKey: name) }
 
     /// Servers whose link says `allowInsecure` get the certificate they present pinned (spec 8.5).
     static var allowInsecure: Bool { defaults.bool(forKey: "allowInsecure") }

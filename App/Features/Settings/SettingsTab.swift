@@ -1,3 +1,3 @@
-enum SettingsTab: Hashable {
-    case general, proxy, routing, connection, servers, core, about
+enum SettingsTab: String, Hashable, Sendable {
+    case general, proxy, routing, connection, servers, notifications, core, about
 }

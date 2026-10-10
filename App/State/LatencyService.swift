@@ -17,6 +17,9 @@ final class LatencyService {
     private var task: Task<Void, Never>?
     /// Set while TUN mode is up: tests must leave through this interface, not the tunnel.
     var physicalInterface: @MainActor () -> String? = { nil }
+    /// A run ended by itself: how many servers, and the fastest one that answered (spec 12.8).
+    @ObservationIgnored var onFinished: @MainActor (_ tested: Int, _ best: (id: UUID, ms: Int)?) -> Void = { _, _ in }
+    @ObservationIgnored private var best: (id: UUID, ms: Int)?
 
     init(container: ModelContainer) {
         self.container = container
@@ -134,11 +137,13 @@ final class LatencyService {
         speedTestingIDs = []
         completed = 0
         total = ids.count
+        best = nil
     }
 
     private func record(_ result: LatencyResult, kind: String, expectsSpeed: Bool = false) async {
         try? await store.apply(id: result.id, outcome: result.outcome, kind: kind)
         testingIDs.remove(result.id)
+        if case .ok(let ms) = result.outcome, ms < (best?.ms ?? .max) { best = (result.id, ms) }
         if expectsSpeed {
             // Only servers that answered get a download test; the rest are done now.
             if case .ok = result.outcome { return }
@@ -164,6 +169,7 @@ final class LatencyService {
         testingIDs = []
         speedTestingIDs = []
         task = nil
+        onFinished(total, best)
         #if DEBUG
         print("[v2mac-debug] latency run finished: \(completed)/\(total)")
         #endif

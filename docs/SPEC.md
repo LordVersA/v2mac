@@ -42,7 +42,7 @@ on the Mac through the same connection.
 | Intel Macs, macOS 15 and earlier | arm64, macOS 26+ only. |
 | Developer ID signing, notarization, Sparkle | Planned after v1. |
 | Mux, global sniffing options | Outbounds are used as provided. TLS fragment, noise packets and DNS came later (section 8.4). |
-| Auto-select fastest server, notifications, global hotkeys | Future. |
+| Auto-select fastest server, global hotkeys | Future. Notifications came later (section 12.6). |
 
 ---
 
@@ -955,6 +955,41 @@ Empty search: "No servers match".
 - Check the exact modifier signatures in the Xcode 27 SDK before use; they
   changed during the macOS 26 betas.
 
+### 12.6 Notifications
+
+Local notifications through `UNUserNotificationCenter`; they need no entitlement and
+work on the ad-hoc signed build (checked 2026-10-10). Permission is asked on first
+launch. Each kind has a switch in Settings → Notifications:
+
+| Kind | Sent when | Default |
+|---|---|---|
+| Connection lost or failed | A connect fails, the core stops and all restart attempts fail, or the port is busy (with a "Use Port N" button) | On |
+| Reconnected | The core is running again after a crash, sleep or network change | Off |
+| TUN mode stopped | TUN could not start or went down by itself | On |
+| Subscription expiring | 3 days and 1 day before the expiry date, and when it passes | On |
+| Traffic running out | 80%, 95% and 100% of the quota | On |
+| Automatic update failed | A scheduled update fails (first failure in a row only) | Off |
+| Servers added or removed | A scheduled update changed the server list | Off |
+| V2Mac update available | The background check finds a release, once per release | On |
+| Xray core update available | Same, for the core | Off |
+| Delay test finished | A test ends while the app is in the background | Off |
+
+Rules:
+
+- Services do not know about notifications: each reports events through a closure
+  (`onNotice`, `onFailure`, `onFound`, `onFinished`) and `AppModel.wireNotifications`
+  decides the wording and posts through `NotificationService`.
+- Connection, TUN and test notifications show no banner while a V2Mac window is in
+  front (they still reach Notification Center). The three connection kinds share one
+  identifier, so the newest replaces the one before it.
+- Expiry and traffic levels come from `UsageAlert` (package). A level is announced
+  once per subscription; `UsageAlert.step` keeps a marker per group in `UserDefaults`
+  (`notifiedExpiry`, `notifiedTraffic`) that resets when the date or quota changes.
+  Groups are checked after every update and on each 15-minute scheduler tick.
+- A click opens the main window, or Settings on the tab that fits (updates,
+  subscriptions). The click sets `AppModel.windowRequest`; `WindowRequestHandler`, a
+  view in the menu bar label, opens the window, because only a view has `openWindow`.
+
 ---
 
 ## 13. Settings
@@ -979,6 +1014,7 @@ Empty search: "No servers match".
 | | Concurrency | 8 |
 | Connection | Switch servers without restarting | On |
 | Connection | Allow insecure servers | Off |
+| Notifications | One switch per kind | See section 12.6 |
 | | TLS fragment: split (TLS hello / first packets), piece size, pause | Off; `100-200` bytes, `10-20` ms |
 | | Noise packets: packet size, pause | Off; `10-20` bytes, `10-16` ms |
 | | Use custom DNS: servers, addresses (IPv4 and IPv6 / IPv4 only / IPv6 only) | Off; Cloudflare and Google DoH |

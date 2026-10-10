@@ -27,6 +27,13 @@ final class UpdateService {
         case unavailable(String)
     }
 
+    /// A background check found a newer release (spec 12.8).
+    enum Found: Equatable {
+        case app(String)
+        case core(String)
+    }
+    @ObservationIgnored var onFound: @MainActor (Found) -> Void = { _ in }
+
     private(set) var coreStatus: CoreStatus = .idle
     private(set) var coreVersion: String?
     private(set) var coreIsUpdatedCopy = false
@@ -99,6 +106,7 @@ final class UpdateService {
             Prefs.lastCoreUpdateCheck = Date()
             if VersionCompare.isNewer(release.tag, than: coreVersion ?? "") {
                 coreStatus = .available(release)
+                if !manual { onFound(.core(release.tag)) }
             } else if manual {
                 coreStatus = .upToDate
             }
@@ -165,6 +173,7 @@ final class UpdateService {
             let found = try await AppUpdateChecker.newer(than: Prefs.appVersion, repository: repo, downloader: downloader)
             Prefs.lastAppUpdateCheck = Date()
             appStatus = found.map(AppStatus.available) ?? .upToDate
+            if !manual, let found { onFound(.app(found.tag)) }
         } catch {
             appStatus = manual ? .unavailable(error.localizedDescription) : .idle
         }

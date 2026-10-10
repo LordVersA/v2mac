@@ -13,6 +13,7 @@ struct SettingsView: View {
             RoutingSettings().tabItem { Label("Routing", systemImage: "arrow.triangle.branch") }.tag(SettingsTab.routing)
             ConnectionSettings().tabItem { Label("Connection", systemImage: "bolt.horizontal") }.tag(SettingsTab.connection)
             SubscriptionSettings().tabItem { Label("Servers", systemImage: "tray.and.arrow.down") }.tag(SettingsTab.servers)
+            NotificationSettings().tabItem { Label("Notifications", systemImage: "bell") }.tag(SettingsTab.notifications)
             CoreSettings().tabItem { Label("Core", systemImage: "cpu") }.tag(SettingsTab.core)
             AboutSettings().tabItem { Label("About", systemImage: "info.circle") }.tag(SettingsTab.about)
         }

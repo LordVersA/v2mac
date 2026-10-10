@@ -20,6 +20,7 @@ final class AppModel {
     let latency: LatencyService
     let regionPacks = RegionPackService()
     let updates = UpdateService()
+    let notifications = NotificationService()
 
     var sidebarSelection: SidebarItem = .all
     var selectedProfileIDs: Set<UUID> = []
@@ -30,6 +31,8 @@ final class AppModel {
     var showRegionsSheet = false
     /// The Settings tab to show; the update buttons set it before opening Settings.
     var settingsTab: SettingsTab = .general
+    /// A window a notification click asked for; `WindowRequestHandler` opens it.
+    var windowRequest: WindowRequest?
     /// Rows currently shown in the server table (after search); the default test target.
     var visibleProfileIDs: [UUID] = []
 
@@ -78,6 +81,7 @@ final class AppModel {
             return
         }
         #endif
+        wireNotifications()
         restoreActiveServer()
         if Prefs.reconnectOnLaunch, Prefs.wasRunning, connection.activeServer != nil {
             connection.connectActive()
@@ -87,6 +91,88 @@ final class AppModel {
         #if DEBUG
         runDebugHooks()
         #endif
+    }
+
+    // MARK: Notifications
+
+    /// Spec 12.8: every service reports events through a closure; the wording is decided here.
+    private func wireNotifications() {
+        let notifications = self.notifications
+        let connection = self.connection
+        notifications.onOpen = { [weak self] request in self?.windowRequest = request }
+        notifications.onUsePort = { connection.useSuggestedPort() }
+
+        connection.onNotice = { notice in
+            // One id: the latest state of the connection replaces the one before it.
+            switch notice {
+            case .failed(let server, let message):
+                notifications.post(.connection, title: "Could not connect", body: "\(server): \(message)", id: "connection")
+            case .lost(let server):
+                notifications.post(.connection, title: "Connection lost", body: "\(server) stopped and could not be restarted.", id: "connection")
+            case .reconnected(let server):
+                notifications.post(.reconnected, title: "Reconnected", body: "Connected to \(server) again.", id: "connection")
+            case .portInUse(let busy, let suggested):
+                notifications.post(
+                    .connection, title: "Port \(busy) is in use",
+                    body: suggested.map { "Another app is using it. V2Mac can use port \($0) instead." } ?? "Another app is using it. Choose another port in Settings.",
+                    id: "connection", usePort: suggested
+                )
+            }
+        }
+        connection.tun.onFailure = { message in
+            notifications.post(.tun, title: "TUN mode stopped", body: message, id: "tun")
+        }
+
+        subscriptions.onNotice = { notice in
+            switch notice {
+            case .updateFailed(let group, let message):
+                notifications.post(.updateFailed, title: "Could not update \(group)", body: message, open: .settings(.servers))
+            case .serversChanged(let group, let added, let removed, let activeRemoved):
+                var parts: [String] = []
+                if added > 0 { parts.append("\(added) added") }
+                if removed > 0 { parts.append("\(removed) removed") }
+                var body = parts.joined(separator: ", ") + "."
+                if activeRemoved { body += " The server in use is no longer in the subscription." }
+                notifications.post(.serversChanged, title: "\(group) was updated", body: body)
+            case .expiry(let group, let level, let expiresAt):
+                let body: String
+                switch level {
+                case .expired: body = "This subscription has expired."
+                case .lastDay: body = "This subscription expires in less than a day."
+                default: body = "This subscription expires in \(UsageAlert.daysLeft(expiresAt: expiresAt)) days."
+                }
+                notifications.post(.expiry, title: group, body: body)
+            case .traffic(let group, let level, let used, let total):
+                let amount = "\(ByteCountFormatter.string(fromByteCount: used, countStyle: .binary)) of \(ByteCountFormatter.string(fromByteCount: total, countStyle: .binary)) used"
+                let body = level == .out ? "The traffic quota is used up (\(amount))." : "\(Int(Double(used) / Double(total) * 100))% of the traffic quota is used (\(amount))."
+                notifications.post(.traffic, title: group, body: body)
+            }
+        }
+
+        updates.onFound = { found in
+            // Once per release, not once per daily check.
+            switch found {
+            case .app(let tag):
+                guard Prefs.announcedTag("notifiedAppTag") != tag else { return }
+                Prefs.setAnnouncedTag(tag, "notifiedAppTag")
+                notifications.post(.appUpdate, title: "V2Mac \(VersionCompare.normalized(tag)) is available", body: "Open Settings to install it.", id: "appUpdate", open: .settings(.general))
+            case .core(let tag):
+                guard Prefs.announcedTag("notifiedCoreTag") != tag else { return }
+                Prefs.setAnnouncedTag(tag, "notifiedCoreTag")
+                notifications.post(.coreUpdate, title: "Xray core \(tag) is available", body: "Open Settings to install it.", id: "coreUpdate", open: .settings(.core))
+            }
+        }
+
+        latency.onFinished = { [weak self] tested, best in
+            guard !NSApp.isActive else { return }
+            let fastest = best.flatMap { best in self?.profile(id: best.id).map { "Fastest: \($0.name), \(best.ms) ms." } }
+            notifications.post(
+                .testFinished, title: "Test finished",
+                body: "\(tested) \(tested == 1 ? "server" : "servers") tested. " + (fastest ?? "None answered."), id: "test"
+            )
+        }
+
+        notifications.start()
     }
 
     // MARK: Active server
@@ -299,6 +385,44 @@ final class AppModel {
                 print("[v2mac-debug] login item \(action): status \(service.status.rawValue)")
             } catch {
                 print("[v2mac-debug] login item \(action) failed: \(error)")
+            }
+        }
+        // `-debugWindowRequest <settings tab>|main`: what a click on a notification does.
+        if let target = defaults.string(forKey: "debugWindowRequest") {
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                windowRequest = WindowRequest(code: target == "main" ? "main" : "settings:\(target)")
+                try? await Task.sleep(for: .seconds(1))
+                print("[v2mac-debug] window request handled: \(windowRequest == nil), settings tab \(settingsTab.rawValue)")
+            }
+        }
+        // `-debugListDelivered <seconds>`: what Notification Center holds after that long.
+        if defaults.integer(forKey: "debugListDelivered") > 0 {
+            Task {
+                try? await Task.sleep(for: .seconds(defaults.integer(forKey: "debugListDelivered")))
+                let delivered = await UNUserNotificationCenter.current().deliveredNotifications().map { "\($0.request.content.title): \($0.request.content.body)" }
+                print("[v2mac-debug] delivered \(delivered.count): \(delivered.sorted().joined(separator: " / "))")
+            }
+        }
+        // `-debugNotices YES`: one sample of every notification, through the same closures.
+        if defaults.bool(forKey: "debugNotices") {
+            Task {
+                try? await Task.sleep(for: .seconds(1))
+                connection.onNotice(.failed(server: "Sample server", message: "sample reason"))
+                connection.onNotice(.lost(server: "Sample server"))
+                connection.onNotice(.reconnected(server: "Sample server"))
+                connection.onNotice(.portInUse(busy: 10808, suggested: 10809))
+                connection.tun.onFailure("Sample TUN failure.")
+                subscriptions.onNotice(.updateFailed(group: "Sample", message: "sample reason"))
+                subscriptions.onNotice(.serversChanged(group: "Sample", added: 2, removed: 1, activeRemoved: true))
+                subscriptions.onNotice(.expiry(group: "Sample", level: .soon, expiresAt: Date().addingTimeInterval(2.5 * 86400)))
+                subscriptions.onNotice(.traffic(group: "Sample", level: .low, used: 85 << 30, total: 100 << 30))
+                updates.onFound(.app("v9.9.9"))
+                updates.onFound(.core("v99.0.0"))
+                latency.onFinished(12, nil)
+                try? await Task.sleep(for: .seconds(4))
+                let delivered = await UNUserNotificationCenter.current().deliveredNotifications().map(\.request.content.title)
+                print("[v2mac-debug] notices: delivered \(delivered.count): \(delivered.sorted().joined(separator: " / "))")
             }
         }
         // `-debugNotify YES`: ask for permission and post one local notification.

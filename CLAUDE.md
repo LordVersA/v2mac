@@ -60,7 +60,7 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
 - The Xray version is pinned in `Scripts/core.lock`; change `VERSION` and `SHA256` together.
 - Debug builds accept launch arguments for scripted checks (`-debugAddSubscription <url>`,
   `-debugActivateFirst YES`, `-debugConnect YES`, `-debugTest tcp|real`, `-debugSwitchTest YES`,
-  `-debugLoginItem on|off|status`, `-debugNotify YES`, …) and print
+  `-debugLoginItem on|off|status`, `-debugNotices YES`, `-debugListDelivered <seconds>`, …) and print
   `[v2mac-debug]` lines to stdout. See `AppModel.runDebugHooks`.
   - To see that output, run the binary itself instead of `open`:
     `~/Library/Developer/Xcode/DerivedData/v2mac-*/Build/Products/Debug/V2MacDev.app/Contents/MacOS/V2MacDev -debugConnect YES`
@@ -112,6 +112,12 @@ Anything that needs a new config (routing mode, port, region pack, TUN switch) c
 whose keys must match the `@AppStorage` keys in the settings views (`Features/Settings/`). A new
 setting also needs its default in `Prefs.registerDefaults`, or the view and the getter disagree
 until the user first changes it.
+
+**Notifications** (spec 12.6). Services never post one themselves: each reports events through a
+closure (`onNotice`, `onFailure`, `onFound`, `onFinished`), and `AppModel.wireNotifications` turns
+them into text and posts through `NotificationService`. Every kind is a `NotificationKind` case with
+its own switch (`notify_<kind>`) in Settings → Notifications. A new one needs the case, a row in
+`NotificationSettings`, and a row in the spec table.
 
 **TUN mode** (spec 9.5) runs two Xray processes: the normal core as the user, and a root
 *forwarder* with a fixed config (TUN inbound → SOCKS to the core's `tun-in` port). The root helper

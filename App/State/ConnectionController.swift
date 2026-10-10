@@ -15,6 +15,17 @@ final class ConnectionController {
     private(set) var activeServer: ActiveServer?
     private(set) var port = Prefs.port
     private(set) var routingMode = Prefs.routingMode
+    /// Events worth a notification (spec 12.8); `AppModel` turns them into one.
+    enum Notice: Equatable {
+        case failed(server: String, message: String)
+        /// The core stopped and every restart attempt failed.
+        case lost(server: String)
+        case reconnected(server: String)
+        case portInUse(busy: Int, suggested: Int?)
+    }
+    @ObservationIgnored var onNotice: @MainActor (Notice) -> Void = { _ in }
+    /// Set when a restart was the app's own doing (sleep, network change), not the user's.
+    @ObservationIgnored private var announceReconnect = false
     /// Supplied by the region pack service: rules for enabled, downloaded packs.
     var regionRoutes: @MainActor () -> [RegionRoute] = { [] }
     /// Set when the configured port is taken: the busy port and a free one to offer.
@@ -184,6 +195,7 @@ final class ConnectionController {
         case .running, .failed:
             logs.append("[v2mac] Restarting core after \(reason)")
             crashCount = 0
+            announceReconnect = true
             connectActive()
         default: break
         }
@@ -192,6 +204,7 @@ final class ConnectionController {
     private func scheduleRestart() {
         guard crashCount < Self.restartDelays.count else {
             isRecovering = false
+            onNotice(.lost(server: activeServer?.name ?? ""))
             return
         }
         let delay = Self.restartDelays[crashCount]
@@ -317,7 +330,12 @@ final class ConnectionController {
             tun.down()
             if case CoreError.portInUse(let busy) = error {
                 portConflict = suggestPort(avoiding: busy)
+                onNotice(.portInUse(busy: busy, suggested: portConflict?.suggested))
+            } else if crashCount == 0 {
+                // A restart attempt that fails is reported once, when the attempts run out.
+                onNotice(.failed(server: server.name, message: error.localizedDescription))
             }
+            announceReconnect = false
             // The runner's own state already reflects the failure; only surface errors it can't.
             if case .failed = coreState { return }
             localError = error.localizedDescription
@@ -338,6 +356,8 @@ final class ConnectionController {
         print("[v2mac-debug] core state \(previous) -> \(state); phase=\(phase); conflict=\(String(describing: portConflict))")
         #endif
         if state == .running {
+            if isRecovering || announceReconnect { onNotice(.reconnected(server: activeServer?.name ?? "")) }
+            announceReconnect = false
             isRecovering = false
             stableTask?.cancel()
             stableTask = Task { [weak self] in
