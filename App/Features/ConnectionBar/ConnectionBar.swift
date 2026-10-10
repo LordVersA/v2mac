@@ -120,7 +120,13 @@ struct ConnectionBar: View {
 
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.headline).lineLimit(1)
+            Button { model.revealActiveServer() } label: {
+                Text(title).font(.headline).lineLimit(1)
+            }
+            .buttonStyle(.plain)
+            // Not `disabled`, which would dim "No server selected".
+            .allowsHitTesting(connection.activeServer != nil)
+            .help(connection.activeServer == nil ? "" : "Show this server in its list")
             subtitle
         }
     }

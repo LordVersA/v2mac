@@ -287,73 +287,88 @@ private struct ServerTable: View {
 
     var body: some View {
         @Bindable var model = model
-        Table(rows, selection: $model.selectedProfileIDs, sortOrder: $sortOrder, columnCustomization: $columns) {
-            TableColumn("") { row in
-                if let flag = row.flag {
-                    Text(flag).font(.title3).accessibilityLabel("Flag")
-                }
-            }
-            .width(24)
-            .customizationID("flag")
-
-            TableColumn("Name", value: \.displayName) { row in
-                let isActive = model.connection.activeServer?.id == row.id
-                let tint: Color = model.connection.phase == .connected ? .green : .secondary
-                HStack(spacing: 6) {
-                    if isActive {
-                        Image(systemName: "circle.fill").font(.caption2).foregroundStyle(tint)
-                            .accessibilityLabel(model.connection.phase == .connected ? "Active server, connected" : "Active server")
-                            .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-                    }
-                    Text(row.displayName).lineLimit(1)
-                        .fontWeight(isActive ? .semibold : .regular)
-                        .foregroundStyle(isActive ? tint : .primary)
-                    if row.hasWarnings {
-                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                            .accessibilityLabel("Has warnings")
-                    }
-                    if row.isFavorite {
-                        Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow)
-                            .accessibilityLabel("Favorite")
-                    }
-                    if row.isStale {
-                        Text("Removed from subscription").font(.caption).foregroundStyle(.secondary)
+        ScrollViewReader { proxy in
+            Table(rows, selection: $model.selectedProfileIDs, sortOrder: $sortOrder, columnCustomization: $columns) {
+                TableColumn("") { row in
+                    if let flag = row.flag {
+                        Text(flag).font(.title3).accessibilityLabel("Flag")
                     }
                 }
-                .animation(.snappy, value: isActive)
-                .animation(.smooth, value: model.connection.phase == .connected)
-            }
-            .customizationID("name")
+                .width(24)
+                .customizationID("flag")
 
-            TableColumn("Type", value: \.typeSummary) { row in
-                Text(row.typeSummary).foregroundStyle(.secondary).lineLimit(1)
-            }
-            .customizationID("type")
+                TableColumn("Name", value: \.displayName) { row in
+                    let isActive = model.connection.activeServer?.id == row.id
+                    let tint: Color = model.connection.phase == .connected ? .green : .secondary
+                    HStack(spacing: 6) {
+                        if isActive {
+                            Image(systemName: "circle.fill").font(.caption2).foregroundStyle(tint)
+                                .accessibilityLabel(model.connection.phase == .connected ? "Active server, connected" : "Active server")
+                                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+                        }
+                        Text(row.displayName).lineLimit(1)
+                            .fontWeight(isActive ? .semibold : .regular)
+                            .foregroundStyle(isActive ? tint : .primary)
+                        if row.hasWarnings {
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                                .accessibilityLabel("Has warnings")
+                        }
+                        if row.isFavorite {
+                            Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow)
+                                .accessibilityLabel("Favorite")
+                        }
+                        if row.isStale {
+                            Text("Removed from subscription").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .animation(.snappy, value: isActive)
+                    .animation(.smooth, value: model.connection.phase == .connected)
+                }
+                .customizationID("name")
 
-            TableColumn("Address", value: \.address) { row in
-                Text(row.address).foregroundStyle(.secondary).lineLimit(1)
-            }
-            .defaultVisibility(.hidden)
-            .customizationID("address")
+                TableColumn("Type", value: \.typeSummary) { row in
+                    Text(row.typeSummary).foregroundStyle(.secondary).lineLimit(1)
+                }
+                .customizationID("type")
 
-            TableColumn("Delay", value: \.delaySortKey) { row in
-                DelayText(row: row, isTesting: model.latency.testingIDs.contains(row.id))
-            }
-            .width(min: 70, ideal: 80)
-            .customizationID("delay")
+                TableColumn("Address", value: \.address) { row in
+                    Text(row.address).foregroundStyle(.secondary).lineLimit(1)
+                }
+                .defaultVisibility(.hidden)
+                .customizationID("address")
 
-            TableColumn("Speed", value: \.speedSortKey) { row in
-                SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id))
+                TableColumn("Delay", value: \.delaySortKey) { row in
+                    DelayText(row: row, isTesting: model.latency.testingIDs.contains(row.id))
+                }
+                .width(min: 70, ideal: 80)
+                .customizationID("delay")
+
+                TableColumn("Speed", value: \.speedSortKey) { row in
+                    SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id))
+                }
+                .width(min: 70, ideal: 80)
+                .customizationID("speed")
             }
-            .width(min: 70, ideal: 80)
-            .customizationID("speed")
-        }
-        // Sideways swipes move the table only when its columns are wider than the list.
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-        .contextMenu(forSelectionType: UUID.self) { ids in
-            contextMenu(for: ids)
-        } primaryAction: { ids in
-            if let id = ids.first { model.activate(profileID: id) }
+            // Sideways swipes move the table only when its columns are wider than the list.
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            .contextMenu(forSelectionType: UUID.self) { ids in
+                contextMenu(for: ids)
+            } primaryAction: { ids in
+                if let id = ids.first { model.activate(profileID: id) }
+            }
+            .onChange(of: model.revealProfileID) { _, id in
+                guard let id else { return }
+                model.revealProfileID = nil
+                Task {
+                    // On the next turn: the table has yet to take the rows of the list just opened.
+                    await Task.yield()
+                    withAnimation { proxy.scrollTo(id, anchor: .center) }
+                    // Once more when a subscription's header has slid in above the table, which
+                    // makes the table shorter and would leave a row near the end behind the bar.
+                    try? await Task.sleep(for: .milliseconds(350))
+                    proxy.scrollTo(id, anchor: .center)
+                }
+            }
         }
     }
 

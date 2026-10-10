@@ -922,7 +922,9 @@ content column with `safeAreaInset(edge: .bottom)`: connect button, active
 server name, routing mode menu, local address with a copy menu
 (`127.0.0.1:10808`, `socks5://…`, `http://…`, and shell `export` lines), live
 rates. In a failed state it turns red and shows the one-line cause with
-"Show Logs".
+"Show Logs". A click on the server name opens the list that server belongs to
+(its subscription or Custom Configs), clears the search, selects its row and
+scrolls it into view.
 
 **Inspector** (read-only). Name, protocol, transport, security, address and
 port, SNI/host when present, last delay with its time and kind, any warnings.

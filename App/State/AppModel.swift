@@ -34,6 +34,8 @@ final class AppModel {
     var settingsTab: SettingsTab = .general
     /// A window a notification click asked for; `WindowRequestHandler` opens it.
     var windowRequest: WindowRequest?
+    /// A server the table should scroll to; `ServerTable` clears it once it has.
+    var revealProfileID: UUID?
     /// Rows currently shown in the server table (after search); the default test target.
     var visibleProfileIDs: [UUID] = []
     /// Favorites a manual update found missing from their subscription; the main window asks
@@ -82,6 +84,7 @@ final class AppModel {
         if demo {
             snapshotHook()
             seedDemoData()
+            revealHook()
             if UserDefaults.standard.bool(forKey: "debugFakeUpdates") { updates.fakeUpdates() }
             AppDelegate.model = self
             return
@@ -186,6 +189,16 @@ final class AppModel {
     private func restoreActiveServer() {
         guard let id = Prefs.activeProfileID, let profile = profile(id: id) else { return }
         connection.setActive(ActiveServer(profile))
+    }
+
+    /// Opens the list the active server belongs to, with its row selected and scrolled into view.
+    func revealActiveServer() {
+        guard let id = connection.activeServer?.id, let profile = profile(id: id) else { return }
+        // A search could be hiding the row.
+        searchText = ""
+        sidebarSelection = profile.group.map { .group($0.id) } ?? .all
+        selectedProfileIDs = [id]
+        revealProfileID = id
     }
 
     func profile(id: UUID) -> Profile? {
@@ -416,6 +429,32 @@ final class AppModel {
         }
         if UserDefaults.standard.bool(forKey: "debugShowFavorites") { sidebarSelection = .favorites }
         try? context.save()
+    }
+
+    /// `-debugDemoData YES -debugRevealActive YES`: a long list whose last server is the active
+    /// one, then what a click on the server name in the connection bar does.
+    private func revealHook() {
+        guard UserDefaults.standard.bool(forKey: "debugRevealActive") else { return }
+        setvbuf(stdout, nil, _IOLBF, 0)
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            let groups = (try? context.fetch(FetchDescriptor<ServerGroup>(sortBy: [SortDescriptor(\.sortIndex)]))) ?? []
+            guard let group = groups.first(where: { !$0.profiles.isEmpty }),
+                  let template = group.profiles.first?.originalLink.flatMap({ try? ShareLinkParser.parse($0) }) else { return }
+            // `-debugRevealRow <n>` picks another filler row than the last.
+            let target = UserDefaults.standard.string(forKey: "debugRevealRow").flatMap(Int.init) ?? 59
+            var last: Profile?
+            for i in 0..<60 {
+                let p = Profile(parsed: template, sortIndex: 100 + i, group: group)
+                p.name = "Filler \(i)"
+                context.insert(p)
+                if i == target { last = p }
+            }
+            try? context.save()
+            connection.setActive(last.flatMap(ActiveServer.init))
+            revealActiveServer()
+            print("[v2mac-debug] reveal: sidebar \(sidebarSelection), selected \(selectedProfileIDs.count)")
+        }
     }
 
     /// `-debugSnapshot <path prefix>`: after `-debugSnapshotDelay` seconds (default 4) each open
