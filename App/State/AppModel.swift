@@ -3,6 +3,7 @@ import Observation
 import ServiceManagement
 import SwiftData
 import SwiftUI
+import UserNotifications
 import V2MacCore
 
 enum SidebarItem: Hashable {
@@ -298,6 +299,25 @@ final class AppModel {
                 print("[v2mac-debug] login item \(action): status \(service.status.rawValue)")
             } catch {
                 print("[v2mac-debug] login item \(action) failed: \(error)")
+            }
+        }
+        // `-debugNotify YES`: ask for permission and post one local notification.
+        if defaults.bool(forKey: "debugNotify") {
+            Task {
+                let center = UNUserNotificationCenter.current()
+                print("[v2mac-debug] notify: status before \(await center.notificationSettings().authorizationStatus.rawValue)")
+                do {
+                    let granted = try await center.requestAuthorization(options: [.alert, .sound])
+                    print("[v2mac-debug] notify: granted \(granted), status \(await center.notificationSettings().authorizationStatus.rawValue)")
+                    let content = UNMutableNotificationContent()
+                    content.title = "V2Mac Dev"
+                    content.body = "Test notification from the debug hook."
+                    try await center.add(UNNotificationRequest(identifier: "debug-notify", content: content, trigger: nil))
+                    try? await Task.sleep(for: .seconds(2))
+                    print("[v2mac-debug] notify: posted, delivered \(await center.deliveredNotifications().count)")
+                } catch {
+                    print("[v2mac-debug] notify failed: \(error)")
+                }
             }
         }
         if defaults.bool(forKey: "debugAppUpdate") {

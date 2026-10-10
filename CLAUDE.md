@@ -60,7 +60,7 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
 - The Xray version is pinned in `Scripts/core.lock`; change `VERSION` and `SHA256` together.
 - Debug builds accept launch arguments for scripted checks (`-debugAddSubscription <url>`,
   `-debugActivateFirst YES`, `-debugConnect YES`, `-debugTest tcp|real`, `-debugSwitchTest YES`,
-  `-debugLoginItem on|off|status`, …) and print
+  `-debugLoginItem on|off|status`, `-debugNotify YES`, …) and print
   `[v2mac-debug]` lines to stdout. See `AppModel.runDebugHooks`.
   - To see that output, run the binary itself instead of `open`:
     `~/Library/Developer/Xcode/DerivedData/v2mac-*/Build/Products/Debug/V2MacDev.app/Contents/MacOS/V2MacDev -debugConnect YES`
