@@ -44,6 +44,11 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
+# The window's background and icon positions, made once by Scripts/make-dmg-layout.sh. The
+# layout finds its picture by volume name and path, so neither may change here.
+mkdir "$STAGE/.background"
+cp "$ROOT/Scripts/dmg/background.tiff" "$STAGE/.background/background.tiff"
+cp "$ROOT/Scripts/dmg/DS_Store" "$STAGE/.DS_Store"
 rm -f "$DMG"
 hdiutil create -quiet -volname "V2Mac" -srcfolder "$STAGE" -format UDZO -ov "$DMG"
 

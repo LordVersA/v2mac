@@ -53,6 +53,11 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     is missing, so a green run without `fetch-core.sh` has not exercised them. Some need the network.
 - There is no linter and no app-target test bundle. All testable logic belongs in the package.
 - Local DMG: `Scripts/make-dmg.sh` (ad-hoc signed, output in `dist/`).
+  - The DMG window (background picture, icon positions, size) comes from two committed files in
+    `Scripts/dmg/`, which `make-dmg.sh` only copies, so CI never scripts Finder. To change the
+    picture (`docs/images/dmg-background-source.jpg`) or the positions, edit and run
+    `Scripts/make-dmg-layout.sh` on a Mac with a desktop session and commit both files. The layout
+    finds its picture by volume name and path: keep the volume called `V2Mac`.
 - The scheme and project are still named `v2mac`; the Release product is `V2Mac.app`. Its data folder
   (`~/Library/Application Support/v2mac`) and bundle id (`io.github.lordversa.v2mac`) must not change.
   The Debug product is `V2MacDev.app` (see "Never close the installed app"); it starts with an empty
