@@ -6,6 +6,8 @@ struct ConnectionSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage("liveSwitch") private var liveSwitch = true
     @AppStorage("allowInsecure") private var allowInsecure = false
+    @AppStorage("checkExit") private var checkExit = true
+    @AppStorage("menuBarCountry") private var menuBarCountry = true
     @AppStorage("fragmentEnabled") private var fragmentEnabled = false
     @AppStorage("fragmentPackets") private var fragmentPackets = FragmentSettings.Packets.tlsHello.rawValue
     @AppStorage("fragmentLength") private var fragmentLength = FragmentSettings.defaultLength
@@ -30,6 +32,14 @@ struct ConnectionSettings: View {
                 Toggle("Switch servers without restarting", isOn: $liveSwitch)
             } footer: {
                 note("Picking another server replaces it inside the running core, so the local port stays up. Full Xray configs always restart.")
+            }
+            Section {
+                Toggle("Show where traffic comes out", isOn: $checkExit)
+                if checkExit {
+                    Toggle("Country badge on the menu bar icon", isOn: $menuBarCountry)
+                }
+            } footer: {
+                note("After connecting, V2Mac asks a public service through the server for its address, city and country: ipwho.is, then ipinfo.io and Cloudflare if that does not answer. They see the server's address, not yours. No answer means traffic is not passing. Not done in Direct mode.")
             }
             Section {
                 Toggle("Allow insecure servers", isOn: $allowInsecure)
@@ -73,6 +83,8 @@ struct ConnectionSettings: View {
         }
         .formStyle(.grouped)
         .animation(.default, value: fragmentEnabled)
+        .animation(.default, value: checkExit)
+        .onChange(of: checkExit) { model.connection.checkExit() }
         .animation(.default, value: noiseEnabled)
         .animation(.default, value: dnsEnabled)
         .onChange(of: coreSettings) { restartSoon() }

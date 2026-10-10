@@ -3,8 +3,20 @@ import SwiftUI
 
 struct MenuBarIcon: View {
     let phase: ConnectionController.Phase
+    /// The exit country, shown as two letters beside the icon while connected.
+    var countryCode: String?
+    @AppStorage("menuBarCountry") private var showsCountry = true
 
     var body: some View {
+        if phase == .connected, showsCountry, let countryCode, let image = MenuBarBadge.image(code: countryCode) {
+            Image(nsImage: image).accessibilityLabel("V2Mac, connected, exit in \(countryCode)")
+        } else {
+            glyph
+        }
+    }
+
+    @ViewBuilder
+    private var glyph: some View {
         switch phase {
         case .off:
             Image("MenuBarGlyphOutline").accessibilityLabel("V2Mac, off")
@@ -17,6 +29,56 @@ struct MenuBarIcon: View {
         case .failed:
             Image(systemName: "exclamationmark.triangle.fill").accessibilityLabel("V2Mac, connection failed")
         }
+    }
+}
+
+/// The connected glyph with the exit country in a green capsule over its lower edge. It is drawn
+/// into one image, since a menu bar label lays out nothing but a plain image and plain text. The
+/// badge has a colour, so this cannot be a template image: the glyph is drawn in black and in
+/// white, and the one that suits the menu bar is picked each time the image is drawn.
+@MainActor
+enum MenuBarBadge {
+    private static var cache: [String: NSImage] = [:]
+    private static let size = CGSize(width: 26, height: 22)
+    private static let green = Color(red: 0.16, green: 0.74, blue: 0.33)
+
+    static func image(code: String) -> NSImage? {
+        if let cached = cache[code] { return cached }
+        guard let onLight = render(code, glyph: .black), let onDark = render(code, glyph: .white) else { return nil }
+        let image = NSImage(size: size, flipped: false) { rect in
+            let dark = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .vibrantDark, .aqua, .vibrantLight])
+            (dark == .darkAqua || dark == .vibrantDark ? onDark : onLight).draw(in: rect)
+            return true
+        }
+        cache[code] = image
+        return image
+    }
+
+    private static func render(_ code: String, glyph: Color) -> NSImage? {
+        let renderer = ImageRenderer(content:
+            ZStack(alignment: .bottom) {
+                Image("MenuBarGlyphFilled")
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(glyph)
+                    .frame(height: 15)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                // A clear ring, so the badge reads as sitting on the glyph, not merged with it.
+                Capsule()
+                    .frame(width: 24, height: 12)
+                    .blendMode(.destinationOut)
+                Text(code)
+                    .font(.system(size: 7.5, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(width: 22, height: 10)
+                    .background(green, in: Capsule())
+                    .padding(.bottom, 1)
+            }
+            .compositingGroup()
+            .frame(width: size.width, height: size.height)
+        )
+        renderer.scale = 3
+        return renderer.nsImage
     }
 }
 
@@ -58,6 +120,28 @@ struct MenuBarPanel: View {
                 }
             }
             if connection.phase == .connected {
+                switch connection.exit {
+                case .known(let exit):
+                    HStack(spacing: 6) {
+                        if let flag = exit.flag { Text(flag) }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(exit.place() ?? "Unknown place").font(.callout)
+                            Text(exit.ip).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                        }
+                        Spacer()
+                        CopyButton("Copy exit address") { exit.ip }
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.borderless)
+                            .help("Copy exit address")
+                    }
+                case .failed:
+                    Label("No answer through this server", systemImage: "exclamationmark.triangle")
+                        .font(.caption).foregroundStyle(.orange)
+                case .checking:
+                    Text("Checking where traffic comes out…").font(.caption).foregroundStyle(.secondary)
+                case .unknown:
+                    EmptyView()
+                }
                 PanelRates(connection: connection)
             }
 

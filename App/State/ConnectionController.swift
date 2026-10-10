@@ -15,6 +15,17 @@ final class ConnectionController {
     private(set) var activeServer: ActiveServer?
     private(set) var port = Prefs.port
     private(set) var routingMode = Prefs.routingMode
+    /// Where traffic comes out, looked up through the proxy after every connect (spec 9.6).
+    enum ExitState: Equatable {
+        case unknown
+        case checking
+        case known(ExitInfo)
+        /// Nothing answered through the proxy: the core runs but traffic is not passing.
+        case failed
+    }
+    private(set) var exit: ExitState = .unknown
+    @ObservationIgnored private var exitTask: Task<Void, Never>?
+
     /// Events worth a notification (spec 12.8); `AppModel` turns them into one.
     enum Notice: Equatable {
         case failed(server: String, message: String)
@@ -235,6 +246,38 @@ final class ConnectionController {
         await runner.stop()
     }
 
+    /// Asks through the local proxy, a few times: the first request to a server can be slow.
+    /// Skipped in Direct mode, where the answer would be the user's own address.
+    func checkExit() {
+        exitTask?.cancel()
+        guard Prefs.checkExit, coreState == .running, activeIsCustom || routingMode != .direct else {
+            exit = .unknown
+            return
+        }
+        exit = .checking
+        let inbound = Prefs.inbound
+        let route = FetchRoute.localProxy(port: port, username: inbound.username, password: inbound.password)
+        exitTask = Task { [weak self] in
+            for attempt in 0..<3 {
+                if attempt > 0 { try? await Task.sleep(for: .seconds(2)) }
+                let info = await ExitLookup.lookup(route: route)
+                if Task.isCancelled { return }
+                if let info {
+                    self?.exit = .known(info)
+                    #if DEBUG
+                    print("[v2mac-debug] exit: \(info.countryCode ?? "??") \(info.city ?? "-")")
+                    #endif
+                    return
+                }
+            }
+            self?.exit = .failed
+            self?.logs.append("[v2mac] Nothing answered through the server: traffic is not passing")
+            #if DEBUG
+            print("[v2mac-debug] exit: failed")
+            #endif
+        }
+    }
+
     // MARK: Internals
 
     private func enqueue(_ operation: @escaping @MainActor () async -> Void) {
@@ -289,6 +332,7 @@ final class ConnectionController {
                 let outbound = ConfigBuilder.proxyOutbound(outboundConfig, options: running.options)
                 try await runner.replaceOutbound(tag: ConfigBuilder.proxyTag, with: outbound, apiPort: api)
                 logs.append("[v2mac] Switched to \(server.name) without restarting the core")
+                checkExit()
                 #if DEBUG
                 print("[v2mac-debug] live switch ok")
                 #endif
@@ -359,6 +403,7 @@ final class ConnectionController {
             if isRecovering || announceReconnect { onNotice(.reconnected(server: activeServer?.name ?? "")) }
             announceReconnect = false
             isRecovering = false
+            checkExit()
             stableTask?.cancel()
             stableTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(60))
@@ -367,6 +412,8 @@ final class ConnectionController {
             startPolling()
         } else {
             stableTask?.cancel()
+            exitTask?.cancel()
+            exit = .unknown
             if case .failed = state, userWantsRunning, portConflict == nil, previous == .running || isRecovering {
                 scheduleRestart()
             }

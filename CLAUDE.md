@@ -117,6 +117,11 @@ whose keys must match the `@AppStorage` keys in the settings views (`Features/Se
 setting also needs its default in `Prefs.registerDefaults`, or the view and the getter disagree
 until the user first changes it.
 
+**Exit check** (spec 9.6). After every connect and live switch `ConnectionController.checkExit` asks
+a public IP service through the local proxy (`ExitLookup`) and publishes `exit`; no answer means
+traffic is not passing. The bar, the menu bar panel and the menu bar badge (`MenuBarBadge`, one
+non-template image, because a menu bar label lays out nothing else) all read that one value.
+
 **Notifications** (spec 12.6). Services never post one themselves: each reports events through a
 closure (`onNotice`, `onFailure`, `onFound`, `onFinished`), and `AppModel.wireNotifications` turns
 them into text and posts through `NotificationService`. Every kind is a `NotificationKind` case with

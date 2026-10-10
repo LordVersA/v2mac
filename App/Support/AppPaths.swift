@@ -90,6 +90,8 @@ enum Prefs {
             "speedTestURL": Prefs.defaultSpeedURL,
             "liveSwitch": true,
             "allowInsecure": false,
+            "checkExit": true,
+            "menuBarCountry": true,
             "fragmentEnabled": false,
             "fragmentPackets": FragmentSettings.Packets.tlsHello.rawValue,
             "fragmentLength": FragmentSettings.defaultLength,
@@ -157,6 +159,9 @@ enum Prefs {
 
     /// Changing servers swaps the outbound in the running core instead of restarting it.
     static var liveSwitch: Bool { defaults.bool(forKey: "liveSwitch") }
+
+    /// Look up the exit address and place after connecting (spec 9.6).
+    static var checkExit: Bool { defaults.bool(forKey: "checkExit") }
 
     static func notify(_ kind: NotificationKind) -> Bool { defaults.bool(forKey: kind.key) }
 

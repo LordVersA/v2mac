@@ -375,12 +375,14 @@ final class AppModel {
         let delay = max(defaults.integer(forKey: "debugSnapshotDelay"), 4)
         Task {
             try? await Task.sleep(for: .seconds(delay))
-            let windows = NSApp.windows.filter { $0.isVisible && $0.styleMask.contains(.titled) }
+            // Titled windows, and the menu bar item (its own small window).
+            let windows = NSApp.windows.filter { $0.isVisible && ($0.styleMask.contains(.titled) || $0.className.contains("StatusBar")) }
             for (index, window) in windows.enumerated() {
                 guard let view = window.contentView?.superview,
                       let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { continue }
                 view.cacheDisplay(in: view.bounds, to: rep)
-                try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "\(prefix)-\(index).png"))
+                let png = rep.representation(using: .png, properties: [:])
+                try? png?.write(to: URL(fileURLWithPath: "\(prefix)-\(index).png"))
             }
             print("[v2mac-debug] snapshot: \(windows.count) windows")
         }

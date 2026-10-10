@@ -197,7 +197,18 @@ struct ConnectionBar: View {
         case .switching:
             status("Switching…")
         case .connected:
-            status("Connected · \(routingTitle)")
+            switch connection.exit {
+            case .known(let exit):
+                // The green button and the routing menu already say "connected" and the mode.
+                status([exit.flag, exit.place(), exit.ip].compactMap { $0 }.joined(separator: "  "))
+                    .help("Where your traffic comes out: \(exit.place() ?? "unknown place"), \(exit.ip)")
+            case .failed:
+                status("Connected · \(routingTitle)")
+                Text("No answer through this server").font(.caption).foregroundStyle(.orange).lineLimit(1)
+                    .help("The core is running, but a test request through the server got no answer.")
+            case .checking, .unknown:
+                status("Connected · \(routingTitle)")
+            }
         case .off:
             status(connection.activeServer == nil ? "Double-click a server to connect" : "Off · \(routingTitle)")
         }
@@ -220,6 +231,10 @@ struct ConnectionBar: View {
             copy("127.0.0.1:\(port)")
             copy("socks5://127.0.0.1:\(port)")
             copy("http://127.0.0.1:\(port)")
+            if case .known(let exit) = connection.exit {
+                Divider()
+                copy(exit.ip, label: "Exit address \(exit.ip)")
+            }
             Divider()
             copy("export http_proxy=http://127.0.0.1:\(port) https_proxy=http://127.0.0.1:\(port) all_proxy=socks5://127.0.0.1:\(port)", label: "Shell export lines")
         } label: {

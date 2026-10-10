@@ -696,6 +696,27 @@ is future work.
 through the tunnel while it is up. Latency tests are bound to the physical
 interface so they keep measuring the servers.
 
+### 9.6 Exit check
+
+Each time the core reaches `running`, and after a live switch, `ConnectionController.checkExit`
+asks a public service through the local proxy where traffic comes out (`ExitLookup`, package):
+`https://ipwho.is/`, then `https://ipinfo.io/json`, then `https://www.cloudflare.com/cdn-cgi/trace`
+(country only), the first that answers. Up to three rounds, 2 s apart. The services see the
+server's address, not the user's; in Direct mode the check is skipped, because there the answer
+would be the user's own address.
+
+- **Answer:** the connection bar's status line becomes flag, city, country and address; the menu
+  bar panel shows the same with a copy button; the menu bar icon gets the two-letter country code
+  in a green capsule over its lower edge (`MenuBarBadge`).
+- **No answer from any source:** the core is running but traffic is not passing. The bar and the
+  panel say "No answer through this server" and the log records it.
+- Settings → Connection: "Show where traffic comes out" (on) and "Country badge on the menu bar
+  icon" (on). Nothing is stored; the result is dropped when the core stops.
+
+The badge has a colour, so the menu bar image cannot be a template image. It is one `NSImage`
+whose drawing handler picks a black or a white glyph from the appearance it is drawn in.
+Checked 2026-10-10 on a dark menu bar; a light one was not available to check.
+
 ---
 
 ## 10. Latency testing
@@ -1015,6 +1036,8 @@ Rules:
 | Connection | Switch servers without restarting | On |
 | Connection | Allow insecure servers | Off |
 | Notifications | One switch per kind | See section 12.6 |
+| Connection | Show where traffic comes out | On |
+| Connection | Country badge on the menu bar icon | On |
 | | TLS fragment: split (TLS hello / first packets), piece size, pause | Off; `100-200` bytes, `10-20` ms |
 | | Noise packets: packet size, pause | Off; `10-20` bytes, `10-16` ms |
 | | Use custom DNS: servers, addresses (IPv4 and IPv6 / IPv4 only / IPv6 only) | Off; Cloudflare and Google DoH |
