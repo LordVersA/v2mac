@@ -42,7 +42,7 @@ on the Mac through the same connection.
 | Intel Macs, macOS 15 and earlier | arm64, macOS 26+ only. |
 | Developer ID signing, notarization, Sparkle | Planned after v1. |
 | Mux, global sniffing options | Outbounds are used as provided. TLS fragment, noise packets and DNS came later (section 8.4). |
-| Auto-select fastest server, global hotkeys | Future. Notifications came later (section 12.6). |
+| Auto-select fastest server, global hotkeys | Auto-selection is optional (9.7); global hotkeys remain future. |
 
 ---
 
@@ -706,7 +706,13 @@ session. The helper:
 
 **Lifecycle.** The TUN is up while the core is connecting, switching or
 connected, and comes down on disconnect, on a core that stays failed, and on
-quit. Cancelling the prompt turns TUN mode off and connects without it. A
+quit. Settings → Connection → "If TUN fails" chooses between keeping the local
+proxy (default) and stopping the connection. This applies to cancelled administrator
+access, preparation/start failure, and loss of the helper/forwarder. The requested
+TUN setting remains enabled, so a later reconnect can retry. "Stop connection"
+invalidates pending automatic selection and connect operations, stops the local
+core, and clears reconnect-on-launch intent. Status distinguishes "Local proxy
+connected", "System tunnel active", and an unavailable/starting tunnel. A
 network change always restarts the core in TUN mode, because the binding names
 one interface; the app's own `utun` is not counted as a network change.
 
@@ -716,6 +722,13 @@ resolver to find its own server. Poisoned answers are tolerated for HTTP, TLS
 and QUIC because the sniffed name replaces the resolved address. DNS queries
 themselves are not hidden from the local network. Routing DNS through the proxy
 is future work.
+
+**Protection contract.** Neither TUN failure policy is a persistent kill switch.
+Removing a TUN interface removes its routes; direct traffic may resume during a
+failure or after the app/helper crashes. "Stop connection" prevents the app from
+continuing with only a local proxy, but cannot block other apps' direct traffic.
+The optional firewall-backed fail-closed design and its bootstrap/DNS exceptions
+are specified in `docs/FAIL_CLOSED_DESIGN.md`; enforcement is not shipped.
 
 **Known limits.** "Without proxy" downloads (subscriptions, updates) still go
 through the tunnel while it is up. Latency tests are bound to the physical
@@ -741,6 +754,37 @@ would be the user's own address.
 The badge has a colour, so the menu bar image cannot be a template image. It is one `NSImage`
 whose drawing handler picks a black or a white glyph from the appearance it is drawn in.
 Checked 2026-10-10 on a dark menu bar; a light one was not available to check.
+
+### 9.7 Optional automatic server selection
+
+Settings → Connection → "Automatically select a working server" defaults to off.
+When enabled, connecting/reconnecting tests non-stale candidates in the active
+profile's group with `RealDelayTester`. Only fresh successful HTTP responses
+qualify; TCP ping and saved row delays never influence selection. An initial
+connection chooses the lowest real delay. Direct routing skips automation for
+ordinary outbound profiles; full custom configs retain their routing semantics.
+
+Every 30 seconds a request through the actual running SOCKS proxy (including its
+credentials) checks the configured latency URL. No direct retry is allowed.
+Two consecutive failures trigger a fresh group test and ordered fallback to the
+first responding peer in group order. Exhausted core crash recovery also tries
+fallback. If no peer responds, show a failure and retry while the user still
+wants a connection; port conflicts retain their explicit user fix.
+
+Automatic switches have a 60-second cooldown. A failed node is excluded for
+120 seconds. Every 180 seconds, fresh group tests can choose a faster node only
+if it improves delay by at least 100 ms and 25%. A manual activation pins the
+chosen server until its health fails, or automation is reset/disconnected.
+Disabling automation, disconnecting, quitting or activating another server
+cancels outstanding tests and invalidates late connect results. Automatic tests
+use physical-interface binding while TUN is up, and save real-delay row results
+without triggering manual-test notifications. Existing flows may be interrupted
+by switching; automatic selection does not promise session migration.
+
+The test URL must be HTTP(S) with a public destination; local/private literals,
+IPv6 literals and embedded credentials are rejected to avoid URLSession's SOCKS
+bypass. The first 2xx/3xx response headers count as a response; redirects are not
+followed, so a redirect cannot turn a local direct request into a health result.
 
 ---
 
@@ -1101,6 +1145,8 @@ A sheet that adds a server by hand or changes one, field by field.
 | | Timeout | 8 s |
 | | Concurrency | 8 |
 | Connection | Switch servers without restarting | On |
+| | Automatically select a working server | Off |
+| | If TUN fails: Keep local proxy running / Stop connection | Keep local proxy running |
 | Connection | Allow insecure servers | Off |
 | Notifications | One switch per kind | See section 12.6 |
 | Connection | Show where traffic comes out | On |

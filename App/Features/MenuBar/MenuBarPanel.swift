@@ -278,7 +278,7 @@ struct MenuBarPanel: View {
         case .off: "Off"
         case .connecting: "Connecting…"
         case .switching: "Switching…"
-        case .connected: "Connected"
+        case .connected: connection.connectedTitle
         case .failed: "Connection failed"
         }
     }

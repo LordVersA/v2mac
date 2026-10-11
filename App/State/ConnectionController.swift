@@ -35,6 +35,18 @@ final class ConnectionController {
         case portInUse(busy: Int, suggested: Int?)
     }
     @ObservationIgnored var onNotice: @MainActor (Notice) -> Void = { _ in }
+    @ObservationIgnored var onTunFailure: @MainActor (String) -> Void = { _ in }
+    @ObservationIgnored var automaticCandidates: @MainActor (UUID) -> [ActiveServer] = { _ in [] }
+    @ObservationIgnored var onAutomaticResults: @MainActor ([LatencyResult]) async -> Void = { _ in }
+    private(set) var isSelectingAutomatically = false
+    private(set) var healthFailed = false
+    @ObservationIgnored private var selectionTask: Task<[LatencyResult], Never>?
+    @ObservationIgnored private var healthTask: Task<Void, Never>?
+    private var selectionPolicy = AutoSelectionPolicy()
+    /// Invalidates queued work and results after a manual command, disconnect or settings change.
+    private var commandGeneration = 0
+    private var pendingConnectionGeneration: Int?
+    private static let noWorkingServer = "No working server answered in this group."
     /// Set when a restart was the app's own doing (sleep, network change), not the user's.
     @ObservationIgnored private var announceReconnect = false
     /// Supplied by the region pack service: rules for enabled, downloaded packs.
@@ -65,6 +77,9 @@ final class ConnectionController {
     let logs: LogStore
     let tun: TunController
     private let runner: CoreRunner
+    private let executable: @MainActor () -> URL
+    private let assetDirectory: URL
+    private let healthInterval: Duration
     private var metricsPort: Int?
     /// What the running core was started with, kept only for servers that can be switched live.
     private var running: (options: RunOptions, plan: RoutingPlan)?
@@ -77,7 +92,7 @@ final class ConnectionController {
     private var lifecycle: LifecycleMonitor?
 
     var phase: Phase {
-        if isSwitching || isRecovering { return .switching }
+        if isSwitching || isRecovering || isSelectingAutomatically { return .switching }
         if let localError { return .failed(localError) }
         switch coreState {
         case .stopped, .stopping: return .off
@@ -89,22 +104,32 @@ final class ConnectionController {
 
     var isRunning: Bool { coreState == .running }
     var localAddress: String { "127.0.0.1:\(port)" }
+    var connectedTitle: String { tun.isOn ? "System tunnel active" : "Local proxy connected" }
 
-    init(logs: LogStore) {
+    init(logs: LogStore, executable: @escaping @MainActor () -> URL = { AppPaths.coreExecutable },
+         assetDirectory: URL = AppPaths.assetsDirectory, runDirectory: URL = AppPaths.runDirectory,
+         tun: TunController? = nil, monitorsLifecycle: Bool = true, healthInterval: Duration = .seconds(30)) {
         self.logs = logs
-        tun = TunController(logs: logs)
+        self.executable = executable
+        self.assetDirectory = assetDirectory
+        self.healthInterval = healthInterval
+        self.tun = tun ?? TunController(logs: logs)
         runner = CoreRunner(
-            executable: AppPaths.coreExecutable,
-            assetDirectory: AppPaths.assetsDirectory,
-            runDirectory: AppPaths.runDirectory,
-            allowedExecutables: [AppPaths.coreExecutable, AppPaths.bundledCore]
+            executable: executable(),
+            assetDirectory: assetDirectory,
+            runDirectory: runDirectory,
+            allowedExecutables: [executable(), AppPaths.bundledCore]
         )
+        self.tun.onFailure = { [weak self] message in
+            self?.onTunFailure(message)
+            self?.tunFailurePolicyChanged()
+        }
         let states = runner.states
         let lines = runner.logs
-        lifecycle = LifecycleMonitor(
+        if monitorsLifecycle { lifecycle = LifecycleMonitor(
             ignoredInterface: { [weak self] in self?.tun.interfaceName },
             onTrigger: { [weak self] reason in self?.systemEvent(reason) }
-        )
+        ) }
         Task { [weak self] in
             for await state in states { self?.coreStateChanged(state) }
         }
@@ -149,6 +174,7 @@ final class ConnectionController {
     var activeIsCustom: Bool { activeServer?.kind == .custom }
 
     func setActive(_ server: ActiveServer?) {
+        if activeServer?.id != server?.id { cancelAutomation() }
         activeServer = server
         Prefs.activeProfileID = server?.id
     }
@@ -156,17 +182,21 @@ final class ConnectionController {
     /// Activating a server connects to it immediately (decision 19).
     func activate(_ server: ActiveServer) {
         cancelRecovery()
+        selectionPolicy.selectManually()
         setActive(server)
-        enqueue { await self.performConnect(server, mayLiveSwitch: true) }
+        requestConnect(server, mayLiveSwitch: true)
     }
 
     func connectActive() {
         guard let server = activeServer else { return }
-        enqueue { await self.performConnect(server) }
+        requestConnect(server, selection: .initial)
     }
 
     func disconnect() {
         userWantsRunning = false
+        commandGeneration += 1
+        cancelAutomation()
+        selectionPolicy = AutoSelectionPolicy()
         cancelRecovery()
         portConflict = nil
         // First, so nothing is left pointing at a core that is about to stop.
@@ -215,6 +245,9 @@ final class ConnectionController {
     private func scheduleRestart() {
         guard crashCount < Self.restartDelays.count else {
             isRecovering = false
+            if Prefs.autoSelectServer, automationAllowed, let activeServer {
+                requestConnect(activeServer, selection: .fallback)
+            }
             onNotice(.lost(server: activeServer?.name ?? ""))
             return
         }
@@ -226,7 +259,7 @@ final class ConnectionController {
         recoveryTask = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled, let self, userWantsRunning else { return }
-            connectActive()
+            if let activeServer { requestConnect(activeServer) }
         }
     }
 
@@ -240,6 +273,8 @@ final class ConnectionController {
     /// Stops the core and waits; used on quit.
     func shutdown() async {
         userWantsRunning = false
+        commandGeneration += 1
+        cancelAutomation()
         cancelRecovery()
         tun.endSession()
         await queue?.value
@@ -280,6 +315,162 @@ final class ConnectionController {
 
     // MARK: Internals
 
+    private var automationAllowed: Bool { activeIsCustom || routingMode != .direct }
+
+    func autoSelectionChanged() {
+        let wasConnecting = pendingConnectionGeneration != nil
+        commandGeneration += 1
+        cancelAutomation()
+        selectionPolicy = AutoSelectionPolicy()
+        if localError == Self.noWorkingServer { localError = nil }
+        if userWantsRunning {
+            if Prefs.autoSelectServer || wasConnecting || coreState != .running { connectActive() }
+            else if coreState == .running { startHealthChecks() }
+        }
+    }
+
+    func tunFailurePolicyChanged() {
+        guard tun.isEnabled, tun.failureMessage != nil, Prefs.tunFailurePolicy.stopsProxy else { return }
+        stopForTunFailure()
+    }
+
+    private func stopForTunFailure() {
+        let message = tun.failureMessage ?? "The system tunnel could not start."
+        userWantsRunning = false
+        Prefs.wasRunning = false
+        commandGeneration += 1
+        cancelAutomation()
+        cancelRecovery()
+        localError = message + " Connection stopped by the TUN failure policy."
+        tun.down()
+        enqueue { await self.runner.stop() }
+    }
+
+    private func cancelAutomation() {
+        selectionTask?.cancel()
+        selectionTask = nil
+        healthTask?.cancel()
+        healthTask = nil
+        isSelectingAutomatically = false
+        healthFailed = false
+    }
+
+    private func requestConnect(_ server: ActiveServer, mayLiveSwitch: Bool = false, selection: AutoSelectionPolicy.Reason? = nil) {
+        commandGeneration += 1
+        let generation = commandGeneration
+        cancelAutomation()
+        userWantsRunning = true
+        pendingConnectionGeneration = generation
+        enqueue {
+            defer {
+                if self.pendingConnectionGeneration == generation { self.pendingConnectionGeneration = nil }
+            }
+            guard self.commandGeneration == generation, self.userWantsRunning else { return }
+            var target = server
+            if let selection, Prefs.autoSelectServer, self.automationAllowed,
+               selection == .fallback || !self.selectionPolicy.manualOverride {
+                self.isSelectingAutomatically = true
+                let candidates = self.automaticCandidates(server.id)
+                let results = await self.measureCandidates(candidates, activeID: server.id)
+                guard self.commandGeneration == generation, self.userWantsRunning else { return }
+                self.isSelectingAutomatically = false
+                if let id = self.selectionPolicy.choose(results: results, currentID: server.id, reason: selection, now: .now),
+                   let chosen = self.automaticCandidates(server.id).first(where: { $0.id == id }) {
+                    target = chosen
+                    self.selectionPolicy.didSwitch(at: .now)
+                    self.logs.append("[v2mac] Automatically selected \(chosen.name) using real response delay")
+                    self.setActive(chosen)
+                } else if !results.contains(where: { result in
+                    guard result.id == server.id, case .ok = result.outcome else { return false }
+                    return true
+                }) {
+                    self.healthFailed = true
+                    self.logs.append("[v2mac] \(Self.noWorkingServer)")
+                    if self.coreState != .running {
+                        self.localError = Self.noWorkingServer
+                        self.tun.down()
+                    }
+                    self.startHealthChecks()
+                    return
+                }
+            }
+            await self.performConnect(target, mayLiveSwitch: mayLiveSwitch, generation: generation)
+        }
+    }
+
+    private func measureCandidates(_ candidates: [ActiveServer], activeID: UUID) async -> [LatencyResult] {
+        let tester = RealDelayTester(executable: executable(), assetDirectory: assetDirectory,
+                                     options: Prefs.latencyOptions, outboundInterface: tun.physicalInterface,
+                                     dialer: Prefs.dialer, allowInsecure: Prefs.allowInsecure)
+        let targets = candidates.map { LatencyTarget(id: $0.id, config: $0.config, kind: $0.kind) }
+        let task = Task {
+            let collector = AutomaticLatencyResults()
+            await tester.run(targets) { await collector.append($0) }
+            return await collector.results
+        }
+        selectionTask = task
+        let results = await task.value
+        guard !task.isCancelled else { return [] }
+        // Subscriptions or editing can replace/remove a config while its request is in flight.
+        let current = automaticCandidates(activeID)
+        let validIDs = Set(current.filter { candidate in
+            candidates.contains { $0.id == candidate.id && $0.kind == candidate.kind && $0.config == candidate.config }
+        }.map(\.id))
+        let validResults = results.filter { validIDs.contains($0.id) }
+        await onAutomaticResults(validResults)
+        let byID = Dictionary(uniqueKeysWithValues: validResults.map { ($0.id, $0) })
+        return current.compactMap { byID[$0.id] }
+    }
+
+    private func startHealthChecks() {
+        healthTask?.cancel()
+        guard Prefs.autoSelectServer, userWantsRunning, automationAllowed else { return }
+        let generation = commandGeneration
+        healthTask = Task { [weak self] in
+            var nextOptimization = Date.now.addingTimeInterval(180)
+            while !Task.isCancelled {
+                guard let interval = self?.healthInterval else { return }
+                try? await Task.sleep(for: interval)
+                guard !Task.isCancelled, let self, commandGeneration == generation,
+                      Prefs.autoSelectServer, userWantsRunning, let server = activeServer else { return }
+                if coreState != .running {
+                    guard portConflict == nil, !isRecovering else { return }
+                    requestConnect(server, selection: .fallback)
+                    return
+                }
+                let inbound = Prefs.inbound
+                let outcome = await ProxyHealthProbe.measure(
+                    route: .localProxy(port: port, username: inbound.username, password: inbound.password),
+                    url: Prefs.latencyOptions.url, timeout: Prefs.latencyOptions.timeout
+                )
+                guard !Task.isCancelled, commandGeneration == generation else { return }
+                let needsFallback = selectionPolicy.recordHealth(outcome)
+                healthFailed = needsFallback
+                if case .ok = outcome, localError == Self.noWorkingServer { localError = nil }
+                if needsFallback {
+                    logs.append("[v2mac] Two real response checks failed; testing fallback servers")
+                    requestConnect(server, mayLiveSwitch: true, selection: .fallback)
+                    return
+                }
+                guard !selectionPolicy.manualOverride, Date.now >= nextOptimization else { continue }
+                nextOptimization = Date.now.addingTimeInterval(180)
+                let candidates = automaticCandidates(server.id)
+                var results = await measureCandidates(candidates, activeID: server.id)
+                guard !Task.isCancelled, commandGeneration == generation else { return }
+                // Use the response from the actual live connection for the hysteresis comparison.
+                results.removeAll { $0.id == server.id }
+                results.append(LatencyResult(id: server.id, outcome: outcome))
+                if let id = selectionPolicy.choose(results: results, currentID: server.id, reason: .faster, now: .now),
+                   let chosen = automaticCandidates(server.id).first(where: { $0.id == id }) {
+                    selectionPolicy.didSwitch(at: .now)
+                    setActive(chosen)
+                    requestConnect(chosen, mayLiveSwitch: true)
+                    return
+                }
+            }
+        }
+    }
+
     private func enqueue(_ operation: @escaping @MainActor () async -> Void) {
         let previous = queue
         queue = Task { @MainActor in
@@ -296,14 +487,20 @@ final class ConnectionController {
         }
     }
 
-    /// `mayLiveSwitch` is set only when the user picks a server: every other caller is asking
-    /// for a real restart (new settings, a network change, a crash).
-    private func performConnect(_ server: ActiveServer, mayLiveSwitch: Bool = false) async {
-        userWantsRunning = true
+    /// Server activation and automatic fallback may switch live; settings and lifecycle
+    /// changes require a restart.
+    private func performConnect(_ server: ActiveServer, mayLiveSwitch: Bool = false, generation: Int) async {
+        guard commandGeneration == generation, userWantsRunning else { return }
         localError = nil
         portConflict = nil
         // Before the running core stops: the administrator prompt can stay open for a while.
-        let tunLink = tun.isEnabled ? await tun.prepare() : nil
+        let requestedTun = tun.isEnabled
+        let tunLink = requestedTun ? await tun.prepare() : nil
+        guard commandGeneration == generation, userWantsRunning else { return }
+        if requestedTun, tunLink == nil, Prefs.tunFailurePolicy.stopsProxy {
+            stopForTunFailure()
+            return
+        }
         if tunLink == nil { tun.down() }
         let inbound = Prefs.inbound
         let plan = routingPlan
@@ -322,6 +519,7 @@ final class ConnectionController {
                 logs.append("[v2mac] \(server.name): could not read the server's certificate, so it will be checked normally")
             }
         }
+        guard commandGeneration == generation, userWantsRunning else { return }
 
         // Same settings, only the server differs: swap the outbound and keep the core.
         if mayLiveSwitch, Prefs.liveSwitch, coreState == .running, server.kind == .outbound,
@@ -337,6 +535,7 @@ final class ConnectionController {
                 print("[v2mac-debug] live switch ok")
                 #endif
                 isSwitching = false
+                startHealthChecks()
                 return
             } catch {
                 logs.append("[v2mac] Could not switch without a restart (\(error.localizedDescription)); restarting the core")
@@ -350,7 +549,8 @@ final class ConnectionController {
         }
         defer { isSwitching = false }
 
-        await runner.setExecutable(AppPaths.coreExecutable)
+        await runner.setExecutable(executable())
+        guard commandGeneration == generation, userWantsRunning else { return }
         port = inbound.port
         do {
             let metrics = try PortUtil.freePort()
@@ -367,11 +567,14 @@ final class ConnectionController {
             }
             logs.append("[v2mac] Connecting to \(server.name)")
             try await runner.start(config: config, readyPort: port)
+            guard commandGeneration == generation, userWantsRunning else { await runner.stop(); return }
             running = started.map { ($0, plan) }
             Prefs.wasRunning = true
             if tunLink != nil { tun.up() }
+            startHealthChecks()
         } catch {
             tun.down()
+            if Prefs.autoSelectServer, !isRecovering { startHealthChecks() }
             if case CoreError.portInUse(let busy) = error {
                 portConflict = suggestPort(avoiding: busy)
                 onNotice(.portInUse(busy: busy, suggested: portConflict?.suggested))

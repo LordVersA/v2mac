@@ -55,6 +55,11 @@ public struct SpeedResult: Sendable, Equatable {
 public struct LatencyResult: Sendable, Equatable {
     public var id: UUID
     public var outcome: LatencyOutcome
+
+    public init(id: UUID, outcome: LatencyOutcome) {
+        self.id = id
+        self.outcome = outcome
+    }
 }
 
 enum LatencyConfig {
@@ -288,27 +293,7 @@ public struct RealDelayTester: Sendable {
     }
 
     static func measureOne(port: Int, url: URL, timeout: TimeInterval) async -> LatencyOutcome {
-        guard let nwPort = NWEndpoint.Port(rawValue: UInt16(clamping: port)) else { return .timeout }
-        let config = URLSessionConfiguration.ephemeral
-        config.proxyConfigurations = [ProxyConfiguration(socksv5Proxy: .hostPort(host: "127.0.0.1", port: nwPort))]
-        config.timeoutIntervalForRequest = timeout
-        config.timeoutIntervalForResource = timeout
-        config.requestCachePolicy = .reloadIgnoringLocalCacheData
-        config.urlCache = nil
-        let session = URLSession(configuration: config)
-        defer { session.invalidateAndCancel() }
-
-        let clock = ContinuousClock()
-        let start = clock.now
-        do {
-            // Headers are enough; the body is never read.
-            let (_, response) = try await session.bytes(for: URLRequest(url: url))
-            let elapsed = clock.now - start
-            guard let http = response as? HTTPURLResponse, (200..<400).contains(http.statusCode) else { return .timeout }
-            return .ok(ms: max(1, Int((elapsed / .milliseconds(1)).rounded())))
-        } catch {
-            return .timeout
-        }
+        await ProxyHealthProbe.measure(route: .localProxy(port: port), url: url, timeout: timeout)
     }
 }
 

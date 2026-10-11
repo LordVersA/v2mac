@@ -47,3 +47,35 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac.dev
           PRODUCT_NAME: V2MacDev
           PRODUCT_MODULE_NAME: V2Mac
+  v2macStateTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/V2MacAppTests
+      - App/State/ConnectionController.swift
+      - App/State/AutomaticLatencyResults.swift
+      - App/State/TunController.swift
+      - App/State/LifecycleMonitor.swift
+      - App/State/LogStore.swift
+      - App/State/NotificationService.swift
+      - App/Features/Settings/SettingsTab.swift
+      - App/Support/AppPaths.swift
+      - App/Support/ServerName.swift
+      - App/Models/Profile.swift
+      - App/Models/ServerGroup.swift
+      - Packages/V2MacCore/Tests/V2MacCoreTests/TestHTTPServer.swift
+    dependencies:
+      - package: V2MacCore
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac.state-tests
+        TEST_HOST: ""
+schemes:
+  v2macStateTests:
+    build:
+      targets:
+        v2macStateTests: all
+    test:
+      targets:
+        - v2macStateTests

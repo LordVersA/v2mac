@@ -25,8 +25,13 @@ final class TunController {
     private let logs: LogStore
     private var port: Int?
     private var watcher: Task<Void, Never>?
-    private let stateDirectory = AppPaths.runDirectory
-    private let rootDirectory = TunHelper.rootDirectory()
+    private let stateDirectory: URL
+    private let rootDirectory: URL
+    private let primaryInterface: @MainActor (String?) -> String?
+    private let authorize: @MainActor (String) async -> LaunchResult
+    private let helperIsAlive: @MainActor (URL) -> Bool
+    private let interfaceExists: @MainActor (String) -> Bool
+    private var preparationGeneration = 0
 
     private var sessionFlag: URL { stateDirectory.appendingPathComponent(TunHelper.sessionFlag) }
     private var onFlag: URL { stateDirectory.appendingPathComponent(TunHelper.onFlag) }
@@ -36,10 +41,11 @@ final class TunController {
     /// Short progress note for the connection status line; nil when there is nothing to say.
     var statusNote: String? {
         switch state {
-        case .on: "TUN"
+        case .on: "System tunnel active"
         case .starting: "TUN starting…"
         case .authorizing: "TUN waiting for administrator access"
-        case .off, .failed: nil
+        case .off: isEnabled ? "System tunnel inactive" : nil
+        case .failed: "System tunnel unavailable"
         }
     }
 
@@ -57,8 +63,18 @@ final class TunController {
         }
     }
 
-    init(logs: LogStore) {
+    init(logs: LogStore, stateDirectory: URL = AppPaths.runDirectory, rootDirectory: URL = TunHelper.rootDirectory(),
+         primaryInterface: @escaping @MainActor (String?) -> String? = { NetworkInterfaces.primary(excluding: $0) },
+         authorize: @escaping @MainActor (String) async -> LaunchResult = { await runAsRoot($0) },
+         helperIsAlive: @escaping @MainActor (URL) -> Bool = { TunHelper.isAlive(rootDirectory: $0) },
+         interfaceExists: @escaping @MainActor (String) -> Bool = { NetworkInterfaces.exists($0) }) {
         self.logs = logs
+        self.stateDirectory = stateDirectory
+        self.rootDirectory = rootDirectory
+        self.primaryInterface = primaryInterface
+        self.authorize = authorize
+        self.helperIsAlive = helperIsAlive
+        self.interfaceExists = interfaceExists
         // Flags left by a crash would start a new helper with the TUN already wanted.
         removeFlags()
     }
@@ -72,13 +88,14 @@ final class TunController {
     // MARK: Session
 
     /// Makes sure the helper is running and returns what the core config needs.
-    /// Nil means "connect without TUN": the prompt was cancelled, or something failed.
+    /// The connection controller applies the user's failure policy when this returns nil.
     func prepare() async -> TunLink? {
-        guard let primary = NetworkInterfaces.primary(excluding: interfaceName) else {
+        let generation = preparationGeneration
+        guard let primary = primaryInterface(interfaceName) else {
             fail("TUN mode is waiting for a network connection.")
             return nil
         }
-        if let port, TunHelper.isAlive(rootDirectory: rootDirectory) {
+        if let port, helperIsAlive(rootDirectory) {
             return TunLink(port: port, outboundInterface: primary)
         }
 
@@ -91,11 +108,12 @@ final class TunController {
             let command = try writeSessionFiles(port: newPort, interface: name)
             state = .authorizing
             logs.append("[v2mac] TUN mode: asking for administrator access")
-            switch await Self.runAsRoot(command) {
+            let authorization = await authorize(command)
+            guard preparationGeneration == generation, isEnabled else { removeFlags(); return nil }
+            switch authorization {
             case .cancelled:
-                logs.append("[v2mac] TUN mode: administrator access was not given, TUN mode is off")
                 removeFlags()
-                setEnabled(false)
+                fail("Administrator access was cancelled; the system tunnel is inactive.")
                 return nil
             case .failed(let message):
                 throw TunError(message: message)
@@ -105,12 +123,14 @@ final class TunController {
             guard await helperAppeared() else {
                 throw TunError(message: "The TUN helper did not start.")
             }
+            guard isEnabled, !Task.isCancelled else { removeFlags(); return nil }
             port = newPort
             interfaceName = name
             state = .off
             return TunLink(port: newPort, outboundInterface: primary)
         } catch {
             removeFlags()
+            guard preparationGeneration == generation, isEnabled else { return nil }
             fail("TUN mode could not start: \(error.localizedDescription)")
             return nil
         }
@@ -119,7 +139,10 @@ final class TunController {
     /// Brings the TUN up. The core must already be listening on the session's port.
     func up() {
         guard port != nil, let name = interfaceName else { return }
-        FileManager.default.createFile(atPath: onFlag.path, contents: nil)
+        guard FileManager.default.createFile(atPath: onFlag.path, contents: nil) else {
+            fail("TUN mode could not start: its request file could not be written.")
+            return
+        }
         if state != .on { state = .starting }
         watcher?.cancel()
         watcher = Task { [weak self] in await self?.watch(name) }
@@ -127,6 +150,7 @@ final class TunController {
 
     /// Takes the TUN down; the helper stays for the next connect.
     func down(clearingError: Bool = false) {
+        preparationGeneration += 1
         watcher?.cancel()
         watcher = nil
         try? FileManager.default.removeItem(at: onFlag)
@@ -150,7 +174,7 @@ final class TunController {
         var errorDescription: String? { message }
     }
 
-    private enum LaunchResult {
+    enum LaunchResult {
         case started, cancelled
         case failed(String)
     }
@@ -160,12 +184,12 @@ final class TunController {
     private func watch(_ name: String) async {
         var deadline = ContinuousClock.now + .seconds(8)
         while !Task.isCancelled {
-            if NetworkInterfaces.exists(name) {
+            if interfaceExists(name) {
                 if state != .on {
                     state = .on
                     logs.append("[v2mac] TUN mode is on (\(name))")
                 }
-            } else if !TunHelper.isAlive(rootDirectory: rootDirectory) {
+            } else if !helperIsAlive(rootDirectory) {
                 port = nil
                 interfaceName = nil
                 try? FileManager.default.removeItem(at: onFlag)
@@ -222,7 +246,7 @@ final class TunController {
     private func helperAppeared() async -> Bool {
         let deadline = ContinuousClock.now + .seconds(5)
         while ContinuousClock.now < deadline {
-            if TunHelper.isAlive(rootDirectory: rootDirectory) { return true }
+            if helperIsAlive(rootDirectory) { return true }
             try? await Task.sleep(for: .milliseconds(100))
         }
         return false

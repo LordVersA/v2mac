@@ -7,3 +7,6 @@ DerivedData/
 .swiftpm/
 xcuserdata/
 dist/
+/reports/
+/research_notes/
+/AGENTS.md

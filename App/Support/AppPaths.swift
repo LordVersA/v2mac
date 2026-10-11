@@ -89,6 +89,8 @@ enum Prefs {
             "latencyConcurrency": 8,
             "speedTestURL": Prefs.defaultSpeedURL,
             "liveSwitch": true,
+            "autoSelectServer": false,
+            "tunFailurePolicy": TunFailurePolicy.continueProxy.rawValue,
             "allowInsecure": false,
             "checkExit": true,
             "menuBarCountry": true,
@@ -159,6 +161,11 @@ enum Prefs {
 
     /// Changing servers swaps the outbound in the running core instead of restarting it.
     static var liveSwitch: Bool { defaults.bool(forKey: "liveSwitch") }
+
+    static var autoSelectServer: Bool { defaults.bool(forKey: "autoSelectServer") }
+    static var tunFailurePolicy: TunFailurePolicy {
+        TunFailurePolicy(rawValue: defaults.string(forKey: "tunFailurePolicy") ?? "") ?? .continueProxy
+    }
 
     /// Look up the exit address and place after connecting (spec 9.6).
     static var checkExit: Bool { defaults.bool(forKey: "checkExit") }

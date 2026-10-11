@@ -206,14 +206,17 @@ struct ConnectionBar: View {
             switch connection.exit {
             case .known(let exit):
                 // The green button and the routing menu already say "connected" and the mode.
-                status([exit.flag, exit.place(), exit.ip].compactMap { $0 }.joined(separator: "  "))
+                status([connection.connectedTitle, exit.flag, exit.place(), exit.ip].compactMap { $0 }.joined(separator: "  "))
                     .help("Where your traffic comes out: \(exit.place() ?? "unknown place"), \(exit.ip)")
             case .failed:
-                status("Connected · \(routingTitle)")
+                status("\(connection.connectedTitle) · \(routingTitle)")
                 Text("No answer through this server").font(.caption).foregroundStyle(.orange).lineLimit(1)
                     .help("The core is running, but a test request through the server got no answer.")
             case .checking, .unknown:
-                status("Connected · \(routingTitle)")
+                status("\(connection.connectedTitle) · \(routingTitle)")
+            }
+            if connection.healthFailed {
+                Text("No response through the running proxy").font(.caption).foregroundStyle(.orange)
             }
         case .off:
             status(connection.activeServer == nil ? "Double-click a server to connect" : "Off · \(routingTitle)")
@@ -223,7 +226,7 @@ struct ConnectionBar: View {
     /// The status line, with what TUN mode is doing; a TUN failure gets its own line.
     @ViewBuilder
     private func status(_ text: String) -> some View {
-        let note = connection.tun.statusNote
+        let note = connection.tun.isOn ? nil : connection.tun.statusNote
         Text(note.map { "\(text) · \($0)" } ?? text).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             .help(connection.activeIsCustom ? "Routing is managed by this config" : "")
         if let failure = connection.tun.failureMessage {

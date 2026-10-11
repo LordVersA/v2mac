@@ -69,6 +69,16 @@ final class AppModel {
         subscriptions.onMissingFavorites = { [weak self] ids in self?.missingFavoriteIDs.formUnion(ids) }
         let connection = self.connection
         latency.physicalInterface = { connection.tun.physicalInterface }
+        connection.automaticCandidates = { [weak self] activeID in
+            guard let self, let active = profile(id: activeID), let group = active.group else { return [] }
+            return group.profiles.filter { !$0.isStale || $0.id == activeID }
+                .sorted { $0.sortIndex == $1.sortIndex ? $0.id.uuidString < $1.id.uuidString : $0.sortIndex < $1.sortIndex }
+                .compactMap { ActiveServer($0) }
+        }
+        let latencyStore = LatencyStore(modelContainer: container)
+        connection.onAutomaticResults = { results in
+            for result in results { try? await latencyStore.apply(id: result.id, outcome: result.outcome, kind: "real") }
+        }
         let routes: () -> [FetchRoute] = {
             guard connection.isRunning else { return [.direct] }
             let inbound = Prefs.inbound
@@ -133,7 +143,7 @@ final class AppModel {
                 )
             }
         }
-        connection.tun.onFailure = { message in
+        connection.onTunFailure = { message in
             notifications.post(.tun, title: "TUN mode stopped", body: message, id: "tun")
         }
 

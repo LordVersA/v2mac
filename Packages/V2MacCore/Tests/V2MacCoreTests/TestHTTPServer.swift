@@ -8,6 +8,8 @@ final class TestHTTPServer: Sendable {
         var status = 200
         var headers: [String: String] = [:]
         var body = Data()
+        var withholdResponse = false
+        var responseDelay: TimeInterval = 0
     }
 
     typealias Responder = @Sendable (_ path: String) -> Response
@@ -15,6 +17,7 @@ final class TestHTTPServer: Sendable {
     let port: Int
     private let listener: NWListener
     private let lastUserAgent = OSAllocatedUnfairLock<String?>(initialState: nil)
+    private let connections = OSAllocatedUnfairLock<[NWConnection]>(initialState: [])
 
     var userAgent: String? { lastUserAgent.withLock { $0 } }
 
@@ -30,6 +33,7 @@ final class TestHTTPServer: Sendable {
         _ = agent
 
         listener.newConnectionHandler = { connection in
+            box.withLock { $0 }?.connections.withLock { $0.append(connection) }
             connection.start(queue: .global())
             connection.receive(minimumIncompleteLength: 1, maximumLength: 16384) { data, _, _, _ in
                 let request = String(decoding: data ?? Data(), as: UTF8.self)
@@ -40,12 +44,17 @@ final class TestHTTPServer: Sendable {
                     box.withLock { $0 }?.lastUserAgent.withLock { $0 = value }
                 }
                 let r = responder(path)
+                guard !r.withholdResponse else { return }
                 var head = "HTTP/1.1 \(r.status) X\r\nContent-Length: \(r.body.count)\r\nConnection: close\r\n"
                 for (k, v) in r.headers { head += "\(k): \(v)\r\n" }
                 head += "\r\n"
                 var out = Data(head.utf8)
                 out.append(r.body)
-                connection.send(content: out, completion: .contentProcessed { _ in connection.cancel() })
+                let response = out
+                Task {
+                    if r.responseDelay > 0 { try? await Task.sleep(for: .seconds(r.responseDelay)) }
+                    connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
+                }
             }
         }
 
@@ -69,5 +78,11 @@ final class TestHTTPServer: Sendable {
         return server
     }
 
-    func stop() { listener.cancel() }
+    func stop() {
+        listener.cancel()
+        connections.withLock { connections in
+            for connection in connections { connection.cancel() }
+            connections = []
+        }
+    }
 }

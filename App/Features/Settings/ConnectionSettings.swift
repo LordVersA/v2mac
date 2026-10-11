@@ -5,6 +5,8 @@ import V2MacCore
 struct ConnectionSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage("liveSwitch") private var liveSwitch = true
+    @AppStorage("autoSelectServer") private var autoSelectServer = false
+    @AppStorage("tunFailurePolicy") private var tunFailurePolicy = TunFailurePolicy.continueProxy.rawValue
     @AppStorage("allowInsecure") private var allowInsecure = false
     @AppStorage("checkExit") private var checkExit = true
     @AppStorage("menuBarCountry") private var menuBarCountry = true
@@ -28,6 +30,22 @@ struct ConnectionSettings: View {
 
     var body: some View {
         Form {
+            Section {
+                Toggle("Automatically select a working server", isOn: $autoSelectServer)
+            } footer: {
+                note("Uses real HTTP response delay to choose the fastest server in the active group when connecting. Checks the running connection every 30 seconds and tries peers in group order after two failed responses. A server you pick stays selected while it responds. Switching can interrupt existing connections.")
+            }
+            Section {
+                Picker("If TUN fails", selection: $tunFailurePolicy) {
+                    ForEach(TunFailurePolicy.allCases, id: \.rawValue) { policy in
+                        Text(policy.title).tag(policy.rawValue)
+                    }
+                }
+            } header: {
+                Text("System tunnel")
+            } footer: {
+                note("Applies when administrator access is cancelled, the tunnel cannot start, or it stops. Stop connection also stops the local proxy. This is not a system kill switch: direct traffic can resume when TUN disappears. Port-53 DNS currently goes directly to the network to let the core resolve its server.")
+            }
             Section {
                 Toggle("Switch servers without restarting", isOn: $liveSwitch)
             } footer: {
@@ -85,6 +103,8 @@ struct ConnectionSettings: View {
         .animation(.default, value: fragmentEnabled)
         .animation(.default, value: checkExit)
         .onChange(of: checkExit) { model.connection.checkExit() }
+        .onChange(of: autoSelectServer) { model.connection.autoSelectionChanged() }
+        .onChange(of: tunFailurePolicy) { model.connection.tunFailurePolicyChanged() }
         .animation(.default, value: noiseEnabled)
         .animation(.default, value: dnsEnabled)
         .onChange(of: coreSettings) { restartSoon() }
