@@ -23,15 +23,52 @@
 
 ## Screenshots
 
-Shown with made-up demo servers.
+Captured from the current V2MacDev build with made-up demo servers. The development proxy uses port `10818`; the installed app defaults to `10808`.
 
 <p align="center"><img src="docs/images/screenshots/main.png" alt="V2Mac main window: subscription groups, servers with delay and speed, inspector and connection bar" width="720"></p>
 
 The main window lists each subscription with its traffic usage and days left, plus every server's delay and top download speed. Select a server to see its details and copy its share link or QR code. The bar at the bottom shows the connection, the TUN switch, the routing mode and the local proxy address.
 
-<p align="center"><img src="docs/images/screenshots/settings.png" alt="V2Mac settings: launch at login, reconnect, restart after sleep and app updates" width="420"></p>
+**Server browsing:** sort by delay, open Favorites, and search for a server.
 
-Settings cover launch at login, reconnecting, restarting the core after sleep or a network change, and one-click app updates. More tabs hold the proxy, routing, subscriptions, latency, core and advanced options.
+<p align="center"><img src="docs/images/screenshots/server-browsing.gif" alt="Animated walkthrough of sorting servers by delay, opening Favorites and searching for Frankfurt" width="720"></p>
+
+**Settings tour:** General, Proxy, Routing, Connection, Servers, Notifications, Core, and About.
+
+<p align="center"><img src="docs/images/screenshots/settings-tour.gif" alt="Animated walkthrough of all eight V2Mac settings tabs" width="560"></p>
+
+Automatic server selection is off by default. Connection settings explain real HTTP checks and let you choose what happens if TUN fails.
+
+<p align="center"><img src="docs/images/screenshots/connection-settings.png" alt="Connection settings with automatic server selection off and the TUN failure policy set to keep the local proxy running" width="560"></p>
+
+<details>
+<summary>More screenshots: import, editing, QR sharing, and settings</summary>
+
+**Add a subscription** using its URL and an optional name.
+
+<p align="center"><img src="docs/images/screenshots/add-subscription.png" alt="Add Subscription dialog with URL, optional name and proxy fetching controls" width="460"></p>
+
+**Edit a server copy** in Custom Configs without changing the subscription's original entry.
+
+<p align="center"><img src="docs/images/screenshots/server-editor.png" alt="Server editor showing demo VLESS address, port, user ID, flow and transport" width="520"></p>
+
+**Share a server** using the inspector's QR code.
+
+<p align="center"><img src="docs/images/screenshots/sharing.png" alt="Demo server inspector with its QR sharing popover fully visible" width="328"></p>
+
+**General settings** cover startup, reconnecting, recovery after sleep or network changes, updates, and diagnostics.
+
+<p align="center"><img src="docs/images/screenshots/settings.png" alt="General settings showing startup, connection recovery, updates and diagnostics" width="560"></p>
+
+**Proxy settings** configure the local port and optional LAN access with authentication.
+
+<p align="center"><img src="docs/images/screenshots/proxy-settings.png" alt="Proxy settings with the development port and LAN access disabled" width="560"></p>
+
+**Routing settings** choose a routing mode and manage bypass regions.
+
+<p align="center"><img src="docs/images/screenshots/routing-settings.png" alt="Routing settings showing Global mode and the Iran bypass region" width="560"></p>
+
+</details>
 
 ## Install
 

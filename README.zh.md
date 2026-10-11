@@ -23,15 +23,52 @@
 
 ## 截图
 
-截图使用虚构的演示服务器。
+截图来自当前 V2MacDev 构建，使用虚构的演示服务器。开发版代理使用端口 `10818`；安装版应用的默认端口为 `10808`。
 
 <p align="center"><img src="docs/images/screenshots/main.png" alt="V2Mac 主窗口：订阅分组、服务器延迟和速度、详情面板及连接栏" width="720"></p>
 
 主窗口会显示每个订阅的流量用量和剩余天数，以及每台服务器的延迟和最高下载速度。选择服务器即可查看详情，并复制分享链接或二维码。底部栏显示连接状态、TUN 开关、路由模式和本地代理地址。
 
-<p align="center"><img src="docs/images/screenshots/settings.png" alt="V2Mac 设置：登录时启动、重新连接、睡眠后重启核心及应用更新" width="420"></p>
+**浏览服务器：** 按延迟排序、打开收藏夹，并搜索服务器。
 
-设置中可以管理登录时启动、重新连接、睡眠或网络变化后重启核心，以及一键更新应用。其他标签页包含代理、路由、订阅、延迟、核心和高级选项。
+<p align="center"><img src="docs/images/screenshots/server-browsing.gif" alt="按延迟排序服务器、打开收藏夹并搜索法兰克福的动画演示" width="720"></p>
+
+**设置导览：** 通用、代理、路由、连接、服务器、通知、核心和关于。
+
+<p align="center"><img src="docs/images/screenshots/settings-tour.gif" alt="V2Mac 全部八个设置标签页的动画导览" width="560"></p>
+
+自动选择服务器默认关闭。连接设置说明了真实 HTTP 响应检查，并可选择 TUN 失败时的处理方式。
+
+<p align="center"><img src="docs/images/screenshots/connection-settings.png" alt="连接设置：自动选择服务器关闭，TUN 失败时保持本地代理运行" width="560"></p>
+
+<details>
+<summary>更多截图：导入、编辑、二维码分享和设置</summary>
+
+**添加订阅：** 输入订阅地址和可选名称。
+
+<p align="center"><img src="docs/images/screenshots/add-subscription.png" alt="添加订阅对话框，包含地址、可选名称和通过代理获取的选项" width="460"></p>
+
+**编辑服务器副本：** 保存到自定义配置，不更改订阅中的原始条目。
+
+<p align="center"><img src="docs/images/screenshots/server-editor.png" alt="演示 VLESS 服务器编辑器，包含地址、端口、用户 ID、流控和传输方式" width="520"></p>
+
+**分享服务器：** 使用详情面板中的二维码。
+
+<p align="center"><img src="docs/images/screenshots/sharing.png" alt="演示服务器详情面板，完整显示二维码分享弹出窗口" width="328"></p>
+
+**通用设置：** 启动、重新连接、睡眠或网络变化后的恢复、更新和诊断。
+
+<p align="center"><img src="docs/images/screenshots/settings.png" alt="通用设置，包含启动、连接恢复、更新和诊断" width="560"></p>
+
+**代理设置：** 配置本地端口，以及带身份验证的可选局域网访问。
+
+<p align="center"><img src="docs/images/screenshots/proxy-settings.png" alt="代理设置，显示开发版端口且局域网访问关闭" width="560"></p>
+
+**路由设置：** 选择路由模式并管理绕过代理的地区。
+
+<p align="center"><img src="docs/images/screenshots/routing-settings.png" alt="路由设置，显示全局模式和伊朗绕过代理地区" width="560"></p>
+
+</details>
 
 ## 安装
 
