@@ -25,13 +25,16 @@
 
 Captured from the current V2MacDev build with made-up demo servers. The development proxy uses port `10818`; the installed app defaults to `10808`.
 
-<p align="center"><img src="docs/images/screenshots/main.png" alt="V2Mac main window: subscription groups, servers with delay and speed, inspector and connection bar" width="720"></p>
-
-The main window lists each subscription with its traffic usage and days left, plus every server's delay and top download speed. Select a server to see its details and copy its share link or QR code. The bar at the bottom shows the connection, the TUN switch, the routing mode and the local proxy address.
-
 **Server browsing:** sort by delay, open Favorites, and search for a server.
 
 <p align="center"><img src="docs/images/screenshots/server-browsing.gif" alt="Animated walkthrough of sorting servers by delay, opening Favorites and searching for Frankfurt" width="720"></p>
+
+<details>
+<summary>More screenshots: import, editing, QR sharing, and settings</summary>
+
+<p align="center"><img src="docs/images/screenshots/main.png" alt="V2Mac main window: subscription groups, servers with delay and speed, inspector and connection bar" width="720"></p>
+
+The main window lists each subscription with its traffic usage and days left, plus every server's delay and top download speed. Select a server to see its details and copy its share link or QR code. The bar at the bottom shows the connection, the TUN switch, the routing mode and the local proxy address.
 
 **Settings tour:** General, Proxy, Routing, Connection, Servers, Notifications, Core, and About.
 
@@ -40,9 +43,6 @@ The main window lists each subscription with its traffic usage and days left, pl
 Automatic server selection is off by default. Connection settings explain real HTTP checks and let you choose what happens if TUN fails.
 
 <p align="center"><img src="docs/images/screenshots/connection-settings.png" alt="Connection settings with automatic server selection off and the TUN failure policy set to keep the local proxy running" width="560"></p>
-
-<details>
-<summary>More screenshots: import, editing, QR sharing, and settings</summary>
 
 **Add a subscription** using its URL and an optional name.
 

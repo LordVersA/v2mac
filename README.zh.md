@@ -25,13 +25,16 @@
 
 截图来自当前 V2MacDev 构建，使用虚构的演示服务器。开发版代理使用端口 `10818`；安装版应用的默认端口为 `10808`。
 
-<p align="center"><img src="docs/images/screenshots/main.png" alt="V2Mac 主窗口：订阅分组、服务器延迟和速度、详情面板及连接栏" width="720"></p>
-
-主窗口会显示每个订阅的流量用量和剩余天数，以及每台服务器的延迟和最高下载速度。选择服务器即可查看详情，并复制分享链接或二维码。底部栏显示连接状态、TUN 开关、路由模式和本地代理地址。
-
 **浏览服务器：** 按延迟排序、打开收藏夹，并搜索服务器。
 
 <p align="center"><img src="docs/images/screenshots/server-browsing.gif" alt="按延迟排序服务器、打开收藏夹并搜索法兰克福的动画演示" width="720"></p>
+
+<details>
+<summary>更多截图：导入、编辑、二维码分享和设置</summary>
+
+<p align="center"><img src="docs/images/screenshots/main.png" alt="V2Mac 主窗口：订阅分组、服务器延迟和速度、详情面板及连接栏" width="720"></p>
+
+主窗口会显示每个订阅的流量用量和剩余天数，以及每台服务器的延迟和最高下载速度。选择服务器即可查看详情，并复制分享链接或二维码。底部栏显示连接状态、TUN 开关、路由模式和本地代理地址。
 
 **设置导览：** 通用、代理、路由、连接、服务器、通知、核心和关于。
 
@@ -40,9 +43,6 @@
 自动选择服务器默认关闭。连接设置说明了真实 HTTP 响应检查，并可选择 TUN 失败时的处理方式。
 
 <p align="center"><img src="docs/images/screenshots/connection-settings.png" alt="连接设置：自动选择服务器关闭，TUN 失败时保持本地代理运行" width="560"></p>
-
-<details>
-<summary>更多截图：导入、编辑、二维码分享和设置</summary>
 
 **添加订阅：** 输入订阅地址和可选名称。
 
