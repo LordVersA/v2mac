@@ -38,6 +38,8 @@ struct SidebarView: View {
                     model.moveGroups(subscriptions, from: source, to: destination)
                 }
             }
+
+            SidebarRecents()
         }
         .sheet(item: $editing) { group in
             GroupEditSheet(group: group)
@@ -93,6 +95,42 @@ struct SidebarView: View {
             get: { group.autoUpdateEnabled },
             set: { group.autoUpdateEnabled = $0; try? model.context.save() }
         ))
+    }
+}
+
+/// The servers a connection last came up on, newest first, at the end of the sidebar. A click
+/// connects to one. On its own, with its own query, so that delay tests do not rebuild the sidebar.
+private struct SidebarRecents: View {
+    @Environment(AppModel.self) private var model
+    @Query private var profiles: [Profile]
+
+    var body: some View {
+        let byID = Dictionary(profiles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let recent = model.connection.recentServerIDs.compactMap { byID[$0] }.filter { !$0.isStale }.prefix(5)
+        if !recent.isEmpty {
+            Section("Recent") {
+                ForEach(recent) { profile in
+                    let name = ServerName(profile.name)
+                    let isActive = profile.id == model.connection.activeServer?.id
+                    Button {
+                        model.activate(profile)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(name.flag ?? "🌐")
+                            Text(name.title).lineLimit(1)
+                            Spacer(minLength: 4)
+                            if isActive {
+                                Image(systemName: "checkmark").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                    .accessibilityLabel("Active")
+                            }
+                        }
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .help(isActive ? "The active server" : "Connect to \(name.title)")
+                }
+            }
+        }
     }
 }
 
