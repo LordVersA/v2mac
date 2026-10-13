@@ -18,6 +18,7 @@ struct AboutSettings: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+                    Link(AboutLinks.repositoryText, destination: AboutLinks.repository).font(.callout)
                     HStack(spacing: 8) {
                         ShareLink(item: AboutLinks.repository, subject: Text("V2Mac"), message: Text(AboutLinks.tagline)) {
                             Label("Share V2Mac", systemImage: "square.and.arrow.up")
@@ -36,7 +37,7 @@ struct AboutSettings: View {
                 Text("V2Mac is free and has no ads. If it helps you, share it with someone who needs it.")
             }
             Section("Project") {
-                AboutLinkRow("Star on GitHub", systemImage: "star", detail: "github.com/LordVersA/v2mac", url: AboutLinks.repository)
+                AboutLinkRow("Star on GitHub", systemImage: "star", detail: "Source code", url: AboutLinks.repository)
                 AboutLinkRow("What's New", systemImage: "sparkles", detail: "Release notes", url: AboutLinks.releases)
                 AboutLinkRow("Report a Problem", systemImage: "ladybug", detail: "Open an issue", url: AboutLinks.newIssue)
             }
@@ -74,14 +75,36 @@ struct AboutSettings: View {
     }
 }
 
-/// Where the About tab points. Add a row in `AboutSettings` for every new link.
-private enum AboutLinks {
+/// Where the About tab and the About panel point. Add a row in `AboutSettings` for every new link.
+enum AboutLinks {
     static let tagline = "A free, open-source Xray client for macOS."
+    static let repositoryText = "github.com/LordVersA/v2mac"
     static let repository = URL(string: "https://github.com/LordVersA/v2mac")!
     static let releases = URL(string: "https://github.com/LordVersA/v2mac/releases")!
     static let newIssue = URL(string: "https://github.com/LordVersA/v2mac/issues/new")!
     static let author = URL(string: "https://github.com/LordVersA")!
     static let noleaker = URL(string: "https://github.com/LordVersA/noleaker")!
+
+    /// The app menu's About panel, with the same tagline and links as the About tab.
+    @MainActor static func showAboutPanel() {
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        style.paragraphSpacing = 4
+        let plain: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+            .foregroundColor: NSColor.labelColor,
+            .paragraphStyle: style,
+        ]
+        func link(_ text: String, _ url: URL) -> NSAttributedString {
+            NSAttributedString(string: text, attributes: plain.merging([.link: url]) { _, new in new })
+        }
+        let credits = NSMutableAttributedString(string: tagline + "\n", attributes: plain)
+        credits.append(link(repositoryText, repository))
+        credits.append(NSAttributedString(string: "\nMade by ", attributes: plain))
+        credits.append(link("LordVersa", author))
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+        NSApp.activate()
+    }
 }
 
 private struct AboutLinkRow: View {

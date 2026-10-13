@@ -75,6 +75,11 @@ struct AppCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About \(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "V2Mac")") {
+                AboutLinks.showAboutPanel()
+            }
+        }
         CommandGroup(replacing: .newItem) {
             Button("Add Subscription or Config…") { model.showAddSheet = true }
                 .keyboardShortcut("n")
