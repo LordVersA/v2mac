@@ -907,7 +907,7 @@ Icon by state: outline (stopped), animated (starting / switching), filled
 
 Panel, top to bottom:
 
-1. Connect control with state text ("Connected", "Connecting…", "Off", error),
+1. Connect control (dimmed and disabled with no server selected) with state text ("Connected", "Connecting…", "Off", error),
    the active server's name, group and last delay beside it. The control is a
    tinted glass button in a ring: faint while off, a turning arc while starting
    or switching, a closed glowing circle once connected.
@@ -917,13 +917,15 @@ Panel, top to bottom:
 3. "Subscription" of the active server's group, when the provider sends any of
    it: days left, usage bar with used, total and remaining, Support and Account
    links.
-4. "Switch Server": up to six rows — the active server, then the fastest
+4. "Recent": the last three other servers a connection came up on, newest
+   first, from any group (the app remembers six). Click = activate.
+5. "Switch Server": up to six rows — the active server, then the fastest
    tested servers of the active server's group. Click = activate. "Test" runs
    a real delay test of the whole group and turns into progress with "Stop".
-5. Routing mode picker.
-6. Local address with a copy button.
-7. "Update available" row when relevant.
-8. Open v2mac · Settings… · Quit.
+6. Routing mode picker.
+7. Local address with a copy button.
+8. "Update available" row when relevant.
+9. Open v2mac · Settings… · Quit.
 
 ### 12.3 Main window
 

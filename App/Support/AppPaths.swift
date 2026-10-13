@@ -234,6 +234,12 @@ enum Prefs {
         set { defaults.set(newValue?.uuidString, forKey: "activeProfileID") }
     }
 
+    /// Servers a connection came up on, newest first (the menu bar panel's "Recent" list).
+    static var recentServerIDs: [UUID] {
+        get { (defaults.stringArray(forKey: "recentServerIDs") ?? []).compactMap(UUID.init(uuidString:)) }
+        set { defaults.set(newValue.map(\.uuidString), forKey: "recentServerIDs") }
+    }
+
     static var wasRunning: Bool {
         get { defaults.bool(forKey: "wasRunning") }
         set { defaults.set(newValue, forKey: "wasRunning") }

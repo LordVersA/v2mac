@@ -171,7 +171,8 @@ struct ConnectionBar: View {
         .glassEffect(.regular.tint(stateColor).interactive(), in: .circle)
         .glassEffectID("connect", in: glassNamespace)
         .disabled(connection.activeServer == nil)
-        .help(connection.phase == .connected ? "Disconnect" : "Connect")
+        .opacity(connection.activeServer == nil ? 0.4 : 1)
+        .help(connection.activeServer == nil ? "Select a server first" : (connection.phase == .connected ? "Disconnect" : "Connect"))
         .accessibilityLabel(connection.phase == .connected ? "Disconnect" : "Connect")
     }
 

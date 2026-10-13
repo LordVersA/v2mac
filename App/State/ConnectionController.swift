@@ -54,6 +54,8 @@ final class ConnectionController {
     /// Set when the configured port is taken: the busy port and a free one to offer.
     private(set) var portConflict: PortConflict?
     private(set) var isRecovering = false
+    /// Servers a connection came up on, newest first; the active one is among them.
+    private(set) var recentServerIDs: [UUID] = Prefs.recentServerIDs
     private(set) var downRate: Double = 0
     private(set) var upRate: Double = 0
     /// The last minute of rates, one sample per second, oldest first.
@@ -261,6 +263,13 @@ final class ConnectionController {
             guard !Task.isCancelled, let self, userWantsRunning else { return }
             if let activeServer { requestConnect(activeServer) }
         }
+    }
+
+    /// Puts a server at the head of the recent list, which keeps the last six.
+    func noteRecent(_ id: UUID) {
+        guard recentServerIDs.first != id else { return }
+        recentServerIDs = Array(([id] + recentServerIDs.filter { $0 != id }).prefix(6))
+        Prefs.recentServerIDs = recentServerIDs
     }
 
     private func cancelRecovery() {
@@ -530,6 +539,7 @@ final class ConnectionController {
                 let outbound = ConfigBuilder.proxyOutbound(outboundConfig, options: running.options)
                 try await runner.replaceOutbound(tag: ConfigBuilder.proxyTag, with: outbound, apiPort: api)
                 logs.append("[v2mac] Switched to \(server.name) without restarting the core")
+                noteRecent(server.id)
                 checkExit()
                 #if DEBUG
                 print("[v2mac-debug] live switch ok")
@@ -603,6 +613,7 @@ final class ConnectionController {
         print("[v2mac-debug] core state \(previous) -> \(state); phase=\(phase); conflict=\(String(describing: portConflict))")
         #endif
         if state == .running {
+            if let activeServer { noteRecent(activeServer.id) }
             if isRecovering || announceReconnect { onNotice(.reconnected(server: activeServer?.name ?? "")) }
             announceReconnect = false
             isRecovering = false

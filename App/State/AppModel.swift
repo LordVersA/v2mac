@@ -96,6 +96,7 @@ final class AppModel {
         connection.regionRoutes = { packs.usableRoutes }
         #if DEBUG
         if demo {
+            setvbuf(stdout, nil, _IOLBF, 0)
             snapshotHook()
             seedDemoData()
             revealHook()
@@ -481,6 +482,10 @@ final class AppModel {
         // `-debugActivateFirst YES`: an active server, so the bar and the menu bar panel are filled in.
         if UserDefaults.standard.bool(forKey: "debugActivateFirst"),
            let first = (try? context.fetch(FetchDescriptor<Profile>()))?.first(where: { $0.name.contains("Frankfurt") }) {
+            // Two earlier connections, so the panel's "Recent" list has rows.
+            for name in ["Tokyo", "Paris"] {
+                if let p = (try? context.fetch(FetchDescriptor<Profile>()))?.first(where: { $0.name.contains(name) }) { connection.noteRecent(p.id) }
+            }
             activate(first)
         }
         if UserDefaults.standard.bool(forKey: "debugFakeRates") {
@@ -569,7 +574,10 @@ final class AppModel {
                 let png = rep.representation(using: .png, properties: [:])
                 try? png?.write(to: URL(fileURLWithPath: "\(prefix)-\(index).png"))
             }
-            print("[v2mac-debug] snapshot: \(windows.count) windows")
+            // Frames in screen points from the top left, as synthetic clicks and System Events use them.
+            let top = NSScreen.screens.first?.frame.maxY ?? 0
+            let frames = windows.map { "\(Int($0.frame.minX)),\(Int(top - $0.frame.maxY)) \(Int($0.frame.width))x\(Int($0.frame.height))" }
+            print("[v2mac-debug] snapshot: \(windows.count) windows: \(frames.joined(separator: " | "))")
         }
     }
 

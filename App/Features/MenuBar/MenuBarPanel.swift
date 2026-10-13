@@ -107,10 +107,22 @@ struct MenuBarPanel: View {
         return [active] + peers.prefix(5)
     }
 
+    /// The last three other servers a connection came up on, newest first, from any group.
+    private func recentServers(active: Profile?) -> [Profile] {
+        let byID = Dictionary(profiles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return connection.recentServerIDs
+            .compactMap { byID[$0] }
+            .filter { $0.id != active?.id && !$0.isStale }
+            .prefix(3)
+            .map { $0 }
+    }
+
     var body: some View {
         // Each scans every profile, so once per update is enough.
         let active = activeProfile
-        let candidates = switchCandidates(active: active)
+        let recent = recentServers(active: active)
+        // A server is listed once: under "Recent" when it is there.
+        let candidates = switchCandidates(active: active).filter { candidate in !recent.contains { $0.id == candidate.id } }
         VStack(alignment: .leading, spacing: 12) {
             header(active: active)
             if connection.phase == .connected {
@@ -142,6 +154,16 @@ struct MenuBarPanel: View {
             if let group = active?.group, PanelSubscription.hasContent(group) {
                 Divider()
                 PanelSubscription(group: group)
+            }
+
+            if !recent.isEmpty {
+                Divider()
+                Text("Recent").font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(recent) { profile in
+                        SwitchRow(profile: profile, isActive: false) { model.activate(profile) }
+                    }
+                }
             }
 
             if !candidates.isEmpty {
@@ -334,6 +356,9 @@ private struct PowerOrb: View {
         }
         .buttonStyle(PressScaleStyle())
         .disabled(!isEnabled)
+        // Dimmed with no server to connect to, so it reads as unavailable.
+        .opacity(isEnabled ? 1 : 0.4)
+        .help(isEnabled ? "" : "Select a server first")
         .accessibilityLabel(phase == .off ? "Connect" : "Disconnect")
         .accessibilityValue(statusTitle)
         .animation(.smooth(duration: 0.6), value: phase)
