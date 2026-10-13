@@ -147,7 +147,8 @@ struct MenuBarPanel: View {
                     }
                     if !recent.isEmpty, !candidates.isEmpty { Divider() }
                     if !candidates.isEmpty {
-                        HStack {
+                        HStack(spacing: 5) {
+                            if let group = active?.group { GroupDot(color: group.tint) }
                             PanelSectionTitle(active?.group?.name ?? "Switch Server")
                             Spacer()
                             PanelTestButton(latency: model.latency) { testGroup(of: active) }
@@ -257,7 +258,7 @@ struct MenuBarPanel: View {
         VStack(alignment: .leading, spacing: 1) {
             ForEach(servers) { profile in
                 SwitchRow(profile: profile, isActive: profile.id == connection.activeServer?.id,
-                          groupName: showsGroup ? profile.group?.name : nil) {
+                          group: showsGroup ? profile.group : nil) {
                     model.activate(profile)
                 }
             }
@@ -539,7 +540,7 @@ private struct PanelSectionTitle: View {
 private struct SwitchRow: View {
     let profile: Profile
     let isActive: Bool
-    var groupName: String?
+    var group: ServerGroup?
     let action: () -> Void
     @State private var hovering = false
 
@@ -550,8 +551,11 @@ private struct SwitchRow: View {
                 Text(name.flag ?? "🌐")
                 VStack(alignment: .leading, spacing: 0) {
                     Text(name.title).lineLimit(1)
-                    if let groupName {
-                        Text(groupName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    if let group {
+                        HStack(spacing: 4) {
+                            GroupDot(color: group.tint)
+                            Text(group.name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }
                     }
                 }
                 Spacer(minLength: 6)

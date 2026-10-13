@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 import V2MacCore
 
@@ -10,6 +11,7 @@ struct AddSubscriptionSheet: View {
     @State private var configText = ""
     @State private var name = ""
     @State private var viaProxy = false
+    @State private var color = GroupColor.blue
     @State private var isFetching = false
     @State private var errorMessage: String?
     @State private var duplicateID: UUID?
@@ -34,6 +36,7 @@ struct AddSubscriptionSheet: View {
                         TextField("URL", text: $url, prompt: Text("https://sub.example.com/abc123"))
                             .focused($urlFocused)
                         TextField("Name", text: $name, prompt: Text("(auto)"))
+                        LabeledContent("Color") { GroupColorPicker(selection: $color) }
                         Toggle("Fetch via proxy", isOn: $viaProxy)
                             .disabled(!model.connection.isRunning)
                         if !model.connection.isRunning {
@@ -121,6 +124,9 @@ struct AddSubscriptionSheet: View {
         kind = draft.kind
         configText = draft.configText
         errorMessage = draft.error
+        // The next one in the row, so a new subscription differs from the last without choosing.
+        let groups = (try? model.context.fetch(FetchDescriptor<ServerGroup>())) ?? []
+        color = .automatic(groups.filter { !$0.isManual }.count)
         if kind == .subscription { urlFocused = true } else { configFocused = true }
         if let clip = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
            AddDraft.isSubscriptionURL(clip) {
@@ -160,6 +166,8 @@ struct AddSubscriptionSheet: View {
             defer { isFetching = false }
             do {
                 let id = try await model.subscriptions.add(urlString: url, name: name, viaProxy: viaProxy)
+                model.group(id: id)?.colorName = color.rawValue
+                try? model.context.save()
                 model.sidebarSelection = .group(id)
                 dismiss()
             } catch let AddSubscriptionError.duplicate(id) {

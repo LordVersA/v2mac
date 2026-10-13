@@ -120,8 +120,11 @@ private struct SidebarRecents: View {
                             Label {
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(name.title).lineLimit(1)
-                                    if let group = profile.group?.name {
-                                        Text(group).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                    if let group = profile.group {
+                                        HStack(spacing: 4) {
+                                            GroupDot(color: group.tint)
+                                            Text(group.name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                        }
                                     }
                                 }
                             } icon: {
@@ -161,6 +164,7 @@ private struct SidebarRow: View {
                 Image(systemName: isUpdating ? "arrow.triangle.2.circlepath" : (group.isManual ? "doc.on.clipboard" : "dot.radiowaves.up.forward"))
                     .symbolEffect(.rotate, isActive: isUpdating)
                     .contentTransition(.symbolEffect(.replace))
+                    .foregroundStyle(group.tint.color)
             }
             if !isUpdating, let error = group.lastUpdateError {
                 Spacer()
@@ -182,6 +186,7 @@ struct GroupEditSheet: View {
 
     @State private var name = ""
     @State private var url = ""
+    @State private var color = GroupColor.gray
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -189,6 +194,7 @@ struct GroupEditSheet: View {
             Form {
                 TextField("Name", text: $name)
                 if !group.isManual { TextField("URL", text: $url) }
+                LabeledContent("Color") { GroupColorPicker(selection: $color) }
             }
             HStack {
                 Spacer()
@@ -198,6 +204,7 @@ struct GroupEditSheet: View {
                     if !trimmed.isEmpty { group.name = trimmed }
                     let u = url.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !u.isEmpty { group.subscriptionURL = u }
+                    if color != group.tint { group.colorName = color.rawValue }
                     try? model.context.save()
                     dismiss()
                 }
@@ -209,6 +216,7 @@ struct GroupEditSheet: View {
         .onAppear {
             name = group.name
             url = group.subscriptionURL
+            color = group.tint
         }
     }
 }

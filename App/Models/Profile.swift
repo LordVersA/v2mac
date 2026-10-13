@@ -115,6 +115,7 @@ struct ServerRow: Identifiable, Hashable, Sendable {
     let isFavorite: Bool
     let groupOrder: Int
     let groupName: String
+    let groupColor: GroupColor
     let sortIndex: Int
 
     init(_ p: Profile) {
@@ -134,6 +135,7 @@ struct ServerRow: Identifiable, Hashable, Sendable {
         isFavorite = p.isFavorite
         groupOrder = p.group?.sortIndex ?? 0
         groupName = p.group?.name ?? ""
+        groupColor = p.group?.tint ?? .gray
         sortIndex = p.sortIndex
     }
 

@@ -336,7 +336,7 @@ private struct ServerTable: View {
                 // Always declared and shown or hidden below: a column inside an `if` makes the
                 // table give every column its minimum width.
                 TableColumn("Subscription", value: \.groupName) { row in
-                    Text(row.groupName).foregroundStyle(.secondary).lineLimit(1)
+                    GroupTag(name: row.groupName, color: row.groupColor)
                 }
                 .width(min: 80, ideal: 130)
                 .customizationID("group")

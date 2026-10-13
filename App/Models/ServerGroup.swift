@@ -23,6 +23,8 @@ final class ServerGroup {
     var userAgent: String?
     /// True once the automatic User-Agent search has run, so it is not repeated on every update.
     var userAgentProbed: Bool = false
+    /// A `GroupColor`; nil until the user picks one.
+    var colorName: String?
     var supportURL: String?
     var webPageURL: String?
     @Relationship(deleteRule: .cascade, inverse: \Profile.group)

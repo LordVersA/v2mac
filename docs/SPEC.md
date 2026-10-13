@@ -952,6 +952,13 @@ Control Centre do; the connect control and the last row stand outside one:
 Structure: `NavigationSplitView` (sidebar, content) with `.inspector` on the
 content column.
 
+**Subscription colours.** Every group has one of eleven system colours
+(`GroupColor`), chosen in the Add and Edit sheets from a row of swatches. Until
+one is chosen a subscription takes a colour by its position and Custom Configs
+is grey. The colour tints the group's sidebar icon, its tag in the table's
+Subscription column, and the dot beside its name in the Recent lists and the
+menu bar panel.
+
 **Sidebar.** "All", "Favorites" (6.6) plus one row per group: name, server count, a spinner while
 updating, a warning glyph when the last update failed (tooltip shows the
 error). Drag to reorder. Context menu: Update via Proxy, Update without Proxy,
