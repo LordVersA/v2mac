@@ -62,7 +62,7 @@ struct ServerListView: View {
                     GroupHeader(group: group)
                         .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
-                ServerTable(rows: rows, profiles: profiles, sortOrder: $sortOrder)
+                ServerTable(rows: rows, profiles: profiles, showsGroup: selectedGroupID == nil, sortOrder: $sortOrder)
                 .overlay {
                     ZStack {
                         if showsEmptyState {
@@ -279,6 +279,8 @@ private struct StopTestingButton: View {
 private struct ServerTable: View {
     let rows: [ServerRow]
     let profiles: [Profile]
+    /// In "All" and "Favorites", where rows come from several subscriptions.
+    let showsGroup: Bool
     @Binding var sortOrder: [KeyPathComparator<ServerRow>]
 
     @Environment(AppModel.self) private var model
@@ -289,18 +291,14 @@ private struct ServerTable: View {
         @Bindable var model = model
         ScrollViewReader { proxy in
             Table(rows, selection: $model.selectedProfileIDs, sortOrder: $sortOrder, columnCustomization: $columns) {
-                TableColumn("") { row in
-                    if let flag = row.flag {
-                        Text(flag).font(.title3).accessibilityLabel("Flag")
-                    }
-                }
-                .width(24)
-                .customizationID("flag")
-
                 TableColumn("Name", value: \.displayName) { row in
                     let isActive = model.connection.activeServer?.id == row.id
                     let tint: Color = model.connection.phase == .connected ? .green : .secondary
+                    // A server that did not answer its last test steps back, so the working ones stand out.
+                    let isDead = row.delayState == .timeout || row.delayState == .invalid
                     HStack(spacing: 6) {
+                        // In the name cell, as an icon in a Finder list: a fixed slot keeps the names aligned.
+                        Text(row.flag ?? "").font(.title3).frame(width: 22).accessibilityHidden(true)
                         if isActive {
                             Image(systemName: "circle.fill").font(.caption2).foregroundStyle(tint)
                                 .accessibilityLabel(model.connection.phase == .connected ? "Active server, connected" : "Active server")
@@ -308,7 +306,7 @@ private struct ServerTable: View {
                         }
                         Text(row.displayName).lineLimit(1)
                             .fontWeight(isActive ? .semibold : .regular)
-                            .foregroundStyle(isActive ? tint : .primary)
+                            .foregroundStyle(isActive ? AnyShapeStyle(tint) : (isDead ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary)))
                         if row.hasWarnings {
                             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                                 .accessibilityLabel("Has warnings")
@@ -326,8 +324,16 @@ private struct ServerTable: View {
                 }
                 .customizationID("name")
 
+                // Always declared and shown or hidden below: a column inside an `if` makes the
+                // table give every column its minimum width.
+                TableColumn("Subscription", value: \.groupName) { row in
+                    Text(row.groupName).foregroundStyle(.secondary).lineLimit(1)
+                }
+                .width(min: 80, ideal: 130)
+                .customizationID("group")
+
                 TableColumn("Type", value: \.typeSummary) { row in
-                    Text(row.typeSummary).foregroundStyle(.secondary).lineLimit(1)
+                    TypeTags(summary: row.typeSummary)
                 }
                 .customizationID("type")
 
@@ -340,14 +346,19 @@ private struct ServerTable: View {
                 TableColumn("Delay", value: \.delaySortKey) { row in
                     DelayText(row: row, isTesting: model.latency.testingIDs.contains(row.id))
                 }
-                .width(min: 70, ideal: 80)
+                .width(min: 84, ideal: 96)
+                .alignment(.trailing)
                 .customizationID("delay")
 
                 TableColumn("Speed", value: \.speedSortKey) { row in
                     SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id))
                 }
-                .width(min: 70, ideal: 80)
+                .width(min: 84, ideal: 96)
+                .alignment(.trailing)
                 .customizationID("speed")
+            }
+            .onChange(of: showsGroup, initial: true) {
+                columns[visibility: "group"] = showsGroup ? .visible : .hidden
             }
             // Sideways swipes move the table only when its columns are wider than the list.
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
@@ -479,6 +490,30 @@ struct SpeedText: View {
         } else {
             Text("—").foregroundStyle(.tertiary)
         }
+    }
+}
+
+/// "vless · ws · tls" as the protocol in plain text, then transport and security as small tags.
+private struct TypeTags: View {
+    let summary: String
+
+    var body: some View {
+        let parts = summary.components(separatedBy: " · ")
+        HStack(spacing: 4) {
+            Text(parts.first ?? "").foregroundStyle(.secondary)
+            ForEach(parts.dropFirst(), id: \.self) { part in
+                Text(part)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(.fill.tertiary, in: .rect(cornerRadius: 4))
+            }
+        }
+        .lineLimit(1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(summary)
     }
 }
 

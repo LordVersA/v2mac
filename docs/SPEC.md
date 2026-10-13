@@ -965,9 +965,11 @@ subscription's name on a second line and the active one marked with a dot
 and route, "N skipped" if any, and when available a thin usage bar with
 "12.4 of 50 GB · expires 2 Nov 2026".
 
-**Server table.** SwiftUI `Table`, multi-selection. Columns: active marker,
-Name, Type (`protocol · transport · security`), Address (hidden by default),
-Delay. Default order is subscription order; columns sort; `.searchable` filters
+**Server table.** SwiftUI `Table`, multi-selection. Columns: Name (flag and
+active marker inside the cell; a server whose last test failed is dimmed),
+Subscription (only in "All" and "Favorites"), Type (the protocol, then
+transport and security as small tags), Address (hidden by default), Delay and
+Speed (both right-aligned). Default order is subscription order; columns sort; `.searchable` filters
 by name, address and type. Single click selects (drives the inspector).
 Double-click or Return activates. Context menu: Connect, Test Delay, TCP Ping,
 Copy Share Link, Show QR Code. A warning glyph on rows that carry `warnings`.

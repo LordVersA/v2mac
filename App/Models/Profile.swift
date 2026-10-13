@@ -114,6 +114,7 @@ struct ServerRow: Identifiable, Hashable, Sendable {
     let isStale: Bool
     let isFavorite: Bool
     let groupOrder: Int
+    let groupName: String
     let sortIndex: Int
 
     init(_ p: Profile) {
@@ -132,6 +133,7 @@ struct ServerRow: Identifiable, Hashable, Sendable {
         isStale = p.isStale
         isFavorite = p.isFavorite
         groupOrder = p.group?.sortIndex ?? 0
+        groupName = p.group?.name ?? ""
         sortIndex = p.sortIndex
     }
 
