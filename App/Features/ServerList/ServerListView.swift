@@ -285,7 +285,16 @@ private struct ServerTable: View {
 
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var columns = TableColumnCustomization<ServerRow>()
+    /// Widths, order and hidden columns, kept across launches.
+    @State private var columns = ServerTable.savedColumns()
+    @State private var saveTask: Task<Void, Never>?
+    private static let columnsKey = "serverTableColumns"
+
+    private static func savedColumns() -> TableColumnCustomization<ServerRow> {
+        guard let data = UserDefaults.standard.data(forKey: columnsKey),
+              let saved = try? JSONDecoder().decode(TableColumnCustomization<ServerRow>.self, from: data) else { return .init() }
+        return saved
+    }
 
     var body: some View {
         @Bindable var model = model
@@ -359,6 +368,15 @@ private struct ServerTable: View {
             }
             .onChange(of: showsGroup, initial: true) {
                 columns[visibility: "group"] = showsGroup ? .visible : .hidden
+            }
+            // A resize changes this on every step, so it is written once the dragging has stopped.
+            .onChange(of: columns) {
+                saveTask?.cancel()
+                saveTask = Task {
+                    try? await Task.sleep(for: .milliseconds(400))
+                    guard !Task.isCancelled, let data = try? JSONEncoder().encode(columns) else { return }
+                    UserDefaults.standard.set(data, forKey: Self.columnsKey)
+                }
             }
             // Sideways swipes move the table only when its columns are wider than the list.
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
