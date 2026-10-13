@@ -73,6 +73,8 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     `-debugEditProtocol <protocol>` and `-debugEditorHeight <points>` show a whole form in a snapshot.
   - `-debugWindowRequest <settings tab>|main` opens that window after 2 seconds (also with demo
     data), so a snapshot can show a settings tab: `-debugWindowRequest about`.
+  - `-debugAddCustom YES` adds four made-up servers (VLESS, Trojan, Shadowsocks) to Custom Configs
+    in the dev build's own data. They do not connect; they are for trying the lists by hand.
   - `-debugDemoData YES` uses an in-memory store filled with made-up servers. Use it for UI checks
     and README screenshots, so no real server ever appears on screen.
   - `-debugSnapshot <path prefix>` makes the app draw each of its open windows, toolbar included,

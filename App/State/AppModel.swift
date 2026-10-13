@@ -720,6 +720,26 @@ final class AppModel {
                 print("[v2mac-debug] switch test: after second server, phase=\(connection.phase)")
             }
         }
+        // `-debugAddCustom YES`: a few made-up servers of different protocols in Custom Configs, for
+        // trying the lists by hand with the dev build's own data. They do not connect anywhere.
+        if defaults.bool(forKey: "debugAddCustom") {
+            let uuid = "b831381d-6324-4d53-ad4f-8cda48b30811"
+            let key = "jmsHqm9I9NJN3d3cZmhU6iM3sFM0q9D9p1tBvXkQm2E"
+            let links = [
+                "vless://\(uuid)@custom1.example.com:443?type=tcp&security=reality&encryption=none&flow=xtls-rprx-vision&sni=www.microsoft.com&fp=chrome&pbk=\(key)&sid=ab12#🇩🇪 Custom Berlin",
+                "vless://\(uuid)@custom2.example.com:443?type=ws&security=tls&sni=custom2.example.com&path=%2Fws#🇳🇱 Custom Amsterdam",
+                "trojan://demo-password@custom3.example.com:443?security=tls&sni=custom3.example.com&type=tcp#🇫🇷 Custom Paris",
+                "ss://YWVzLTI1Ni1nY206ZGVtby1wYXNzd29yZA@custom4.example.com:8388#🇯🇵 Custom Tokyo",
+            ]
+            Task {
+                do {
+                    sidebarSelection = .group(try await subscriptions.addCustom(text: links.joined(separator: "\n")))
+                    print("[v2mac-debug] added custom servers")
+                } catch {
+                    print("[v2mac-debug] add custom failed: \(error)")
+                }
+            }
+        }
         guard let url = defaults.string(forKey: "debugAddSubscription") else { return }
         let activate = defaults.bool(forKey: "debugActivateFirst")
         let testMode = defaults.string(forKey: "debugTest")
