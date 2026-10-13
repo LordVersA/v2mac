@@ -34,10 +34,10 @@ enum GroupColor: String, CaseIterable, Identifiable, Sendable {
 }
 
 extension ServerGroup {
-    /// The chosen colour; without one, grey for Custom Configs and one by position for a subscription.
+    /// The chosen colour; without one, blue for Custom Configs and one by position for a subscription.
     var tint: GroupColor {
         if let chosen = colorName.flatMap(GroupColor.init(rawValue:)) { return chosen }
-        return isManual ? .gray : .automatic(sortIndex)
+        return isManual ? .blue : .automatic(sortIndex)
     }
 }
 

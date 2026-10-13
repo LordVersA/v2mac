@@ -104,7 +104,7 @@ struct MenuBarPanel: View {
                 let r = rhs.delayState == .ok ? (rhs.delayMs ?? .max) : .max
                 return l != r ? l < r : lhs.sortIndex < rhs.sortIndex
             }
-        return [active] + peers.prefix(5)
+        return [active] + peers.prefix(isCompact ? 2 : 5)
     }
 
     /// The last three other servers a connection came up on, newest first, from any group.
@@ -113,11 +113,43 @@ struct MenuBarPanel: View {
         return connection.recentServerIDs
             .compactMap { byID[$0] }
             .filter { $0.id != active?.id && !$0.isStale }
-            .prefix(3)
+            .prefix(isCompact ? 2 : 3)
             .map { $0 }
     }
 
+    /// The room below the menu bar on the screen the panel opened on.
+    @State private var availableHeight = MenuBarPanel.screenHeight()
+    /// On a small display the lists are shorter, so the panel rarely has to scroll.
+    private var isCompact: Bool { availableHeight < 860 }
+
+    private static func screenHeight() -> CGFloat {
+        #if DEBUG
+        // `-debugPanelHeight <points>`: the panel as on a display with that much room.
+        let forced = UserDefaults.standard.double(forKey: "debugPanelHeight")
+        if forced > 0 { return forced }
+        #endif
+        let pointer = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { NSMouseInRect(pointer, $0.frame, false) } ?? NSScreen.main
+        return (screen?.visibleFrame.height ?? 900) - 12
+    }
+
+    /// Measured, because a scroll view has no height of its own for the panel's window to take.
+    @State private var contentHeight: CGFloat = 0
+
     var body: some View {
+        // As tall as its content where that fits the screen; on a smaller display it scrolls.
+        ScrollView {
+            panel.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        }
+        // `.never`, not `.hidden`: a hidden scroller still keeps its strip, which pushes the cards sideways.
+        .scrollIndicators(.never)
+        .scrollDisabled(contentHeight <= availableHeight)
+        .frame(width: 330, height: contentHeight > 0 ? min(contentHeight, availableHeight) : nil)
+        .onAppear { availableHeight = Self.screenHeight() }
+    }
+
+    @ViewBuilder
+    private var panel: some View {
         // Each scans every profile, so once per update is enough.
         let active = activeProfile
         let recent = recentServers(active: active)

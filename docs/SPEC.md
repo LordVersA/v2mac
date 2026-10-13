@@ -905,7 +905,10 @@ not through a signing identity.
 Icon by state: outline (stopped), animated (starting / switching), filled
 (running), filled with warning badge (failed).
 
-Panel, top to bottom. Related rows share a translucent rounded card (a
+The panel is as tall as its content where the screen has room. On a small
+display (under 860 points below the menu bar) the lists are shorter (two
+recent servers, three in the switch list), and whatever still does not fit
+scrolls. Panel, top to bottom. Related rows share a translucent rounded card (a
 hierarchical fill, so the panel's glass shows through), as the modules of
 Control Centre do; the connect control and the last row stand outside one:
 
@@ -955,7 +958,7 @@ content column.
 **Subscription colours.** Every group has one of eleven system colours
 (`GroupColor`), chosen in the Add and Edit sheets from a row of swatches. Until
 one is chosen a subscription takes a colour by its position and Custom Configs
-is grey. The colour tints the group's sidebar icon, its tag in the table's
+is blue. The colour tints the group's sidebar icon, its tag in the table's
 Subscription column, and the dot beside its name in the Recent lists and the
 menu bar panel.
 
