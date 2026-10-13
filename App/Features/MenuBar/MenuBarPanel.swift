@@ -433,20 +433,25 @@ private struct PanelTestButton: View {
     }
 }
 
-/// The live rates. On their own so that the once-a-second updates do not re-evaluate the whole panel.
+/// The graph and the live rates. On their own so that the once-a-second updates do not
+/// re-evaluate the whole panel.
 private struct PanelRates: View {
     let connection: ConnectionController
 
     var body: some View {
-        HStack(spacing: 14) {
-            Label(Format.rate(connection.downRate), systemImage: "arrow.down")
-            Label(Format.rate(connection.upRate), systemImage: "arrow.up")
+        VStack(alignment: .leading, spacing: 6) {
+            TrafficSparkline(samples: connection.rateHistory)
+                .frame(height: 34)
+            HStack(spacing: 14) {
+                Label(Format.rate(connection.downRate), systemImage: "arrow.down")
+                Label(Format.rate(connection.upRate), systemImage: "arrow.up")
+            }
+            .font(.caption.monospacedDigit())
+            .contentTransition(.numericText())
+            .animation(.smooth, value: connection.downRate)
+            .animation(.smooth, value: connection.upRate)
+            .foregroundStyle(.secondary)
         }
-        .font(.caption.monospacedDigit())
-        .contentTransition(.numericText())
-        .animation(.smooth, value: connection.downRate)
-        .animation(.smooth, value: connection.upRate)
-        .foregroundStyle(.secondary)
     }
 }
 

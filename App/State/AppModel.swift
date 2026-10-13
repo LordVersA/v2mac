@@ -483,6 +483,12 @@ final class AppModel {
            let first = (try? context.fetch(FetchDescriptor<Profile>()))?.first(where: { $0.name.contains("Frankfurt") }) {
             activate(first)
         }
+        if UserDefaults.standard.bool(forKey: "debugFakeRates") {
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                connection.fakeRates()
+            }
+        }
     }
 
     /// `-debugDemoData YES -debugRevealActive YES`: a long list whose last server is the active

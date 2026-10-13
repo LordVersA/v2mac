@@ -651,6 +651,20 @@ final class ConnectionController {
         }
     }
 
+    #if DEBUG
+    /// `-debugFakeRates YES`: a made-up minute of traffic, so a snapshot shows the graph.
+    func fakeRates() {
+        rateHistory = (1...60).map { i in
+            let t = Double(i)
+            let down = (2.2 + sin(t / 6) * 1.2 + sin(t / 2.3) * 0.5 + (i > 40 && i < 50 ? 2.5 : 0)) * 1_048_576
+            return RateSample(id: i, down: down, up: (0.4 + sin(t / 4) * 0.25) * 1_048_576)
+        }
+        sampleCounter = 60
+        downRate = rateHistory[59].down
+        upRate = rateHistory[59].up
+    }
+    #endif
+
     private func record(down: Double, up: Double) {
         sampleCounter += 1
         rateHistory.append(RateSample(id: sampleCounter, down: down, up: up))

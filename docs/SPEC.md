@@ -911,7 +911,9 @@ Panel, top to bottom:
    the active server's name, group and last delay beside it. The control is a
    tinted glass button in a ring: faint while off, a turning arc while starting
    or switching, a closed glowing circle once connected.
-2. Exit location, then live download and upload rate.
+2. Exit location, then the traffic graph of the last minute (download as a
+   filled curve, upload as a faint line, as in the connection bar) and the live
+   download and upload rate.
 3. "Subscription" of the active server's group, when the provider sends any of
    it: days left, usage bar with used, total and remaining, Support and Account
    links.
