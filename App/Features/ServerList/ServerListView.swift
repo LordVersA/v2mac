@@ -102,9 +102,12 @@ struct ServerListView: View {
             // A plain panel, not `.inspector`: with that modifier attached (even hidden) the table
             // re-fits every visible cell several times on each step of a window resize.
             if model.showInspector {
-                Divider()
+                // No background of its own and the dividing line as an overlay: both would otherwise
+                // run up behind the toolbar and show as an edge through the search field.
                 InspectorPane(profiles: profiles)
+                    .scrollContentBackground(.hidden)
                     .frame(width: 260)
+                    .overlay(alignment: .leading) { Divider() }
             }
         }
         .searchable(text: $model.searchText, prompt: "Search")
