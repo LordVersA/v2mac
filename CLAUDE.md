@@ -79,6 +79,8 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     into `<prefix>-<n>.png` after 4 seconds (`-debugSnapshotDelay` for longer). Use it to look at a
     UI change: it needs no screen recording permission and works with `-debugDemoData YES`. Glass
     effects are not drawn, but layout, sizes and spacing are exact (2 pixels per point).
+    An open menu bar panel is drawn too: add `-debugActivateFirst YES` to the demo data for an
+    active server, and open the panel with System Events (`click menu bar item 1 of menu bar 2`).
 - CI (`.github/workflows/ci.yml`, every push) runs the package tests and an unsigned Debug build on
   `macos-26`. Watch it with `gh run watch` after pushing.
 - The menu bar glyph PDFs in the asset catalog are generated: edit the SVGs in `Design/` and run

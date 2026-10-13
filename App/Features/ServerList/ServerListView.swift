@@ -578,17 +578,10 @@ private struct GroupHeader: View {
     // MARK: Expiry
 
     private func expiry(_ date: Date, compact: Bool) -> some View {
-        let days = Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
-        let expired = date <= Date()
-        let soon = !expired && days < 7
-        let text: String
-        if expired { text = "Expired" }
-        else if days <= 0 { text = "Expires today" }
-        else if compact || days < 60 { text = "\(days) day\(days == 1 ? "" : "s") left" }
-        else { text = "Until \(date.formatted(.dateTime.month(.abbreviated).day().year()))" }
-        return Label(text, systemImage: expired || soon ? "exclamationmark.circle" : "calendar")
+        let state = Format.expiry(date, long: !compact)
+        return Label(state.text, systemImage: state.isWarning ? "exclamationmark.circle" : "calendar")
             .labelStyle(CompactLabelStyle())
-            .foregroundStyle(expired ? Color.red : (soon ? Color.orange : Color.secondary))
+            .foregroundStyle(state.isExpired ? Color.red : (state.isWarning ? Color.orange : Color.secondary))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(.quaternary, in: .capsule)

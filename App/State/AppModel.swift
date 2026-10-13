@@ -450,6 +450,8 @@ final class AppModel {
             group.totalBytes = g.2 * 1_073_741_824
             group.expiresAt = Date().addingTimeInterval(Double(g.3) * 86_400)
             group.lastUpdatedAt = Date().addingTimeInterval(-1_800)
+            group.supportURL = "https://example.com/support"
+            group.webPageURL = "https://example.com/account"
             context.insert(group)
             for (i, s) in g.4.enumerated() {
                 let host = "node\(gi)\(i).example.com"
@@ -476,6 +478,11 @@ final class AppModel {
         }
         if UserDefaults.standard.bool(forKey: "debugShowFavorites") { sidebarSelection = .favorites }
         try? context.save()
+        // `-debugActivateFirst YES`: an active server, so the bar and the menu bar panel are filled in.
+        if UserDefaults.standard.bool(forKey: "debugActivateFirst"),
+           let first = (try? context.fetch(FetchDescriptor<Profile>()))?.first(where: { $0.name.contains("Frankfurt") }) {
+            activate(first)
+        }
     }
 
     /// `-debugDemoData YES -debugRevealActive YES`: a long list whose last server is the active
@@ -545,10 +552,12 @@ final class AppModel {
         let delay = max(defaults.integer(forKey: "debugSnapshotDelay"), 4)
         Task {
             try? await Task.sleep(for: .seconds(delay))
-            // Titled windows, and the menu bar item (its own small window).
-            let windows = NSApp.windows.filter { $0.isVisible && ($0.styleMask.contains(.titled) || $0.className.contains("StatusBar")) }
+            // Titled windows, the menu bar item (its own small window) and its panel when open.
+            let windows = NSApp.windows.filter {
+                $0.isVisible && ($0.styleMask.contains(.titled) || $0.className.contains("StatusBar") || $0.frame.width >= 200)
+            }
             for (index, window) in windows.enumerated() {
-                guard let view = window.contentView?.superview,
+                guard let view = window.contentView?.superview ?? window.contentView,
                       let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { continue }
                 view.cacheDisplay(in: view.bounds, to: rep)
                 let png = rep.representation(using: .png, properties: [:])

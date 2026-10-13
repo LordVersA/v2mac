@@ -287,6 +287,19 @@ enum Prefs {
 }
 
 enum Format {
+    /// How long a subscription still runs: "Expired", "Expires today", "12 days left" or, with
+    /// `long` and two months or more to go, the date. A warning is due within a week, or past.
+    static func expiry(_ date: Date, long: Bool) -> (text: String, isExpired: Bool, isWarning: Bool) {
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
+        let expired = date <= Date()
+        let text: String
+        if expired { text = "Expired" }
+        else if days <= 0 { text = "Expires today" }
+        else if !long || days < 60 { text = "\(days) day\(days == 1 ? "" : "s") left" }
+        else { text = "Until \(date.formatted(.dateTime.month(.abbreviated).day().year()))" }
+        return (text, expired, expired || days < 7)
+    }
+
     static func rate(_ bytesPerSecond: Double) -> String {
         // Below one kilobyte the formatter says "Zero KB" or switches to bytes, which reads as noise.
         guard bytesPerSecond >= 1024 else { return "0 KB/s" }

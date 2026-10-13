@@ -112,13 +112,7 @@ struct MenuBarPanel: View {
         let active = activeProfile
         let candidates = switchCandidates(active: active)
         VStack(alignment: .leading, spacing: 12) {
-            header
-            if let server = connection.activeServer {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(server.name).font(.subheadline.weight(.medium)).lineLimit(1)
-                    Text(serverDetail(server, profile: active)).font(.caption).foregroundStyle(.secondary)
-                }
-            }
+            header(active: active)
             if connection.phase == .connected {
                 switch connection.exit {
                 case .known(let exit):
@@ -145,9 +139,18 @@ struct MenuBarPanel: View {
                 PanelRates(connection: connection)
             }
 
+            if let group = active?.group, PanelSubscription.hasContent(group) {
+                Divider()
+                PanelSubscription(group: group)
+            }
+
             if !candidates.isEmpty {
                 Divider()
-                Text("Switch Server").font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Text("Switch Server").font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    PanelTestButton(latency: model.latency) { testGroup(of: active) }
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(candidates) { profile in
                         SwitchRow(profile: profile, isActive: profile.id == connection.activeServer?.id) {
@@ -221,56 +224,32 @@ struct MenuBarPanel: View {
         .animation(.smooth(duration: 0.35), value: connection.phase)
     }
 
-    private var header: some View {
+    private func header(active: Profile?) -> some View {
         HStack(spacing: 12) {
-            Button {
-                connection.phase == .off || isFailed ? connection.connectActive() : connection.disconnect()
-            } label: {
-                Image(systemName: "power")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(connection.phase == .off ? Color.primary : Color.white)
-                    .symbolEffect(.pulse, isActive: isBusy)
-                    .symbolEffect(.bounce, value: connection.phase == .connected)
-                    .frame(width: 40, height: 40)
+            PowerOrb(phase: connection.phase, isEnabled: connection.activeServer != nil, statusTitle: statusTitle) {
+                connection.toggle()
             }
-            .buttonStyle(.plain)
-            .glassEffect(.regular.tint(stateColor).interactive(), in: .circle)
-            .disabled(connection.activeServer == nil)
-            .accessibilityLabel(connection.phase == .off ? "Connect" : "Disconnect")
-            .accessibilityValue(statusTitle)
-
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle).font(.headline)
                 if case .failed(let message) = connection.phase {
                     Text(message).font(.caption).foregroundStyle(.red).lineLimit(3)
                     FailureActions(connection: connection) { model.openLogs(openWindow) }
-                } else if connection.activeServer == nil {
+                } else if let server = connection.activeServer {
+                    Text(server.name).font(.subheadline.weight(.medium)).lineLimit(1)
+                    Text(serverDetail(server, profile: active)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                } else {
                     Text("No server selected").font(.caption).foregroundStyle(.secondary)
                 }
             }
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 
-    private var isFailed: Bool {
-        if case .failed = connection.phase { return true }
-        return false
-    }
-
-    private var isBusy: Bool {
-        switch connection.phase {
-        case .connecting, .switching: true
-        default: false
-        }
-    }
-
-    private var stateColor: Color? {
-        switch connection.phase {
-        case .connected: .green
-        case .connecting, .switching: .orange
-        case .failed: .red
-        case .off: nil
-        }
+    /// Real delay for every server of the active server's group; the list then shows the fastest.
+    private func testGroup(of active: Profile?) {
+        guard let active else { return }
+        let ids = profiles.filter { $0.group?.id == active.group?.id && !$0.isStale }.map(\.id)
+        model.testReal(ids)
     }
 
     private var statusTitle: String {
@@ -288,6 +267,169 @@ struct MenuBarPanel: View {
         if !server.groupName.isEmpty { parts.append(server.groupName) }
         if let p = profile, p.delayState == .ok, let ms = p.delayMs { parts.append("\(ms) ms") }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// The connect control: a tinted glass button inside a ring. The ring is faint while off, a
+/// turning arc while the core starts or switches, and closes into a glowing circle once connected.
+private struct PowerOrb: View {
+    let phase: ConnectionController.Phase
+    let isEnabled: Bool
+    let statusTitle: String
+    let action: () -> Void
+
+    private var isOn: Bool { phase == .connected }
+
+    private var isBusy: Bool {
+        switch phase {
+        case .connecting, .switching: true
+        default: false
+        }
+    }
+
+    private var color: Color? {
+        switch phase {
+        case .connected: .green
+        case .connecting, .switching: .orange
+        case .failed: .red
+        case .off: nil
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(color ?? .clear)
+                .frame(width: 44, height: 44)
+                .blur(radius: 12)
+                .phaseAnimator([0.3, 0.65]) { glow, opacity in
+                    glow.opacity(isOn ? opacity : 0)
+                } animation: { _ in .easeInOut(duration: 1.8) }
+            Circle().stroke(.quaternary, lineWidth: 2.5)
+            Circle()
+                .trim(from: 0, to: phase == .off || isBusy ? 0 : 1)
+                .stroke(ringStyle, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            if isBusy {
+                TimelineView(.animation) { timeline in
+                    Circle()
+                        .trim(from: 0, to: 0.28)
+                        .stroke(ringStyle, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .rotationEffect(.degrees(timeline.date.timeIntervalSinceReferenceDate.remainder(dividingBy: 1.1) / 1.1 * 360))
+                }
+                .transition(.opacity)
+            }
+            Button(action: action) {
+                Image(systemName: "power")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(phase == .off ? Color.primary : Color.white)
+                    .symbolEffect(.bounce, value: isOn)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.regular.tint(color).interactive(), in: .circle)
+            .disabled(!isEnabled)
+            .accessibilityLabel(phase == .off ? "Connect" : "Disconnect")
+            .accessibilityValue(statusTitle)
+        }
+        .frame(width: 58, height: 58)
+        .animation(.smooth(duration: 0.6), value: phase)
+    }
+
+    private var ringStyle: AnyShapeStyle {
+        guard let color else { return AnyShapeStyle(.clear) }
+        return AnyShapeStyle(color.gradient)
+    }
+}
+
+/// Usage, expiry and the provider's links of the active server's subscription.
+private struct PanelSubscription: View {
+    let group: ServerGroup
+
+    static func hasContent(_ group: ServerGroup) -> Bool {
+        group.usedBytes != nil || group.expiresAt != nil || group.supportURL != nil || group.webPageURL != nil
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Subscription").foregroundStyle(.secondary)
+                Spacer()
+                if let expires = group.expiresAt { expiry(expires) }
+            }
+            .font(.caption)
+            if let used = group.usedBytes {
+                let total = group.totalBytes ?? 0
+                let fraction = total > 0 ? min(Double(used) / Double(total), 1) : 0
+                if total > 0 {
+                    Gauge(value: fraction) { EmptyView() }
+                        .gaugeStyle(.accessoryLinearCapacity)
+                        .tint(fraction >= 0.9 ? .red : (fraction >= 0.75 ? .orange : .accentColor))
+                }
+                HStack {
+                    Text(total > 0 ? "\(Format.bytes(used)) of \(Format.bytes(total))" : "\(Format.bytes(used)) used")
+                    Spacer()
+                    if total > 0 { Text("\(Format.bytes(max(total - used, 0))) left").foregroundStyle(.secondary) }
+                }
+                .font(.caption.monospacedDigit())
+                .accessibilityElement(children: .combine)
+            }
+            if group.supportURL != nil || group.webPageURL != nil {
+                HStack(spacing: 8) {
+                    if let url = group.supportURL.flatMap(URL.init(string:)) {
+                        link("Support", systemImage: "bubble.left", url: url)
+                    }
+                    if let url = group.webPageURL.flatMap(URL.init(string:)) {
+                        link("Account", systemImage: "person.crop.circle", url: url)
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+    }
+
+    private func expiry(_ date: Date) -> some View {
+        let state = Format.expiry(date, long: false)
+        return Label(state.text, systemImage: state.isWarning ? "exclamationmark.circle" : "calendar")
+            .labelStyle(CompactLabelStyle())
+            .foregroundStyle(state.isExpired ? Color.red : (state.isWarning ? Color.orange : Color.secondary))
+            .help("Expires \(date.formatted(date: .long, time: .omitted))")
+    }
+
+    private func link(_ title: String, systemImage: String, url: URL) -> some View {
+        Link(destination: url) {
+            Label(title, systemImage: systemImage)
+                .labelStyle(CompactLabelStyle())
+                .font(.caption)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(.quaternary, in: .capsule)
+                .contentShape(.capsule)
+        }
+        .accessibilityLabel("Open \(title.lowercased()) page")
+    }
+}
+
+/// Starts a real delay test of the active group, and shows its progress with a way to stop it.
+private struct PanelTestButton: View {
+    let latency: LatencyService
+    let start: () -> Void
+
+    var body: some View {
+        if latency.isRunning {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.mini)
+                Text("\(latency.completed)/\(latency.total)").monospacedDigit().foregroundStyle(.secondary)
+                Button("Stop") { latency.cancel() }
+            }
+            .font(.caption)
+            .buttonStyle(.borderless)
+        } else {
+            Button("Test", systemImage: "speedometer", action: start)
+                .font(.caption)
+                .buttonStyle(.borderless)
+                .help("Test the delay of every server in this group")
+        }
     }
 }
 

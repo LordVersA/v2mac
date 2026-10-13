@@ -2,7 +2,7 @@
 
 Status: agreed design, ready for implementation
 Date: 2026-10-09
-Target: macOS 26+, Apple Silicon, Swift 6 / SwiftUI, Xray-core v26.9.30
+Target: macOS 26+, Apple Silicon, Swift 6 / SwiftUI, Xray-core v26.10.10
 
 v2mac is a small, native macOS menu bar app that acts as a shell around
 [Xray-core](https://github.com/XTLS/Xray-core). It imports subscription links,
@@ -907,11 +907,17 @@ Icon by state: outline (stopped), animated (starting / switching), filled
 
 Panel, top to bottom:
 
-1. Connect toggle with state text ("Connected", "Connecting…", "Off", error).
-2. Active server name, group, last delay.
-3. Live download and upload rate.
+1. Connect control with state text ("Connected", "Connecting…", "Off", error),
+   the active server's name, group and last delay beside it. The control is a
+   tinted glass button in a ring: faint while off, a turning arc while starting
+   or switching, a closed glowing circle once connected.
+2. Exit location, then live download and upload rate.
+3. "Subscription" of the active server's group, when the provider sends any of
+   it: days left, usage bar with used, total and remaining, Support and Account
+   links.
 4. "Switch Server": up to six rows — the active server, then the fastest
-   tested servers of the active server's group. Click = activate.
+   tested servers of the active server's group. Click = activate. "Test" runs
+   a real delay test of the whole group and turns into progress with "Stop".
 5. Routing mode picker.
 6. Local address with a copy button.
 7. "Update available" row when relevant.
