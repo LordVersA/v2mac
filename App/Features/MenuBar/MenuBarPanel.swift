@@ -123,128 +123,147 @@ struct MenuBarPanel: View {
         let recent = recentServers(active: active)
         // A server is listed once: under "Recent" when it is there.
         let candidates = switchCandidates(active: active).filter { candidate in !recent.contains { $0.id == candidate.id } }
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             header(active: active)
+                .padding(.horizontal, 4)
+                .padding(.bottom, 2)
+
             if connection.phase == .connected {
-                switch connection.exit {
-                case .known(let exit):
-                    HStack(spacing: 6) {
-                        if let flag = exit.flag { Text(flag) }
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(exit.place() ?? "Unknown place").font(.callout)
-                            Text(exit.ip).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
-                        }
-                        Spacer()
-                        CopyButton("Copy exit address") { exit.ip }
-                            .labelStyle(.iconOnly)
-                            .buttonStyle(.borderless)
-                            .help("Copy exit address")
-                    }
-                case .failed:
-                    Label("No answer through this server", systemImage: "exclamationmark.triangle")
-                        .font(.caption).foregroundStyle(.orange)
-                case .checking:
-                    Text("Checking where traffic comes out…").font(.caption).foregroundStyle(.secondary)
-                case .unknown:
-                    EmptyView()
+                PanelCard {
+                    exitRow
+                    PanelRates(connection: connection)
                 }
-                PanelRates(connection: connection)
             }
 
             if let group = active?.group, PanelSubscription.hasContent(group) {
-                Divider()
-                PanelSubscription(group: group)
+                PanelCard { PanelSubscription(group: group) }
             }
 
-            if !recent.isEmpty {
-                Divider()
-                Text("Recent").font(.caption).foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(recent) { profile in
-                        SwitchRow(profile: profile, isActive: false, groupName: profile.group?.name) { model.activate(profile) }
+            if !recent.isEmpty || !candidates.isEmpty {
+                PanelCard {
+                    if !recent.isEmpty {
+                        PanelSectionTitle("Recent")
+                        rows(recent, showsGroup: true)
+                    }
+                    if !recent.isEmpty, !candidates.isEmpty { Divider() }
+                    if !candidates.isEmpty {
+                        HStack {
+                            PanelSectionTitle(active?.group?.name ?? "Switch Server")
+                            Spacer()
+                            PanelTestButton(latency: model.latency) { testGroup(of: active) }
+                        }
+                        rows(candidates, showsGroup: false)
                     }
                 }
             }
 
-            if !candidates.isEmpty {
+            PanelCard {
+                HStack {
+                    Text("Routing")
+                    Spacer()
+                    RoutingModeMenu(connection: connection, packs: model.regionPacks) {
+                        model.showRegionsSheet = true
+                        model.openMainWindow(openWindow)
+                    }
+                }
                 Divider()
                 HStack {
-                    Text("Switch Server").font(.caption).foregroundStyle(.secondary)
-                    if let name = active?.group?.name { GroupBadge(name: name) }
-                    Spacer()
-                    PanelTestButton(latency: model.latency) { testGroup(of: active) }
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(candidates) { profile in
-                        SwitchRow(profile: profile, isActive: profile.id == connection.activeServer?.id) {
-                            model.activate(profile)
-                        }
+                    Text("TUN Mode")
+                    if let note = connection.tun.statusNote, !connection.tun.isOn {
+                        Text(note).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
+                    Spacer()
+                    TunToggle(connection: connection, showsLabel: false)
                 }
-            }
-
-            Divider()
-            HStack {
-                Text("Routing").foregroundStyle(.secondary)
-                Spacer()
-                RoutingModeMenu(connection: connection, packs: model.regionPacks) {
-                    model.showRegionsSheet = true
-                    model.openMainWindow(openWindow)
+                if let failure = connection.tun.failureMessage {
+                    Text(failure).font(.caption).foregroundStyle(.orange).lineLimit(3)
+                }
+                Divider()
+                HStack {
+                    Text("Local Proxy")
+                    Spacer()
+                    Text(connection.localAddress).font(.callout.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                    CopyButton("Copy local proxy address") { connection.localAddress }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.borderless)
+                        .help("Copy address")
                 }
             }
             .font(.callout)
-
-            HStack {
-                Text("TUN Mode").foregroundStyle(.secondary)
-                if let note = connection.tun.statusNote, !connection.tun.isOn {
-                    Text(note).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
-                Spacer()
-                TunToggle(connection: connection, showsLabel: false)
-            }
-            .font(.callout)
-            if let failure = connection.tun.failureMessage {
-                Text(failure).font(.caption).foregroundStyle(.orange).lineLimit(3)
-            }
-
-            HStack {
-                Text(connection.localAddress).font(.callout.monospaced())
-                Spacer()
-                CopyButton("Copy local proxy address") { connection.localAddress }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .help("Copy address")
-            }
 
             if let release = model.updates.availableAppUpdate {
-                Divider()
-                HStack {
-                    if model.updates.isInstallingApp {
-                        AppDownloadProgress(release: release)
-                    } else {
-                        Label("V2Mac \(release.version) is available", systemImage: "arrow.down.circle.fill")
-                        Spacer()
-                        Button("Update Now") { Task { await model.updates.installApp(release) } }
-                            .controlSize(.small)
+                PanelCard {
+                    HStack {
+                        if model.updates.isInstallingApp {
+                            AppDownloadProgress(release: release)
+                        } else {
+                            Label("V2Mac \(release.version) is available", systemImage: "arrow.down.circle.fill")
+                            Spacer()
+                            Button("Update Now") { Task { await model.updates.installApp(release) } }
+                                .controlSize(.small)
+                        }
                     }
+                    .font(.callout)
                 }
-                .font(.callout)
             }
 
-            Divider()
             HStack {
                 Button("Open V2Mac", systemImage: "macwindow") { model.openMainWindow(openWindow) }
+                Spacer()
                 Button("Settings", systemImage: "gearshape") { model.openSettings(openSettings) }
                     .labelStyle(.iconOnly)
-                Spacer()
+                    .help("Settings")
                 Button("Quit", systemImage: "power.circle") { NSApp.terminate(nil) }
                     .labelStyle(.iconOnly)
+                    .help("Quit V2Mac")
             }
             .buttonStyle(.borderless)
+            .padding(.horizontal, 6)
+            .padding(.top, 2)
         }
-        .padding(14)
-        .frame(width: 320)
+        .padding(12)
+        .frame(width: 330)
         .animation(.smooth(duration: 0.35), value: connection.phase)
+    }
+
+    /// Where traffic comes out, once the exit check has answered.
+    @ViewBuilder
+    private var exitRow: some View {
+        switch connection.exit {
+        case .known(let exit):
+            HStack(spacing: 8) {
+                if let flag = exit.flag { Text(flag).font(.title3) }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(exit.place() ?? "Unknown place").font(.callout)
+                    Text(exit.ip).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                }
+                Spacer()
+                CopyButton("Copy exit address") { exit.ip }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .help("Copy exit address")
+            }
+        case .failed:
+            Label("No answer through this server", systemImage: "exclamationmark.triangle")
+                .font(.caption).foregroundStyle(.orange)
+        case .checking:
+            Text("Checking where traffic comes out…").font(.caption).foregroundStyle(.secondary)
+        case .unknown:
+            EmptyView()
+        }
+    }
+
+    private func rows(_ servers: [Profile], showsGroup: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(servers) { profile in
+                SwitchRow(profile: profile, isActive: profile.id == connection.activeServer?.id,
+                          groupName: showsGroup ? profile.group?.name : nil) {
+                    model.activate(profile)
+                }
+            }
+        }
+        // The hover highlight reaches the card's edge, as in a system menu.
+        .padding(.horizontal, -6)
     }
 
     private func header(active: Profile?) -> some View {
@@ -493,29 +512,33 @@ private struct PanelRates: View {
     }
 }
 
-/// The name of a subscription as a small capsule, beside a server or a list that belongs to it.
-struct GroupBadge: View {
-    let name: String
+/// A translucent rounded group, as the modules of Control Centre: related rows share one.
+private struct PanelCard<Content: View>: View {
+    @ViewBuilder var content: Content
 
     var body: some View {
-        Text(name)
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 1.5)
-            .background(.quaternary, in: .capsule)
-            .frame(maxWidth: 96, alignment: .leading)
-            .accessibilityLabel("Subscription \(name)")
+        VStack(alignment: .leading, spacing: 8) { content }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.fill.quaternary, in: .rect(cornerRadius: 12))
     }
 }
 
-/// One server in the quick-switch list, with its flag and a hover highlight.
+private struct PanelSectionTitle: View {
+    let title: String
+
+    init(_ title: String) { self.title = title }
+
+    var body: some View {
+        Text(title).font(.caption).bold().foregroundStyle(.secondary).lineLimit(1)
+    }
+}
+
+/// One server in the quick-switch lists, with its flag and a hover highlight. A row that can come
+/// from any subscription names it on a second line.
 private struct SwitchRow: View {
     let profile: Profile
     let isActive: Bool
-    /// Shown for rows that can come from any subscription.
     var groupName: String?
     let action: () -> Void
     @State private var hovering = false
@@ -524,20 +547,26 @@ private struct SwitchRow: View {
         let name = ServerName(profile.name)
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: "checkmark")
-                    .opacity(isActive ? 1 : 0)
-                    .animation(.smooth(duration: 0.3), value: isActive)
-                    .frame(width: 14)
-                if let flag = name.flag { Text(flag) }
-                Text(name.title).lineLimit(1)
-                if let groupName { GroupBadge(name: groupName) }
-                Spacer()
+                Text(name.flag ?? "🌐")
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(name.title).lineLimit(1)
+                    if let groupName {
+                        Text(groupName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 6)
                 DelayText(row: ServerRow(profile)).font(.caption)
+                if isActive {
+                    Image(systemName: "checkmark")
+                        .font(.caption.bold())
+                        .foregroundStyle(.tint)
+                        .accessibilityLabel("Active")
+                }
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
-            .background(hovering ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 6))
-            .contentShape(Rectangle())
+            .background(hovering ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 7))
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .animation(.easeOut(duration: 0.12), value: hovering)

@@ -905,7 +905,9 @@ not through a signing identity.
 Icon by state: outline (stopped), animated (starting / switching), filled
 (running), filled with warning badge (failed).
 
-Panel, top to bottom:
+Panel, top to bottom. Related rows share a translucent rounded card (a
+hierarchical fill, so the panel's glass shows through), as the modules of
+Control Centre do; the connect control and the last row stand outside one:
 
 1. Connect control (dimmed and disabled with no server selected) with state text ("Connected", "Connecting…", "Off", error),
    the active server's name, group and last delay beside it. The control is a
@@ -918,8 +920,9 @@ Panel, top to bottom:
    it: days left, usage bar with used, total and remaining, Support and Account
    links.
 4. "Recent": the last three other servers a connection came up on, newest
-   first, from any group (the app remembers six). Click = activate.
-5. "Switch Server": up to six rows — the active server, then the fastest
+   first, from any group (the app remembers six), each with its subscription's
+   name on a second line. Click = activate.
+5. The active group's name as the title of the switch list: up to six rows — the active server, then the fastest
    tested servers of the active server's group. Click = activate. "Test" runs
    a real delay test of the whole group and turns into progress with "Stop".
 6. Routing mode picker.
