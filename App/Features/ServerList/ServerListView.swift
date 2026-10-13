@@ -62,6 +62,12 @@ struct ServerListView: View {
                     GroupHeader(group: group)
                         .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
+                else {
+                    // Keeps the table from reaching up behind the toolbar, as a subscription's header
+                    // does. There it draws a lighter band only as wide as itself, whose end shows as
+                    // an edge through the search field when the inspector is open beside it.
+                    Color.clear.frame(height: 1)
+                }
                 ServerTable(rows: rows, profiles: profiles, showsGroup: selectedGroupID == nil, sortOrder: $sortOrder)
                 .overlay {
                     ZStack {
