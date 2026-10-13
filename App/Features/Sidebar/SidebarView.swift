@@ -119,6 +119,7 @@ private struct SidebarRecents: View {
                             Text(name.flag ?? "🌐")
                             Text(name.title).lineLimit(1)
                             Spacer(minLength: 4)
+                            if let group = profile.group?.name { GroupBadge(name: group) }
                             if isActive {
                                 Image(systemName: "checkmark").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                                     .accessibilityLabel("Active")

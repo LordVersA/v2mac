@@ -161,7 +161,7 @@ struct MenuBarPanel: View {
                 Text("Recent").font(.caption).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(recent) { profile in
-                        SwitchRow(profile: profile, isActive: false) { model.activate(profile) }
+                        SwitchRow(profile: profile, isActive: false, groupName: profile.group?.name) { model.activate(profile) }
                     }
                 }
             }
@@ -170,6 +170,7 @@ struct MenuBarPanel: View {
                 Divider()
                 HStack {
                     Text("Switch Server").font(.caption).foregroundStyle(.secondary)
+                    if let name = active?.group?.name { GroupBadge(name: name) }
                     Spacer()
                     PanelTestButton(latency: model.latency) { testGroup(of: active) }
                 }
@@ -492,10 +493,30 @@ private struct PanelRates: View {
     }
 }
 
+/// The name of a subscription as a small capsule, beside a server or a list that belongs to it.
+struct GroupBadge: View {
+    let name: String
+
+    var body: some View {
+        Text(name)
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1.5)
+            .background(.quaternary, in: .capsule)
+            .frame(maxWidth: 96, alignment: .leading)
+            .accessibilityLabel("Subscription \(name)")
+    }
+}
+
 /// One server in the quick-switch list, with its flag and a hover highlight.
 private struct SwitchRow: View {
     let profile: Profile
     let isActive: Bool
+    /// Shown for rows that can come from any subscription.
+    var groupName: String?
     let action: () -> Void
     @State private var hovering = false
 
@@ -509,6 +530,7 @@ private struct SwitchRow: View {
                     .frame(width: 14)
                 if let flag = name.flag { Text(flag) }
                 Text(name.title).lineLimit(1)
+                if let groupName { GroupBadge(name: groupName) }
                 Spacer()
                 DelayText(row: ServerRow(profile)).font(.caption)
             }
