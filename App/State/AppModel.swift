@@ -100,6 +100,7 @@ final class AppModel {
             seedDemoData()
             revealHook()
             editorHook()
+            windowRequestHook()
             if UserDefaults.standard.bool(forKey: "debugFakeUpdates") { updates.fakeUpdates() }
             AppDelegate.model = self
             return
@@ -557,6 +558,18 @@ final class AppModel {
         }
     }
 
+    /// `-debugWindowRequest <settings tab>|main`: what a click on a notification does. Works with
+    /// demo data, so `-debugSnapshot` can show a settings tab.
+    private func windowRequestHook() {
+        guard let target = UserDefaults.standard.string(forKey: "debugWindowRequest") else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            windowRequest = WindowRequest(code: target == "main" ? "main" : "settings:\(target)")
+            try? await Task.sleep(for: .seconds(1))
+            print("[v2mac-debug] window request handled: \(windowRequest == nil), settings tab \(settingsTab.rawValue)")
+        }
+    }
+
     /// `-debugAddSubscription <url> -debugActivateFirst YES` for scripted verification.
     private func runDebugHooks() {
         setvbuf(stdout, nil, _IOLBF, 0)
@@ -580,15 +593,7 @@ final class AppModel {
                 print("[v2mac-debug] login item \(action) failed: \(error)")
             }
         }
-        // `-debugWindowRequest <settings tab>|main`: what a click on a notification does.
-        if let target = defaults.string(forKey: "debugWindowRequest") {
-            Task {
-                try? await Task.sleep(for: .seconds(2))
-                windowRequest = WindowRequest(code: target == "main" ? "main" : "settings:\(target)")
-                try? await Task.sleep(for: .seconds(1))
-                print("[v2mac-debug] window request handled: \(windowRequest == nil), settings tab \(settingsTab.rawValue)")
-            }
-        }
+        windowRequestHook()
         // `-debugListDelivered <seconds>`: what Notification Center holds after that long.
         if defaults.integer(forKey: "debugListDelivered") > 0 {
             Task {

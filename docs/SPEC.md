@@ -1157,7 +1157,7 @@ A sheet that adds a server by hand or changes one, field by field.
 | Core | Version, Check for Update, Revert to Bundled | — |
 | Advanced | Log level: error / warning / info / debug | warning |
 | | Log connections | Off |
-| About | Version, source link, licences and attributions | — |
+| About | Version, Share V2Mac and Copy Link, project links (repository, release notes, new issue), developer links, licences and attributions | — |
 
 Changing Port, LAN, credentials, Mode, Log level, Log connections, fragment, noise
 or DNS while connected restarts the core.
