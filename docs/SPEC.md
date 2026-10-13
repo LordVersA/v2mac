@@ -954,8 +954,9 @@ updating, a warning glyph when the last update failed (tooltip shows the
 error). Drag to reorder. Context menu: Update via Proxy, Update without Proxy,
 Rename, Edit URL…, Copy URL, Auto-update (toggle), Delete…. Deleting the group
 that owns the active server asks for confirmation and disconnects. At the end, "Recent":
-the last five servers a connection came up on, newest first, the active one
-marked. Click = activate.
+the last five servers a connection came up on, newest first, each with its
+subscription's name on a second line and the active one marked with a dot
+(green while connected). Click = activate.
 
 **Group header** (above the table, when a group is selected): last updated time
 and route, "N skipped" if any, and when available a thin usage bar with
