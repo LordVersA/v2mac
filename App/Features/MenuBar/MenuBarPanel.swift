@@ -297,48 +297,60 @@ private struct PowerOrb: View {
     }
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(color ?? .clear)
-                .frame(width: 44, height: 44)
-                .blur(radius: 12)
-                .phaseAnimator([0.3, 0.65]) { glow, opacity in
-                    glow.opacity(isOn ? opacity : 0)
-                } animation: { _ in .easeInOut(duration: 1.8) }
-            Circle().stroke(.quaternary, lineWidth: 2.5)
-            Circle()
-                .trim(from: 0, to: phase == .off || isBusy ? 0 : 1)
-                .stroke(ringStyle, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            if isBusy {
-                TimelineView(.animation) { timeline in
-                    Circle()
-                        .trim(from: 0, to: 0.28)
-                        .stroke(ringStyle, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                        .rotationEffect(.degrees(timeline.date.timeIntervalSinceReferenceDate.remainder(dividingBy: 1.1) / 1.1 * 360))
+        // The whole orb is the button, ring included: a click anywhere on it counts.
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(color ?? .clear)
+                    .frame(width: 44, height: 44)
+                    .blur(radius: 12)
+                    .phaseAnimator([0.3, 0.65]) { glow, opacity in
+                        glow.opacity(isOn ? opacity : 0)
+                    } animation: { _ in .easeInOut(duration: 1.8) }
+                Circle().stroke(.quaternary, lineWidth: 2.5)
+                Circle()
+                    .trim(from: 0, to: phase == .off || isBusy ? 0 : 1)
+                    .stroke(ringStyle, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                if isBusy {
+                    TimelineView(.animation) { timeline in
+                        Circle()
+                            .trim(from: 0, to: 0.28)
+                            .stroke(ringStyle, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                            .rotationEffect(.degrees(timeline.date.timeIntervalSinceReferenceDate.remainder(dividingBy: 1.1) / 1.1 * 360))
+                    }
+                    .transition(.opacity)
                 }
-                .transition(.opacity)
-            }
-            Button(action: action) {
                 Image(systemName: "power")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(phase == .off ? Color.primary : Color.white)
                     .symbolEffect(.bounce, value: isOn)
                     .frame(width: 44, height: 44)
+                    // Not interactive glass: it takes the click for itself, and the button misses some.
+                    .glassEffect(.regular.tint(color), in: .circle)
             }
-            .buttonStyle(.plain)
-            .glassEffect(.regular.tint(color).interactive(), in: .circle)
-            .disabled(!isEnabled)
-            .accessibilityLabel(phase == .off ? "Connect" : "Disconnect")
-            .accessibilityValue(statusTitle)
+            .frame(width: 58, height: 58)
+            .contentShape(.circle)
         }
-        .frame(width: 58, height: 58)
+        .buttonStyle(PressScaleStyle())
+        .disabled(!isEnabled)
+        .accessibilityLabel(phase == .off ? "Connect" : "Disconnect")
+        .accessibilityValue(statusTitle)
         .animation(.smooth(duration: 0.6), value: phase)
     }
 
     private var ringStyle: AnyShapeStyle {
         guard let color else { return AnyShapeStyle(.clear) }
         return AnyShapeStyle(color.gradient)
+    }
+}
+
+/// Presses in a little, in place of the system button look.
+private struct PressScaleStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.snappy(duration: 0.2), value: configuration.isPressed)
     }
 }
 
