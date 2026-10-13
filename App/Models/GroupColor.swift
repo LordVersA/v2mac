@@ -45,15 +45,18 @@ extension ServerGroup {
 struct GroupTag: View {
     let name: String
     let color: GroupColor
+    /// Increased on a selected table row, where the colour would vanish into the highlight.
+    @Environment(\.backgroundProminence) private var prominence
 
     var body: some View {
+        let onHighlight = prominence == .increased
         Text(name)
             .font(.caption)
-            .foregroundStyle(color.color)
+            .foregroundStyle(onHighlight ? AnyShapeStyle(.white) : AnyShapeStyle(color.color))
             .lineLimit(1)
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
-            .background(color.color.opacity(0.16), in: .capsule)
+            .background(onHighlight ? AnyShapeStyle(.white.opacity(0.22)) : AnyShapeStyle(color.color.opacity(0.16)), in: .capsule)
             .accessibilityLabel("Subscription \(name)")
     }
 }

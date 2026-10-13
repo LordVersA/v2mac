@@ -338,7 +338,7 @@ private struct ServerTable: View {
                 TableColumn("Subscription", value: \.groupName) { row in
                     GroupTag(name: row.groupName, color: row.groupColor)
                 }
-                .width(min: 80, ideal: 130)
+                .width(min: 80, ideal: 160)
                 .customizationID("group")
 
                 TableColumn("Type", value: \.typeSummary) { row in
@@ -512,7 +512,7 @@ struct SpeedText: View {
 }
 
 /// "vless · ws · tls" as the protocol in plain text, then transport and security as small tags.
-private struct TypeTags: View {
+struct TypeTags: View {
     let summary: String
 
     var body: some View {

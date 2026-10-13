@@ -479,6 +479,11 @@ final class AppModel {
         }
         if UserDefaults.standard.bool(forKey: "debugShowFavorites") { sidebarSelection = .favorites }
         try? context.save()
+        // `-debugSelect <part of a name>`: that server selected, so the inspector shows it.
+        if let part = UserDefaults.standard.string(forKey: "debugSelect"),
+           let match = (try? context.fetch(FetchDescriptor<Profile>()))?.first(where: { $0.name.contains(part) }) {
+            selectedProfileIDs = [match.id]
+        }
         // `-debugActivateFirst YES`: an active server, so the bar and the menu bar panel are filled in.
         if UserDefaults.standard.bool(forKey: "debugActivateFirst"),
            let first = (try? context.fetch(FetchDescriptor<Profile>()))?.first(where: { $0.name.contains("Frankfurt") }) {

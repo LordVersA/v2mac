@@ -77,6 +77,7 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     in the dev build's own data. They do not connect; they are for trying the lists by hand.
   - `-debugDemoData YES` uses an in-memory store filled with made-up servers. Use it for UI checks
     and README screenshots, so no real server ever appears on screen.
+    With it, `-debugSelect <part of a name>` selects a server, so a snapshot shows the inspector.
   - `-debugSnapshot <path prefix>` makes the app draw each of its open windows, toolbar included,
     into `<prefix>-<n>.png` after 4 seconds (`-debugSnapshotDelay` for longer). Use it to look at a
     UI change: it needs no screen recording permission and works with `-debugDemoData YES`. Glass

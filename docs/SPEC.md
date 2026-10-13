@@ -981,6 +981,15 @@ by name, address and type. Single click selects (drives the inspector).
 Double-click or Return activates. Context menu: Connect, Test Delay, TCP Ping,
 Copy Share Link, Show QR Code. A warning glyph on rows that carry `warnings`.
 
+**Inspector.** For the selected server, top to bottom: flag, name and its
+subscription's tag; Connect; a row of round buttons (favorite, copy share
+link, QR code, edit). "Live", only for the active server while connected: exit
+location, traffic graph and rates. "Performance": delay in the table's colours
+with when it was tested, speed, and "Test Now" (real delay of this server).
+"Connection": Type as in the table, the address with a copy button on hover,
+and "More" (protocol, transport, security, SNI / host, fingerprint, flow).
+Warnings last.
+
 **Toolbar.** Add (＋). Update menu button (via proxy / without proxy; acts on
 the selected group, or all groups in "All"). Test menu button (Real Delay as
 the primary action, TCP Ping in the menu; acts on the selection, or on all
