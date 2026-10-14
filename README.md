@@ -74,6 +74,14 @@ Automatic server selection is off by default. Connection settings explain real H
 
 Requires macOS 26 or later on Apple Silicon.
 
+With [Homebrew](https://brew.sh), one command installs it and skips the Gatekeeper prompt, so you can go straight to step 3:
+
+```sh
+brew install --cask lordversa/tap/v2mac
+```
+
+Update later with `brew upgrade --cask v2mac`. Or install by hand:
+
 1. Download `V2Mac-<version>.dmg` from [Releases](../../releases) and drag **V2Mac** to **Applications**.
 2. The app is not notarized, so macOS blocks the first launch. Open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**. Or run:
    ```sh

@@ -76,6 +76,14 @@
 
 به macOS 26 یا جدیدتر روی Apple Silicon نیاز دارد.
 
+با [Homebrew](https://brew.sh) یک دستور برنامه را نصب می‌کند و هشدار Gatekeeper را هم برمی‌دارد، پس می‌توانید مستقیم به مرحله ۳ بروید:
+
+```sh
+brew install --cask lordversa/tap/v2mac
+```
+
+برای به‌روزرسانی بعدی `brew upgrade --cask v2mac` را اجرا کنید. یا دستی نصب کنید:
+
 1. فایل `V2Mac-<version>.dmg` را از [Releases](../../releases) دانلود کنید و **V2Mac** را به پوشه **Applications** بکشید.
 2. برنامه notarize نشده است، پس macOS اولین اجرا را مسدود می‌کند. یک بار آن را باز کنید، سپس به **System Settings → Privacy & Security** بروید و روی **Open Anyway** بزنید. یا این دستور را در Terminal اجرا کنید:
 
