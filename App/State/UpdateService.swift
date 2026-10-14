@@ -42,6 +42,8 @@ final class UpdateService {
     private(set) var appProgress: DownloadProgress?
     /// Smoothed download speed in bytes per second.
     private(set) var appDownloadRate: Double?
+    /// What `brew` is doing while a Homebrew install of the app updates; nil otherwise.
+    private(set) var brewStep: String?
     private(set) var coreProgress: DownloadProgress?
     private(set) var coreDownloadRate: Double?
     private var appRate = RateTracker()
@@ -80,6 +82,20 @@ final class UpdateService {
         (Bundle.main.object(forInfoDictionaryKey: "V2MacRepository") as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
+
+    /// The Homebrew installation that installed this copy, which then updates it instead.
+    /// Never for a Debug build: its upgrade would replace the installed release.
+    static var homebrew: BrewUpdater? {
+        #if DEBUG
+        nil
+        #else
+        Bundle.main.bundleIdentifier == "io.github.lordversa.v2mac" && Bundle.main.bundleURL.lastPathComponent == AppInstaller.appName
+            ? BrewUpdater.locate() : nil
+        #endif
+    }
+
+    /// Where the upgrade script leaves `brew`'s exit status (and its output, with `.log`).
+    private static var brewStatusFile: URL { AppPaths.runDirectory.appendingPathComponent("brew-upgrade.status") }
 
     private var downloader: FileDownloader { FileDownloader(routes: downloadRoutes(), timeout: 30) }
 
@@ -187,6 +203,10 @@ final class UpdateService {
         appProgress = nil
         appDownloadRate = nil
         appRate = RateTracker()
+        if let brew = Self.homebrew {
+            await installWithHomebrew(release, brew: brew)
+            return
+        }
         do {
             let target = Bundle.main.bundleURL
             try AppInstaller.checkReplaceable(target)
@@ -218,6 +238,31 @@ final class UpdateService {
         }
     }
 
+    /// Lets `brew` download the release while the proxy still runs, then quits; a detached script
+    /// runs `brew upgrade` once the app is gone and opens it again. Untouched on any failure here.
+    private func installWithHomebrew(_ release: AppRelease, brew: BrewUpdater) async {
+        brewStep = "Downloading V2Mac \(release.version) with Homebrew…"
+        do {
+            try await brew.prepare(version: release.version, routes: downloadRoutes())
+            try brew.scheduleUpgrade(
+                app: Bundle.main.bundleURL,
+                processID: ProcessInfo.processInfo.processIdentifier,
+                statusFile: Self.brewStatusFile
+            )
+            // See installApp for why this is not a direct call.
+            NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
+        } catch {
+            brewStep = nil
+            appStatus = .installFailed(release, error.localizedDescription)
+        }
+    }
+
+    /// Reports a `brew upgrade` that failed after the app quit for it; the old version then reopened.
+    private func reportHomebrewResult() {
+        guard BrewUpdater.takeResult(Self.brewStatusFile) == false else { return }
+        appStatus = .unavailable("Homebrew could not install the update. Run “brew upgrade --cask v2mac” in Terminal to see why.")
+    }
+
     private func updateProgress(_ progress: DownloadProgress) {
         guard case .installing = appStatus else { return }
         appDownloadRate = appRate.add(progress.received)
@@ -232,6 +277,7 @@ final class UpdateService {
 
     /// Checks shortly after launch, then re-evaluates hourly (the 24 h throttle applies).
     func startScheduler() {
+        reportHomebrewResult()
         schedulerTask?.cancel()
         schedulerTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(10))
