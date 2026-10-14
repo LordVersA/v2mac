@@ -183,11 +183,16 @@ private struct InspectorPerformance: View {
                 }
             }
         }
-        if let speed = profile.speedBps, speed > 0 {
-            LabeledContent("Speed") { Text(Format.rate(speed)).monospacedDigit() }
+        let isSpeedTesting = model.latency.speedTestingIDs.contains(profile.id)
+        if isSpeedTesting || (profile.speedBps ?? 0) > 0 {
+            let live = model.latency.liveSpeed
+            LabeledContent("Speed") {
+                SpeedText(row: row, isTesting: isSpeedTesting, live: live?.id == profile.id ? live : nil)
+            }
         }
+        // Another test may be running: this one is queued after it.
         Button(isTesting ? "Testing…" : "Test Now", systemImage: "speedometer") { model.testReal([profile.id]) }
-            .disabled(model.latency.isRunning)
+            .disabled(isTesting)
             .frame(maxWidth: .infinity)
     }
 }

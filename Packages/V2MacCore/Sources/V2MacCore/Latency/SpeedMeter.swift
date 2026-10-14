@@ -19,6 +19,9 @@ public struct SpeedMeter: Sendable {
     private var samples: [(time: Double, bytes: Int64)] = [(0, 0)]
     /// Highest window speed seen, in bytes per second.
     public private(set) var peak: Double = 0
+    /// Speed right now, for showing the test as it runs: the latest window, or the average
+    /// so far while the first window is still filling.
+    public private(set) var current: Double = 0
     private var peakTime: Double = 0
     private var bar: Double = 0
 
@@ -27,10 +30,16 @@ public struct SpeedMeter: Sendable {
     /// Returns true when the test should stop.
     public mutating func add(elapsed: Double, bytes: Int64) -> Bool {
         samples.append((elapsed, bytes))
-        guard elapsed >= window else { return false }
+        guard elapsed >= window else {
+            // The first bytes arrive in a burst: averaged over a few milliseconds they read as
+            // gigabytes per second, so wait for a fifth of the window.
+            if elapsed >= window / 5 { current = Self.average(bytes: bytes, elapsed: elapsed) }
+            return false
+        }
         let start = samples.last { $0.time <= elapsed - window } ?? samples[0]
         samples.removeAll { $0.time < start.time }
         let speed = Double(bytes - start.bytes) / (elapsed - start.time)
+        current = speed
         peak = max(peak, speed)
         if speed > bar * improvement {
             bar = speed

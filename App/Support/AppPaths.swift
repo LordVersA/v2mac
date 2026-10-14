@@ -312,6 +312,14 @@ enum Format {
         return ByteCountFormatter.string(fromByteCount: Int64(bytesPerSecond), countStyle: .binary) + "/s"
     }
 
+    /// A rate that keeps its shape while it changes: whole kilobytes below one megabyte, then
+    /// always one decimal (`6.0 MB/s`), so a decimal point never comes and goes.
+    static func steadyRate(_ bytesPerSecond: Double) -> String {
+        let kb = bytesPerSecond / 1024
+        if kb < 1000 { return String(format: "%.0f KB/s", kb) }
+        return String(format: "%.1f MB/s", kb / 1024)
+    }
+
     /// `12.3 MB`, always in megabytes so "received of total" reads consistently.
     static func megabytes(_ value: Int64) -> String {
         String(format: "%.1f MB", Double(value) / 1_048_576)

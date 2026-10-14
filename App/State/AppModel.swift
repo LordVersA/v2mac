@@ -622,6 +622,31 @@ final class AppModel {
             }
         }
         windowRequestHook()
+        // `-debugQueueTests <part of a subscription name>`: a speed test of that subscription, then a
+        // real delay test of every other server asked for while it runs, as from the menu bar and
+        // then the window. Prints the live speed and what the tests left in the store.
+        if let groupName = defaults.string(forKey: "debugQueueTests") {
+            Task {
+                try? await Task.sleep(for: .seconds(1))
+                let all = (try? container.mainContext.fetch(FetchDescriptor<Profile>())) ?? []
+                let first = all.filter { $0.group?.name.localizedCaseInsensitiveContains(groupName) == true }
+                let rest = all.filter { p in !first.contains { $0.id == p.id } }.map(\.id)
+                latency.testSpeed(first.map(\.id))
+                try? await Task.sleep(for: .milliseconds(300))
+                latency.testReal(rest)
+                print("[v2mac-debug] queued: speed \(first.count), real \(rest.count), total \(latency.total)")
+                var last: LatencyService.LiveSpeed?
+                while latency.isRunning {
+                    if latency.liveSpeed != last {
+                        last = latency.liveSpeed
+                        if let live = last { print("[v2mac-debug] live \(live.id.uuidString.prefix(8)): \(live.bps.map(Format.rate) ?? "connecting")") }
+                    }
+                    try? await Task.sleep(for: .milliseconds(50))
+                }
+                let states = ((try? container.mainContext.fetch(FetchDescriptor<Profile>())) ?? []).map { "\($0.delayState.rawValue)\($0.speedBps.map { "+" + Format.rate($0) } ?? "")" }
+                print("[v2mac-debug] after run: \(Dictionary(grouping: states) { $0 }.mapValues(\.count))")
+            }
+        }
         // `-debugListDelivered <seconds>`: what Notification Center holds after that long.
         if defaults.integer(forKey: "debugListDelivered") > 0 {
             Task {

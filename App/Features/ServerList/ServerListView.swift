@@ -148,18 +148,22 @@ struct ServerListView: View {
         }
         ToolbarSpacer(.fixed)
         ToolbarItem {
-            if isTesting {
-                StopTestingButton(latency: latency)
-            } else {
+            // Test stays available while a run goes on: what it asks for is queued after it.
+            HStack(spacing: 0) {
                 ToolbarSplitButton(
                     title: "Test", systemImage: "speedometer", isSpinning: false,
-                    help: "Test delay (⌘T)", menuHelp: "Choose a test"
+                    help: isTesting ? "Test delay after the running test (⌘T)" : "Test delay (⌘T)",
+                    menuHelp: "Choose a test"
                 ) {
                     model.testReal()
                 } menu: {
                     Button("Real Delay") { model.testReal() }
                     Button("Speed Test") { model.testSpeed() }
                     Button("TCP Ping") { model.testTCP() }
+                }
+                if isTesting {
+                    Divider().frame(height: 16)
+                    StopTestingButton(latency: latency)
                 }
             }
         }
@@ -277,8 +281,13 @@ private struct StopTestingButton: View {
 
     var body: some View {
         Button { latency.cancel() } label: {
-            Label("Stop Testing", systemImage: "stop.circle")
+            Image(systemName: "stop.circle")
+                .font(.system(size: 15, weight: .medium))
+                .frame(width: 33, height: 28)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Stop Testing")
         .help("Stop testing (\(latency.completed)/\(latency.total))")
     }
 }
@@ -369,7 +378,9 @@ private struct ServerTable: View {
                 .customizationID("delay")
 
                 TableColumn("Speed", value: \.speedSortKey) { row in
-                    SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id))
+                    let live = model.latency.liveSpeed
+                    SpeedText(row: row, isTesting: model.latency.speedTestingIDs.contains(row.id),
+                              live: live?.id == row.id ? live : nil)
                 }
                 .width(min: 84, ideal: 96)
                 .alignment(.trailing)
@@ -501,9 +512,34 @@ struct DelayText: View {
 struct SpeedText: View {
     let row: ServerRow
     var isTesting = false
+    /// Set while this row's download runs, so the speed shows as it is measured.
+    var live: LatencyService.LiveSpeed?
 
     var body: some View {
-        if isTesting {
+        if isTesting, let live {
+            if let bps = live.bps {
+                // Several readings a second: a fixed format in a fixed width, and no animation,
+                // so the text changes in place instead of shifting.
+                Label {
+                    // The widest reading, hidden, holds the width.
+                    ZStack(alignment: .trailing) {
+                        Text("000.0 MB/s").hidden()
+                        Text(Format.steadyRate(bps))
+                    }
+                    .monospacedDigit()
+                } icon: {
+                    Image(systemName: "arrow.down")
+                }
+                .labelStyle(CompactLabelStyle())
+                .foregroundStyle(.tint)
+                .transaction { $0.animation = nil }
+                .help("Downloading: current speed")
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Testing, \(Format.rate(bps))")
+            } else {
+                Text("Connecting…").foregroundStyle(.secondary)
+            }
+        } else if isTesting {
             ProgressView().controlSize(.small)
         } else if let bps = row.speedBps {
             if bps > 0 {

@@ -115,11 +115,16 @@ public struct RealDelayTester: Sendable {
 
     /// Results are delivered as they arrive. Cancelling the calling task stops outstanding
     /// requests and kills the throwaway core.
+    ///
+    /// `onSpeedProgress` follows each download as it runs: `nil` once it starts (still
+    /// connecting), then the current speed in bytes per second a few times a second.
     public func run(
         _ targets: [LatencyTarget],
         onResult: @escaping @Sendable (LatencyResult) async -> Void,
-        onSpeed: @escaping @Sendable (SpeedResult) async -> Void = { _ in }
+        onSpeed: @escaping @Sendable (SpeedResult) async -> Void = { _ in },
+        onSpeedProgress: @escaping @Sendable (UUID, Double?) async -> Void = { _, _ in }
     ) async {
+        let handlers = Handlers(onResult: onResult, onSpeed: onSpeed, onSpeedProgress: onSpeedProgress)
         let outbounds = targets.filter { $0.kind == .outbound }
         let customs = targets.filter { $0.kind == .custom }
 
@@ -132,18 +137,24 @@ public struct RealDelayTester: Sendable {
                 let pinned = await InsecureTLS.pinning(batch.map(\.config), timeout: min(options.timeout, 4))
                 for i in batch.indices { batch[i].config = pinned[i] }
             }
-            await testBatch(batch, onResult: onResult, onSpeed: onSpeed)
+            await testBatch(batch, handlers)
             index = end
         }
         for target in customs {
             if Task.isCancelled { return }
-            await testCustom(target, onResult: onResult, onSpeed: onSpeed)
+            await testCustom(target, handlers)
         }
+    }
+
+    private struct Handlers: Sendable {
+        let onResult: @Sendable (LatencyResult) async -> Void
+        let onSpeed: @Sendable (SpeedResult) async -> Void
+        let onSpeedProgress: @Sendable (UUID, Double?) async -> Void
     }
 
     // MARK: Batches
 
-    private func testBatch(_ batch: [LatencyTarget], onResult: @escaping @Sendable (LatencyResult) async -> Void, onSpeed: @escaping @Sendable (SpeedResult) async -> Void, attempt: Int = 0) async {
+    private func testBatch(_ batch: [LatencyTarget], _ handlers: Handlers, attempt: Int = 0) async {
         guard !batch.isEmpty else { return }
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("v2mac-latency-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -160,7 +171,7 @@ public struct RealDelayTester: Sendable {
             }
             await waitUntilListening(ports)
             await withTaskCancellationHandler {
-                await measure(batch, ports: ports, onResult: onResult, onSpeed: onSpeed)
+                await measure(batch, ports: ports, handlers)
             } onCancel: {
                 Task { await runner.stop() }
             }
@@ -168,22 +179,22 @@ public struct RealDelayTester: Sendable {
         } catch {
             if Task.isCancelled { return }
             if case CoreError.portInUse = error, attempt < 2 {
-                await testBatch(batch, onResult: onResult, onSpeed: onSpeed, attempt: attempt + 1)
+                await testBatch(batch, handlers, attempt: attempt + 1)
                 return
             }
             if batch.count == 1 {
                 let detail = (error as? CoreError)?.localizedDescription ?? error.localizedDescription
-                await onResult(LatencyResult(id: batch[0].id, outcome: .invalid(detail)))
+                await handlers.onResult(LatencyResult(id: batch[0].id, outcome: .invalid(detail)))
             } else {
                 // One bad outbound stops the whole core: bisect to find it.
                 let mid = batch.count / 2
-                await testBatch(Array(batch[..<mid]), onResult: onResult, onSpeed: onSpeed)
-                await testBatch(Array(batch[mid...]), onResult: onResult, onSpeed: onSpeed)
+                await testBatch(Array(batch[..<mid]), handlers)
+                await testBatch(Array(batch[mid...]), handlers)
             }
         }
     }
 
-    private func testCustom(_ target: LatencyTarget, onResult: @escaping @Sendable (LatencyResult) async -> Void, onSpeed: @escaping @Sendable (SpeedResult) async -> Void) async {
+    private func testCustom(_ target: LatencyTarget, _ handlers: Handlers) async {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("v2mac-latency-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
         do {
@@ -201,7 +212,7 @@ public struct RealDelayTester: Sendable {
                 throw error
             }
             await withTaskCancellationHandler {
-                await measure([target], ports: [ports[0]], onResult: onResult, onSpeed: onSpeed)
+                await measure([target], ports: [ports[0]], handlers)
             } onCancel: {
                 Task { await runner.stop() }
             }
@@ -209,7 +220,7 @@ public struct RealDelayTester: Sendable {
         } catch {
             if Task.isCancelled { return }
             let detail = (error as? CoreError)?.localizedDescription ?? error.localizedDescription
-            await onResult(LatencyResult(id: target.id, outcome: .invalid(detail)))
+            await handlers.onResult(LatencyResult(id: target.id, outcome: .invalid(detail)))
         }
     }
 
@@ -224,7 +235,7 @@ public struct RealDelayTester: Sendable {
 
     // MARK: Requests
 
-    private func measure(_ batch: [LatencyTarget], ports: [Int], onResult: @escaping @Sendable (LatencyResult) async -> Void, onSpeed: @escaping @Sendable (SpeedResult) async -> Void) async {
+    private func measure(_ batch: [LatencyTarget], ports: [Int], _ handlers: Handlers) async {
         let url = options.url
         let timeout = options.timeout
         let limit = options.concurrency
@@ -240,7 +251,7 @@ public struct RealDelayTester: Sendable {
             }
             for _ in 0..<min(limit, batch.count) { launch() }
             while let result = await group.next() {
-                await onResult(result)
+                await handlers.onResult(result)
                 if case .ok = result.outcome, let port = portByID[result.id] { reachable.append((result.id, port)) }
                 if Task.isCancelled { group.cancelAll(); continue }
                 launch()
@@ -250,12 +261,17 @@ public struct RealDelayTester: Sendable {
         guard let speedURL = options.speedURL else { return }
         for item in reachable {
             if Task.isCancelled { return }
-            let outcome = await Self.measureSpeed(port: item.port, url: speedURL, timeout: timeout)
-            await onSpeed(SpeedResult(id: item.id, outcome: outcome))
+            let id = item.id
+            await handlers.onSpeedProgress(id, nil)
+            let outcome = await Self.measureSpeed(port: item.port, url: speedURL, timeout: timeout) { bps in
+                await handlers.onSpeedProgress(id, bps)
+            }
+            await handlers.onSpeed(SpeedResult(id: id, outcome: outcome))
         }
     }
 
-    static func measureSpeed(port: Int, url: URL, timeout: TimeInterval) async -> SpeedOutcome {
+    static func measureSpeed(port: Int, url: URL, timeout: TimeInterval,
+                             progress: @Sendable (Double) async -> Void = { _ in }) async -> SpeedOutcome {
         guard let nwPort = NWEndpoint.Port(rawValue: UInt16(clamping: port)) else { return .failed }
         let config = URLSessionConfiguration.ephemeral
         config.proxyConfigurations = [ProxyConfiguration(socksv5Proxy: .hostPort(host: "127.0.0.1", port: nwPort))]
@@ -272,6 +288,7 @@ public struct RealDelayTester: Sendable {
         let clock = ContinuousClock()
         var meter = SpeedMeter()
         var start: ContinuousClock.Instant?
+        var reported: ContinuousClock.Instant?
         while !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(100))
             let state = counter.snapshot()
@@ -284,6 +301,11 @@ public struct RealDelayTester: Sendable {
                     return .ok(bytesPerSecond: max(meter.peak, SpeedMeter.average(bytes: state.bytes, elapsed: elapsed)))
                 }
                 if meter.add(elapsed: elapsed, bytes: state.bytes) { return .ok(bytesPerSecond: meter.peak) }
+                // Four times a second is enough to watch, and spares the table redrawing on every sample.
+                if meter.current > 0, reported.map({ clock.now - $0 >= .milliseconds(250) }) ?? true {
+                    reported = clock.now
+                    await progress(meter.current)
+                }
             } else if state.finished {
                 break
             }

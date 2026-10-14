@@ -812,6 +812,11 @@ from 8.2 with a temporary port.
 The live connection is never touched. Cancelling stops outstanding requests and
 kills the throwaway core.
 
+Tests run one request at a time. A test asked for while another runs (from the
+menu bar, the toolbar, a context menu or the inspector) is queued after it rather
+than replacing it; a server already waiting for that kind of result is not queued
+twice. Stop cancels the running test and everything queued.
+
 ### 10.2 TCP ping (secondary)
 
 `NWConnection` TCP connect to `address:port`, 3 s timeout, 32 concurrent. Shown
@@ -823,6 +828,11 @@ profiles.
 The Delay column shows the latest result of either kind: green under 300 ms,
 amber under 800 ms, red above, "timeout", "invalid", or a spinner. Sorting by
 Delay puts untested and failed rows last.
+
+During a speed test the Speed column shows a spinner while the server waits its
+turn, "Connecting…" once its download starts, then the current speed (latest
+one-second window) a few times a second in a fixed format and width, without
+animation, until the top stable speed replaces it.
 
 ---
 

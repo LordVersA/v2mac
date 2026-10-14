@@ -26,6 +26,21 @@ import Testing
         #expect(r.peak > 9_000_000)
     }
 
+    @Test func reportsCurrentSpeedFromTheStart() {
+        var meter = SpeedMeter()
+        // A burst in the first milliseconds is not a speed yet.
+        _ = meter.add(elapsed: 0.001, bytes: 64_000)
+        #expect(meter.current == 0)
+        _ = meter.add(elapsed: 0.5, bytes: 1_000_000)
+        #expect(meter.current == 2_000_000)
+        #expect(meter.peak == 0)
+        _ = meter.add(elapsed: 1.0, bytes: 3_000_000)
+        _ = meter.add(elapsed: 2.0, bytes: 4_000_000)
+        // The last second, not the peak.
+        #expect(meter.current == 1_000_000)
+        #expect(meter.peak == 3_000_000)
+    }
+
     @Test func capsAtMaximum() {
         let r = run { $0 * 1_000_000 }
         #expect(r.done <= 15.1)
