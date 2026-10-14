@@ -64,7 +64,9 @@ jobs:
             echo
             echo "## Install"
             echo
-            echo "Download \`V2Mac-${{ steps.v.outputs.version }}.dmg\`, check it against the \`.sha256\` file, and follow the first-launch steps in the README (the app is ad-hoc signed)."
+            echo "With Homebrew: \`brew install --cask lordversa/tap/v2mac\` (or \`brew upgrade --cask v2mac\`)."
+            echo
+            echo "Or download \`V2Mac-${{ steps.v.outputs.version }}.dmg\`, check it against the \`.sha256\` file, and follow the first-launch steps in the README (the app is ad-hoc signed)."
             [[ -n "$PREVIOUS" ]] && echo && echo "Full changelog: https://github.com/${{ github.repository }}/compare/$PREVIOUS...$TAG"
           } > notes.md
           cat notes.md
@@ -76,6 +78,26 @@ jobs:
         run: |
           gh release create "${{ steps.v.outputs.tag }}" dist/*.dmg dist/*.sha256 \
             --title "V2Mac ${{ steps.v.outputs.version }}" --notes-file notes.md
+
+      # Points the Homebrew cask (LordVersA/homebrew-tap) at the new DMG. Needs a TAP_TOKEN
+      # secret with write access to that repo; without one the step only prints a warning.
+      - name: Update Homebrew tap
+        if: github.ref_type == 'tag'
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          if [[ -z "$TAP_TOKEN" ]]; then
+            echo "::warning::TAP_TOKEN is not set; update Casks/v2mac.rb in LordVersA/homebrew-tap by hand"
+            exit 0
+          fi
+          SHA="$(shasum -a 256 "dist/V2Mac-$VERSION.dmg" | cut -d' ' -f1)"
+          git clone -q "https://x-access-token:$TAP_TOKEN@github.com/LordVersA/homebrew-tap.git" tap
+          cd tap
+          sed -i '' -e "s/^  version \".*\"/  version \"$VERSION\"/" -e "s/^  sha256 \".*\"/  sha256 \"$SHA\"/" Casks/v2mac.rb
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qam "Update v2mac to $VERSION"
+          git push -q
 
       - name: Dry run output
         if: github.ref_type != 'tag'
