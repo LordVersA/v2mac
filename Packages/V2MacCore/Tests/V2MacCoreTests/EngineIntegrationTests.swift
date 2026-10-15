@@ -87,7 +87,10 @@ struct EngineIntegrationTests {
         let config = try ConfigBuilder.buildGlobal(outbound: ["protocol": "freedom"], options: options)
         let dir = try TestSupport.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
-        let runner = CoreRunner(executable: TestSupport.xray, assetDirectory: TestSupport.vendorCore, runDirectory: dir)
+        // A copy: LatencyIntegrationTests counts processes of the original, and this core runs for seconds.
+        let xray = dir.appendingPathComponent("xray-lan")
+        try FileManager.default.copyItem(at: TestSupport.xray, to: xray)
+        let runner = CoreRunner(executable: xray, assetDirectory: TestSupport.vendorCore, runDirectory: dir)
         try await runner.start(config: config, readyPort: options.inbound.port)
 
         for host in ["127.0.0.1", "localhost"] {
