@@ -105,7 +105,7 @@ struct RuleBuilderView: View {
         step = ["action": .action, "targets": .targets, "review": .review][parts[0]] ?? .action
         if parts.count > 1, let picked = Source.allCases.first(where: { $0.rawValue.lowercased().hasPrefix(parts[1]) }) { source = picked }
         countries = ["ir", "de", "jp"]
-        services = catalog.available(["geosite:telegram", "geoip:telegram", "geosite:category-ads-all"])
+        services = catalog.available(["geosite:apple", "geosite:microsoft"])
         manual = "example.com\n10.0.0.0/8\nDOMAIN-SUFFIX,clash.example,DIRECT\nnot a rule!"
     }
     #endif
