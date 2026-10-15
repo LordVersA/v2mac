@@ -14,6 +14,30 @@
 	<key>LSUIElement</key><true/>
 	<key>V2MacRepository</key><string>$(V2MAC_REPOSITORY)</string>
 	<key>NSHumanReadableCopyright</key><string>GPL-3.0</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key><string>io.github.lordversa.v2mac.backup</string>
+			<key>UTTypeDescription</key><string>V2Mac Backup</string>
+			<key>UTTypeConformsTo</key>
+			<array><string>public.data</string></array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array><string>v2m</string></array>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key><string>V2Mac Backup</string>
+			<key>CFBundleTypeRole</key><string>Viewer</string>
+			<key>LSHandlerRank</key><string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array><string>io.github.lordversa.v2mac.backup</string></array>
+		</dict>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

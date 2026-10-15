@@ -103,6 +103,7 @@ final class AppModel {
             revealHook()
             editorHook()
             windowRequestHook()
+            backupHook()
             if UserDefaults.standard.bool(forKey: "debugFakeUpdates") { updates.fakeUpdates() }
             AppDelegate.model = self
             return
@@ -285,8 +286,10 @@ final class AppModel {
         }
     }
 
-    /// A file dropped on the window or opened with V2Mac: configs as text, or a picture of QR codes.
+    /// A file dropped on the window or opened with V2Mac: a backup, configs as text, or a picture
+    /// of QR codes.
     func importFile(_ url: URL) {
+        if url.pathExtension.lowercased() == Backup.fileExtension { return BackupFlow.restore(self, from: url) }
         let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         guard size < 5_000_000 else { return }
         if let image = NSImage(contentsOf: url), image.isValid {
@@ -345,6 +348,90 @@ final class AppModel {
                 showAddSheet = true
             }
         }
+    }
+
+    // MARK: Backup
+
+    /// Spec 12.9: subscriptions with their servers, pasted configs, favorites and settings.
+    func makeBackup() -> Backup {
+        let groups = (try? context.fetch(FetchDescriptor<ServerGroup>(sortBy: [SortDescriptor(\.sortIndex)]))) ?? []
+        let defaults = UserDefaults.standard
+        var settings = Dictionary(uniqueKeysWithValues: Prefs.backupKeys.compactMap { key in
+            defaults.object(forKey: key).flatMap(Backup.json(fromPreference:)).map { (key, $0) }
+        })
+        settings["enabledRegionPacks"] = .array(regionPacks.enabledIDs.sorted().map { .string($0) })
+        return Backup(app: Prefs.appVersion, groups: groups.map { group in
+            let profiles = group.profiles.filter { !$0.isStale || $0.isFavorite }.sorted { $0.sortIndex < $1.sortIndex }
+            return Backup.Group(
+                name: group.name, subscriptionURL: group.subscriptionURL, autoUpdate: group.autoUpdateEnabled,
+                intervalHours: group.serverIntervalHours, color: group.colorName, userAgent: group.userAgent,
+                servers: profiles.compactMap { p in
+                    p.config.map { config in
+                        Backup.Server(profile: ParsedProfile(
+                            name: p.name, kind: p.kind, protocolName: p.protocolName, address: p.address, port: p.port,
+                            transport: p.transport, security: p.security, config: config, originalLink: p.originalLink, warnings: p.warnings
+                        ), favorite: p.isFavorite)
+                    }
+                }
+            )
+        }, settings: settings)
+    }
+
+    /// Adds what the backup has and this Mac does not: subscriptions it lacks come with their
+    /// servers, so they work before their first update; a subscription that is already here
+    /// only gets its favorites back; pasted configs are added unless they are here. Settings are
+    /// taken from the backup. Returns the subscriptions and servers added.
+    @discardableResult
+    func restore(_ backup: Backup) -> (groups: Int, servers: Int) {
+        let existing = (try? context.fetch(FetchDescriptor<ServerGroup>())) ?? []
+        var nextIndex = (existing.map(\.sortIndex).max() ?? -1) + 1
+        var added = (groups: 0, servers: 0)
+        for item in backup.groups {
+            let group: ServerGroup
+            if let match = existing.first(where: { $0.subscriptionURL == item.subscriptionURL }) {
+                group = match
+            } else {
+                group = ServerGroup(name: item.name, subscriptionURL: item.subscriptionURL, sortIndex: nextIndex)
+                group.autoUpdateEnabled = item.autoUpdate
+                group.serverIntervalHours = item.intervalHours
+                group.colorName = item.color
+                group.userAgent = item.userAgent
+                context.insert(group)
+                nextIndex += 1
+                added.groups += 1
+            }
+            let known = Dictionary(group.profiles.map { ($0.fingerprint, $0) }, uniquingKeysWith: { first, _ in first })
+            let addsServers = group.isManual || group.profiles.isEmpty
+            var index = (group.profiles.map(\.sortIndex).max() ?? -1) + 1
+            for server in item.servers {
+                if let profile = known[server.profile.fingerprint] {
+                    if server.favorite { profile.isFavorite = true }
+                } else if addsServers {
+                    let profile = Profile(parsed: server.profile, sortIndex: index, group: group)
+                    profile.isFavorite = server.favorite
+                    context.insert(profile)
+                    index += 1
+                    added.servers += 1
+                }
+            }
+        }
+        try? context.save()
+
+        let allowed = Set(Prefs.backupKeys)
+        for (key, value) in backup.settings where allowed.contains(key) {
+            if let preference = Backup.preference(from: value) { UserDefaults.standard.set(preference, forKey: key) }
+        }
+        let packs = Set(backup.settings["enabledRegionPacks"]?.arrayValue?.compactMap(\.stringValue) ?? [])
+        for pack in regionPacks.packs where packs.contains(pack.id) && !regionPacks.enabledIDs.contains(pack.id) {
+            Task { await regionPacks.enable(pack) }
+        }
+        // State objects that keep a setting of their own take the restored one.
+        connection.setRoutingMode(Prefs.routingMode)
+        connection.setTunEnabled(Prefs.tunEnabled)
+        connection.setSystemProxyEnabled(Prefs.systemProxy)
+        connection.setKillSwitchEnabled(Prefs.killSwitch)
+        connection.reconnectIfRunning()
+        return added
     }
 
     // MARK: Server editor
@@ -614,6 +701,33 @@ final class AppModel {
                 print("[v2mac-debug] editor: now \(copy.name), \(copy.typeSummary), same row \(copy.id == copyID), rows \(copy.group?.profiles.count ?? 0)")
             } else {
                 serverEditor = ServerEditorRequest(target: .new)
+            }
+        }
+    }
+
+    /// `-debugDemoData YES -debugBackupRoundTrip <path>`: writes a backup there, removes every
+    /// server, restores the file, and prints what came back.
+    private func backupHook() {
+        guard let path = UserDefaults.standard.string(forKey: "debugBackupRoundTrip") else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            @MainActor func counts() -> String {
+                let groups = (try? context.fetch(FetchDescriptor<ServerGroup>())) ?? []
+                let profiles = (try? context.fetch(FetchDescriptor<Profile>())) ?? []
+                return "\(groups.count) groups, \(profiles.count) servers, \(profiles.filter(\.isFavorite).count) favorites"
+            }
+            let before = counts()
+            do {
+                try makeBackup().fileData().write(to: URL(fileURLWithPath: path))
+                for group in (try? context.fetch(FetchDescriptor<ServerGroup>())) ?? [] where !group.isManual { context.delete(group) }
+                try? context.save()
+                let emptied = counts()
+                let added = restore(try Backup.read(Data(contentsOf: URL(fileURLWithPath: path))))
+                print("[v2mac-debug] backup: before \(before); emptied \(emptied); added \(added.groups) groups, \(added.servers) servers; after \(counts())")
+                let again = restore(try Backup.read(Data(contentsOf: URL(fileURLWithPath: path))))
+                print("[v2mac-debug] backup: restored twice adds \(again.groups) groups, \(again.servers) servers; \(counts())")
+            } catch {
+                print("[v2mac-debug] backup failed: \(error)")
             }
         }
     }

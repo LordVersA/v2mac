@@ -73,7 +73,30 @@ enum Prefs {
 
     /// Spec 13 defaults. Registered so `@AppStorage` in Settings and these getters agree.
     static func registerDefaults() {
-        defaults.register(defaults: [
+        defaults.register(defaults: defaultValues)
+        defaults.register(defaults: Dictionary(uniqueKeysWithValues: NotificationKind.allCases.map { ($0.key, $0.defaultOn) }))
+        if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
+        // The proxy password used to be kept in the preferences file; it moves to the keychain once.
+        if let old = defaults.string(forKey: "proxyPassword"), old.isEmpty || Keychain.set(old, for: .proxyPassword) {
+            defaults.removeObject(forKey: "proxyPassword")
+        }
+        // macOS puts a new menu bar icon at the far left, where a notch hides it first. This is
+        // AppKit's own (undocumented) key for a dragged icon, in points from the right edge of
+        // the screen; seeding it starts the icon beside the system ones. A position the user
+        // chose by ⌘-dragging is already stored here and is left alone.
+        let iconPosition = "NSStatusItem Preferred Position Item-0"
+        if defaults.object(forKey: iconPosition) == nil { defaults.set(350, forKey: iconPosition) }
+    }
+
+    /// Settings a backup carries (spec 12.9): every one with a default, and those the app keeps
+    /// without one. Region packs are restored through their service, since they need downloading.
+    static var backupKeys: [String] {
+        Array(defaultValues.keys) + NotificationKind.allCases.map(\.key)
+            + ["routingMode", "tunEnabled", "packUpdateIntervals", "userAgent"]
+    }
+
+    private static var defaultValues: [String: Any] {
+        [
             "proxyPort": defaultPort,
             "customRulesProxy": "",
             "customRulesDirect": "",
@@ -117,19 +140,7 @@ enum Prefs {
             "logLevel": XrayLogLevel.warning.rawValue,
             "logConnections": false,
             "countTraffic": true,
-        ])
-        defaults.register(defaults: Dictionary(uniqueKeysWithValues: NotificationKind.allCases.map { ($0.key, $0.defaultOn) }))
-        if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
-        // The proxy password used to be kept in the preferences file; it moves to the keychain once.
-        if let old = defaults.string(forKey: "proxyPassword"), old.isEmpty || Keychain.set(old, for: .proxyPassword) {
-            defaults.removeObject(forKey: "proxyPassword")
-        }
-        // macOS puts a new menu bar icon at the far left, where a notch hides it first. This is
-        // AppKit's own (undocumented) key for a dragged icon, in points from the right edge of
-        // the screen; seeding it starts the icon beside the system ones. A position the user
-        // chose by ⌘-dragging is already stored here and is left alone.
-        let iconPosition = "NSStatusItem Preferred Position Item-0"
-        if defaults.object(forKey: iconPosition) == nil { defaults.set(350, forKey: iconPosition) }
+        ]
     }
 
     static var lastCoreUpdateCheck: Date? {

@@ -1396,6 +1396,31 @@ connection bar (inline layout only). Clicking it opens a popover with the
 session's and the total's download and upload, since when, and Reset Total.
 With the setting off nothing is counted or shown.
 
+### 12.9 Backup
+
+Settings → General → "Backup": "Export Backup…" and "Restore Backup…". A `.v2m` file
+(type `io.github.lordversa.v2mac.backup`, declared in Info.plist; V2Mac opens it from Finder
+too) is base64 text, 76 characters a line, of one JSON object (`Backup`, package):
+
+- `format` (`v2mac-backup`), `version` (1), `app`, `created`;
+- `groups`: name, subscription URL (empty for Custom Configs), auto-update, interval,
+  colour, User-Agent, and `servers`: each server's name, kind, protocol, address, port,
+  transport, security, config, share link, warnings and favorite. Servers a subscription
+  dropped are left out unless they are favorites;
+- `settings`: every setting that has a default (section 13), the notification switches,
+  routing mode, TUN switch, pack intervals, User-Agent and the enabled region packs.
+
+Not in it: the proxy and administrator passwords (keychain), the active and recent
+servers, traffic totals, delays.
+
+A restore asks first, saying when and with which version the file was made and how many
+subscriptions and servers it holds. It adds and never removes: a subscription that is not
+here comes with its servers, so it works before its first update; one that is here only
+gets its favorites back; pasted configs are added unless one with the same fingerprint is
+here. Only the settings listed above are taken; region packs it names are downloaded and
+enabled; the connection restarts when it runs. A newer `version` is refused with "made by a
+newer V2Mac".
+
 ---
 
 ## 13. Settings
@@ -1408,6 +1433,7 @@ With the setting off nothing is counted or shown.
 | | Count traffic usage (section 12.8) | On |
 | | Check for app updates | On |
 | | Administrator access: account and password, kept in the keychain (section 9.5) | Not saved |
+| | Backup: Export Backup…, Restore Backup… (section 12.9) | — |
 | Proxy | Port | 10808 |
 | | Set as system proxy, with its dot (section 9.9) | Off |
 | | Username / Password, optional; the password is kept in the keychain (an older one in the preferences moves there on launch) | Empty |
