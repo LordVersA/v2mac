@@ -27,7 +27,7 @@ struct ConnectionAutomationTests {
     }
 
     private func withController(
-        policy: TunFailurePolicy = .continueProxy, auto: Bool = false, tunEnabled: Bool = false, killSwitch: Bool = false,
+        policy: TunFailurePolicy = .continueProxy, auto: Bool = false, tunEnabled: Bool = false, killSwitch: Bool = false, delayLimit: Int? = nil,
         authorize: @escaping @MainActor (String) async -> TunController.LaunchResult = { _ in .cancelled },
         helperIsAlive: @escaping @MainActor (URL) -> Bool = { _ in false },
         interfaceExists: @escaping @MainActor (String) -> Bool = { _ in false },
@@ -35,7 +35,7 @@ struct ConnectionAutomationTests {
     ) async throws {
         let defaults = UserDefaults.standard
         let keys = ["autoSelectServer", "tunFailurePolicy", "tunEnabled", "checkExit", "proxyPort", "wasRunning", "activeProfileID",
-                    "latencyURL", "latencyTimeout", "routingMode", "killSwitch"]
+                    "latencyURL", "latencyTimeout", "routingMode", "killSwitch", "switchOnDelay", "switchDelayMs"]
         let saved = keys.map { ($0, defaults.object(forKey: $0)) }
         defer {
             for (key, value) in saved { if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) } }
@@ -45,6 +45,8 @@ struct ConnectionAutomationTests {
         defaults.set(policy.rawValue, forKey: "tunFailurePolicy")
         defaults.set(tunEnabled, forKey: "tunEnabled")
         defaults.set(killSwitch, forKey: "killSwitch")
+        defaults.set(delayLimit != nil, forKey: "switchOnDelay")
+        defaults.set(delayLimit ?? 1000, forKey: "switchDelayMs")
         defaults.set(false, forKey: "checkExit")
         defaults.set("http://example.com/probe", forKey: "latencyURL")
         defaults.set(0.5, forKey: "latencyTimeout")
@@ -180,6 +182,21 @@ struct ConnectionAutomationTests {
             #expect(await wait { controller.phase == .connected })
             fastResponse.fail()
             #expect(await wait { controller.isRunning && controller.activeServer?.id == orderedFirst.id })
+        }
+    }
+
+    @Test func aServerThatStaysSlowIsLeftForAFasterOneWhenThatConditionIsOn() async throws {
+        let slowHTTP = try await TestHTTPServer.start { _ in .init(status: 204, responseDelay: 0.3) }
+        let fastHTTP = try await TestHTTPServer.start { _ in .init(status: 204) }
+        defer { slowHTTP.stop(); fastHTTP.stop() }
+        try await withController(auto: true, delayLimit: 150) { controller, _ in
+            let slow = try server(outbound(to: slowHTTP.port), index: 0)
+            let fast = try server(outbound(to: fastHTTP.port), index: 1)
+            controller.automaticCandidates = { _ in [slow, fast] }
+            // Picked by hand: the condition still applies.
+            controller.activate(slow)
+            #expect(await wait { controller.isRunning })
+            #expect(await wait { controller.isRunning && controller.activeServer?.id == fast.id })
         }
     }
 

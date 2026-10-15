@@ -43,6 +43,8 @@ final class ConnectionController {
     @ObservationIgnored private var selectionTask: Task<[LatencyResult], Never>?
     @ObservationIgnored private var healthTask: Task<Void, Never>?
     private var selectionPolicy = AutoSelectionPolicy()
+    /// Spec 9.7, conditions: the live download rate, while that condition is on.
+    @ObservationIgnored private var speedWatch: SlowSpeedWatch?
     /// Invalidates queued work and results after a manual command, disconnect or settings change.
     private var commandGeneration = 0
     private var pendingConnectionGeneration: Int?
@@ -415,6 +417,7 @@ final class ConnectionController {
         commandGeneration += 1
         let generation = commandGeneration
         cancelAutomation()
+        speedWatch = nil
         // A connect from off starts a new session; reconnects and switches continue it.
         if !userWantsRunning { usage.startSession() }
         userWantsRunning = true
@@ -426,7 +429,7 @@ final class ConnectionController {
             guard self.commandGeneration == generation, self.userWantsRunning else { return }
             var target = server
             if let selection, Prefs.autoSelectServer, self.automationAllowed,
-               selection == .fallback || !self.selectionPolicy.manualOverride {
+               selection == .fallback || selection == .degraded || !self.selectionPolicy.manualOverride {
                 self.isSelectingAutomatically = true
                 let candidates = self.automaticCandidates(server.id)
                 let results = await self.measureCandidates(candidates, activeID: server.id)
@@ -438,6 +441,11 @@ final class ConnectionController {
                     self.selectionPolicy.didSwitch(at: .now)
                     self.logs.append("[v2mac] Automatically selected \(chosen.name) using real response delay")
                     self.setActive(chosen)
+                } else if selection == .degraded {
+                    // Nothing better answered: the connection stays as it is.
+                    self.logs.append("[v2mac] No faster server answered; staying on \(server.name)")
+                    self.startHealthChecks()
+                    return
                 } else if !results.contains(where: { result in
                     guard result.id == server.id, case .ok = result.outcome else { return false }
                     return true
@@ -509,6 +517,11 @@ final class ConnectionController {
                 if needsFallback {
                     logs.append("[v2mac] Two real response checks failed; testing fallback servers")
                     requestConnect(server, mayLiveSwitch: true, selection: .fallback)
+                    return
+                }
+                if let limit = Prefs.switchDelayLimit, selectionPolicy.recordDelay(outcome, limit: limit) {
+                    logs.append("[v2mac] Two checks in a row answered slower than \(limit) ms; looking for a faster server")
+                    requestConnect(server, mayLiveSwitch: true, selection: .degraded)
                     return
                 }
                 guard !selectionPolicy.manualOverride, Date.now >= nextOptimization else { continue }
@@ -721,6 +734,7 @@ final class ConnectionController {
                         self?.downRate = rate.downBytesPerSecond
                         self?.upRate = rate.upBytesPerSecond
                         self?.record(down: rate.downBytesPerSecond, up: rate.upBytesPerSecond)
+                        self?.watchSpeed(rate.downBytesPerSecond)
                     }
                     previous = snapshot
                 }
@@ -756,6 +770,22 @@ final class ConnectionController {
     func resetTotalUsage() {
         usage.resetTotal()
         Prefs.trafficUsage = usage
+    }
+
+    /// Spec 9.7, conditions: a download rate that stayed under the floor looks for a faster server.
+    private func watchSpeed(_ rate: Double) {
+        guard Prefs.autoSelectServer, automationAllowed, userWantsRunning, !isSelectingAutomatically, !isSwitching,
+              let server = activeServer, let floor = Prefs.switchSpeedFloor else {
+            speedWatch = nil
+            return
+        }
+        if speedWatch?.floor != floor.bytesPerSecond || speedWatch?.seconds != floor.minutes * 60 {
+            speedWatch = SlowSpeedWatch(floor: floor.bytesPerSecond, minutes: floor.minutes)
+        }
+        guard speedWatch?.record(rate) == true else { return }
+        speedWatch = nil
+        logs.append("[v2mac] Download speed stayed under \(Format.steadyRate(floor.bytesPerSecond)) for \(floor.minutes) min; looking for a faster server")
+        requestConnect(server, mayLiveSwitch: true, selection: .degraded)
     }
 
     private func record(down: Double, up: Double) {

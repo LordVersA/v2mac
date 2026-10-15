@@ -6,6 +6,11 @@ struct ConnectionSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage("liveSwitch") private var liveSwitch = true
     @AppStorage("autoSelectServer") private var autoSelectServer = false
+    @AppStorage("switchOnDelay") private var switchOnDelay = false
+    @AppStorage("switchDelayMs") private var switchDelayMs = 1000
+    @AppStorage("switchOnSlowSpeed") private var switchOnSlowSpeed = false
+    @AppStorage("switchSpeedKBps") private var switchSpeedKBps = 100
+    @AppStorage("switchSpeedMinutes") private var switchSpeedMinutes = 2
     @AppStorage("tunFailurePolicy") private var tunFailurePolicy = TunFailurePolicy.continueProxy.rawValue
     @AppStorage("killSwitch") private var killSwitch = false
     @AppStorage("allowInsecure") private var allowInsecure = false
@@ -37,6 +42,22 @@ struct ConnectionSettings: View {
             } footer: {
                 note("Uses real HTTP response delay to choose the fastest server in the active group when connecting. Checks the running connection every 30 seconds and tries peers in group order after two failed responses. A server you pick stays selected while it responds. Switching can interrupt existing connections.")
             }
+            Section {
+                Toggle("Switch when the delay is high", isOn: $switchOnDelay)
+                if switchOnDelay {
+                    numberField("Delay over", value: $switchDelayMs, unit: "ms", range: 100...10_000)
+                }
+                Toggle("Switch when the download is slow", isOn: $switchOnSlowSpeed)
+                if switchOnSlowSpeed {
+                    numberField("Speed under", value: $switchSpeedKBps, unit: "KB/s", range: 1...100_000)
+                    Stepper("For \(switchSpeedMinutes) min", value: $switchSpeedMinutes, in: 1...30)
+                }
+            } header: {
+                Text("Switch conditions")
+            } footer: {
+                note("With automatic selection on, these also move to the fastest other server in the group: when two checks in a row (30 seconds apart) answer slower than the delay, or when the download never reaches the speed for that many minutes while traffic flows. An idle connection never counts as slow. A server you picked yourself is switched too.")
+            }
+            .disabled(!autoSelectServer)
             Section {
                 Picker("If TUN fails", selection: $tunFailurePolicy) {
                     ForEach(TunFailurePolicy.allCases, id: \.rawValue) { policy in
@@ -114,6 +135,8 @@ struct ConnectionSettings: View {
         }
         .formStyle(.grouped)
         .animation(.default, value: fragmentEnabled)
+        .animation(.default, value: switchOnDelay)
+        .animation(.default, value: switchOnSlowSpeed)
         .animation(.default, value: checkExit)
         .onChange(of: checkExit) { model.connection.checkExit() }
         .onChange(of: autoSelectServer) { model.connection.autoSelectionChanged() }
@@ -136,6 +159,19 @@ struct ConnectionSettings: View {
 
     private func note(_ text: LocalizedStringKey) -> some View {
         Text(text).font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func numberField(_ title: LocalizedStringKey, value: Binding<Int>, unit: LocalizedStringKey, range: ClosedRange<Int>) -> some View {
+        LabeledContent(title) {
+            HStack(spacing: 4) {
+                TextField(title, value: Binding(get: { value.wrappedValue }, set: { value.wrappedValue = min(max($0, range.lowerBound), range.upperBound) }),
+                          format: .number.grouping(.never))
+                    .labelsHidden()
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 80)
+                Text(unit).foregroundStyle(.secondary)
+            }
+        }
     }
 
     @ViewBuilder

@@ -868,6 +868,21 @@ use physical-interface binding while TUN is up, and save real-delay row results
 without triggering manual-test notifications. Existing flows may be interrupted
 by switching; automatic selection does not promise session migration.
 
+**Conditions.** Two more reasons to switch, each off by default and used only with
+automatic selection on (Settings → Connection → "Switch conditions"):
+
+- *Delay is high*: two health checks in a row answer slower than the limit (default
+  1000 ms). Failed checks neither count nor reset; they have their own rule.
+- *Download is slow*: in the last N minutes (default 2) the live download rate never
+  reached the floor (default 100 KB/s), and at least a quarter of those seconds carried
+  traffic (1 KB/s or more), so an idle connection never counts (`SlowSpeedWatch`).
+
+A met condition tests the group and takes the fastest other server that answers
+(`AutoSelectionPolicy.Reason.degraded`), a manually chosen one included. It honours the
+switch cooldown and excludes the server it leaves for the failure cooldown. When nothing
+else answers the connection stays as it is, and the condition has to be met again from
+the start.
+
 The test URL must be HTTP(S) with a public destination; local/private literals,
 IPv6 literals and embedded credentials are rejected to avoid URLSession's SOCKS
 bypass. The first 2xx/3xx response headers count as a response; redirects are not
@@ -1409,6 +1424,7 @@ With the setting off nothing is counted or shown.
 | | Concurrency | 8 |
 | Connection | Switch servers without restarting | On |
 | | Automatically select a working server | Off |
+| | Switch conditions: delay over (ms); download under (KB/s) for (min) (section 9.7) | Off; 1000 ms; 100 KB/s for 2 min |
 | | If TUN fails: Keep local proxy running / Stop connection | Keep local proxy running |
 | | Kill switch (section 9.8) | Off |
 | Connection | Allow insecure servers | Off |

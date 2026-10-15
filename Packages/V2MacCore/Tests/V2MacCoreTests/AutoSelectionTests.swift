@@ -83,3 +83,54 @@ import Testing
         guard case .invalid = result else { Issue.record("health probe must reject direct routes"); return }
     }
 }
+
+@Suite struct SwitchConditionTests {
+    let current = UUID(), slow = UUID(), fast = UUID()
+    let now = Date(timeIntervalSince1970: 1000)
+
+    @Test func twoSlowChecksInARowAskForAFasterServer() {
+        var policy = AutoSelectionPolicy()
+        let outcomes: [LatencyOutcome] = [.ok(ms: 1500), .ok(ms: 400), .ok(ms: 1500), .timeout, .ok(ms: 1200), .ok(ms: 1300), .ok(ms: 1300)]
+        // Met once, the count starts again, so a group with nothing faster is not retested every check.
+        #expect(outcomes.map { policy.recordDelay($0, limit: 1000) } == [false, false, false, false, true, false, true])
+        policy.didSwitch(at: now)
+        let afterSwitch = policy.recordDelay(.ok(ms: 1500), limit: 1000)
+        #expect(!afterSwitch, "a new server starts counting again")
+    }
+
+    @Test func degradedTakesTheFastestOtherServerEvenOverAManualChoice() {
+        var policy = AutoSelectionPolicy()
+        policy.selectManually()
+        let results = [LatencyResult(id: current, outcome: .ok(ms: 50)),
+                       LatencyResult(id: slow, outcome: .ok(ms: 400)),
+                       LatencyResult(id: fast, outcome: .ok(ms: 120))]
+        #expect(policy.choose(results: results, currentID: current, reason: .degraded, now: now) == fast)
+        #expect(!policy.manualOverride)
+        policy.didSwitch(at: now)
+        // Within the cooldown nothing switches, and the server left behind is not taken back.
+        #expect(policy.choose(results: results, currentID: fast, reason: .degraded, now: now.addingTimeInterval(30)) == nil)
+        #expect(policy.choose(results: results, currentID: fast, reason: .degraded, now: now.addingTimeInterval(61)) == slow)
+    }
+
+    @Test func slowSpeedNeedsAWholeWindowOfSlowTraffic() {
+        var watch = SlowSpeedWatch(floor: 100 * 1024, minutes: 1)
+        // Busy but slow for 59 seconds: not yet a whole window.
+        #expect((0..<59).map { _ in watch.record(20 * 1024) }.allSatisfy { !$0 })
+        let full = watch.record(20 * 1024)
+        #expect(full)
+        // One fast second in the window means the server can do it.
+        watch.reset()
+        _ = (0..<30).map { _ in watch.record(20 * 1024) }
+        _ = watch.record(500 * 1024)
+        #expect((0..<29).map { _ in watch.record(20 * 1024) }.allSatisfy { !$0 })
+    }
+
+    @Test func anIdleConnectionIsNeverSlow() {
+        var watch = SlowSpeedWatch(floor: 100 * 1024, minutes: 1)
+        #expect((0..<120).map { _ in watch.record(200) }.allSatisfy { !$0 })
+        // A few slow bursts in an idle minute are not enough either.
+        watch.reset()
+        let rates = (0..<60).map { $0 % 6 == 0 ? 20.0 * 1024 : 0 }
+        #expect(rates.map { watch.record($0) }.allSatisfy { !$0 })
+    }
+}

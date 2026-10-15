@@ -94,6 +94,11 @@ enum Prefs {
             "speedTestURL": Prefs.defaultSpeedURL,
             "liveSwitch": true,
             "autoSelectServer": false,
+            "switchOnDelay": false,
+            "switchDelayMs": 1000,
+            "switchOnSlowSpeed": false,
+            "switchSpeedKBps": 100,
+            "switchSpeedMinutes": 2,
             "tunFailurePolicy": TunFailurePolicy.continueProxy.rawValue,
             "allowInsecure": false,
             "checkExit": true,
@@ -212,6 +217,17 @@ enum Prefs {
     static var liveSwitch: Bool { defaults.bool(forKey: "liveSwitch") }
 
     static var autoSelectServer: Bool { defaults.bool(forKey: "autoSelectServer") }
+
+    /// Spec 9.7, conditions: switch when two checks in a row answer slower than this (ms).
+    static var switchDelayLimit: Int? {
+        defaults.bool(forKey: "switchOnDelay") ? max(100, defaults.integer(forKey: "switchDelayMs")) : nil
+    }
+
+    /// Spec 9.7, conditions: switch when the download rate stays under `bytesPerSecond` for `minutes`.
+    static var switchSpeedFloor: (bytesPerSecond: Double, minutes: Int)? {
+        guard defaults.bool(forKey: "switchOnSlowSpeed") else { return nil }
+        return (Double(max(1, defaults.integer(forKey: "switchSpeedKBps"))) * 1024, max(1, defaults.integer(forKey: "switchSpeedMinutes")))
+    }
     static var tunFailurePolicy: TunFailurePolicy {
         TunFailurePolicy(rawValue: defaults.string(forKey: "tunFailurePolicy") ?? "") ?? .continueProxy
     }
