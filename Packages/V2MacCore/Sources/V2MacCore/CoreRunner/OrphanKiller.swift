@@ -5,7 +5,7 @@ enum OrphanKiller {
     /// Terminates the process recorded in `pidFile` if (and only if) its
     /// executable is one of `allowedExecutables`. Never matches by name.
     @discardableResult
-    static func terminateOrphan(pidFile: URL, allowedExecutables: [URL]) -> Bool {
+    static func terminateOrphan(pidFile: URL, allowedExecutables: [URL]) async -> Bool {
         defer { try? FileManager.default.removeItem(at: pidFile) }
         guard let text = try? String(contentsOf: pidFile, encoding: .utf8),
               let pid = pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -21,7 +21,7 @@ enum OrphanKiller {
         kill(pid, SIGTERM)
         for _ in 0..<40 {
             if kill(pid, 0) != 0 { return true }
-            usleep(50_000)
+            try? await Task.sleep(for: .milliseconds(50))
         }
         kill(pid, SIGKILL)
         return true

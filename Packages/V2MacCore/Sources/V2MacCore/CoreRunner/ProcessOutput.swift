@@ -26,12 +26,12 @@ final class ProcessOutput: Sendable {
             var lines: [String] = []
             var buffer = s.partial[stream, default: Data()]
             buffer.append(data)
-            while let nl = buffer.firstIndex(of: 0x0A) {
-                let lineData = buffer[buffer.startIndex..<nl]
-                buffer = Data(buffer[buffer.index(after: nl)...])
-                lines.append(String(decoding: lineData, as: UTF8.self))
+            var start = buffer.startIndex
+            while let nl = buffer[start...].firstIndex(of: 0x0A) {
+                lines.append(String(decoding: buffer[start..<nl], as: UTF8.self))
+                start = buffer.index(after: nl)
             }
-            s.partial[stream] = buffer
+            s.partial[stream] = Data(buffer[start...])
             return lines
         }
         emit(lines)

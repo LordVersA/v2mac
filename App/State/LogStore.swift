@@ -13,12 +13,31 @@ final class LogStore {
     private(set) var lines: [Line] = []
     private let limit = 5000
     private var nextID = 0
+    /// Lines not yet in `lines`. They are moved in together a moment later, so a busy core
+    /// redraws the log a few times a second instead of once per line.
+    @ObservationIgnored private var pending: [String] = []
 
     func append(_ line: String) {
-        lines.append(Line(id: nextID, text: line))
-        nextID += 1
-        if lines.count > limit { lines.removeFirst(lines.count - limit) }
+        pending.append(line)
+        guard pending.count == 1 else { return }
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            self?.flush()
+        }
     }
 
-    func clear() { lines.removeAll() }
+    private func flush() {
+        let start = nextID
+        nextID += pending.count
+        var all = lines
+        all.append(contentsOf: pending.enumerated().map { Line(id: start + $0.offset, text: $0.element) })
+        pending.removeAll()
+        if all.count > limit { all.removeFirst(all.count - limit) }
+        lines = all
+    }
+
+    func clear() {
+        pending.removeAll()
+        lines.removeAll()
+    }
 }

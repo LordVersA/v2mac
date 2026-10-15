@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 @testable import V2MacCore
 
@@ -38,6 +39,17 @@ import Testing
 
     @Test func detectsBusyPort() {
         #expect(CoreOutputParser.indicatesPortBusy(["listen tcp 127.0.0.1:1: bind: address already in use"]))
+    }
+}
+
+@Suite struct ProcessOutputTests {
+    @Test func splitsLinesAcrossChunks() {
+        let lines = OSAllocatedUnfairLock<[String]>(initialState: [])
+        let output = ProcessOutput { line in lines.withLock { $0.append(line) } }
+        output.ingest(Data("a\nb".utf8), stream: 1)
+        output.ingest(Data("c\r\n\nd\ne".utf8), stream: 1)
+        output.flush(stream: 1)
+        #expect(lines.withLock { $0 } == ["a", "bc", "d", "e"])
     }
 }
 

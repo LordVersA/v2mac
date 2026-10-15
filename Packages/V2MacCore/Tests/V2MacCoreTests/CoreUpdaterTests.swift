@@ -73,6 +73,16 @@ import Testing
 
     // MARK: App install
 
+    @Test func runCollectsOutputAndStopsAToolThatTakesTooLong() async throws {
+        let done = try await CoreUpdater.run("/bin/sh", ["-c", "echo out; echo err >&2; exit 3"])
+        #expect(done.status == 3)
+        #expect(done.output == "out\nerr\n")
+        let start = ContinuousClock.now
+        let stuck = try await CoreUpdater.run("/bin/sleep", ["30"], timeout: .milliseconds(300))
+        #expect(stuck.status != 0)
+        #expect(ContinuousClock.now - start < .seconds(5))
+    }
+
     @Test func buildsAppAssetURLsAndReadsChecksum() throws {
         let urls = try #require(AppInstaller.assetURLs(repository: "o/r", tag: "v0.2.1"))
         #expect(urls.dmg.absoluteString == "https://github.com/o/r/releases/download/v0.2.1/V2Mac-0.2.1.dmg")

@@ -237,22 +237,50 @@ public enum CoreUpdater {
 
     // MARK: Process helper
 
-    static func run(_ path: String, _ arguments: [String], environment: [String: String] = [:]) async throws -> (status: Int32, output: String) {
-        try await Task.detached {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: path)
-            process.arguments = arguments
-            if !environment.isEmpty {
-                process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
+    /// Runs a tool without holding a thread while it works. Output goes through a temporary
+    /// file, so a child that keeps the output open cannot keep this waiting. After `timeout`
+    /// the tool is terminated.
+    static func run(_ path: String, _ arguments: [String], environment: [String: String] = [:],
+                    timeout: Duration? = nil) async throws -> (status: Int32, output: String) {
+        let fm = FileManager.default
+        let log = fm.temporaryDirectory.appendingPathComponent("v2mac-run-\(UUID().uuidString).log")
+        guard fm.createFile(atPath: log.path, contents: nil, attributes: [.posixPermissions: 0o600]) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        defer { try? fm.removeItem(at: log) }
+        let handle = try FileHandle(forWritingTo: log)
+        defer { try? handle.close() }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = arguments
+        if !environment.isEmpty {
+            process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
+        }
+        process.standardOutput = handle
+        process.standardError = handle
+        process.standardInput = FileHandle.nullDevice
+        let status: Int32 = try await withCheckedThrowingContinuation { continuation in
+            process.terminationHandler = { continuation.resume(returning: $0.terminationStatus) }
+            do {
+                try process.run()
+            } catch {
+                process.terminationHandler = nil
+                continuation.resume(throwing: error)
+                return
             }
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = pipe
-            process.standardInput = FileHandle.nullDevice
-            try process.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            return (process.terminationStatus, String(decoding: data, as: UTF8.self))
-        }.value
+            guard let timeout else { return }
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout.timeInterval) {
+                if process.isRunning { process.terminate() }
+            }
+        }
+        return (status, String(decoding: (try? Data(contentsOf: log)) ?? Data(), as: UTF8.self))
+    }
+}
+
+extension Duration {
+    var timeInterval: TimeInterval {
+        let (seconds, attoseconds) = components
+        return TimeInterval(seconds) + TimeInterval(attoseconds) / 1e18
     }
 }

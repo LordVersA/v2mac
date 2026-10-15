@@ -79,7 +79,7 @@ public actor CoreRunner {
     }
 
     private func launch(config: JSONValue, readyPort: Int, listenHost: String) async throws {
-        OrphanKiller.terminateOrphan(pidFile: pidURL, allowedExecutables: allowedExecutables)
+        await OrphanKiller.terminateOrphan(pidFile: pidURL, allowedExecutables: allowedExecutables)
 
         guard PortUtil.isFree(port: readyPort, host: listenHost) else {
             throw CoreError.portInUse(readyPort)
