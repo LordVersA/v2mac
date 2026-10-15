@@ -105,11 +105,13 @@ public struct RuleMatchers: Sendable, Equatable {
 
     static func domainName(_ token: String) -> String? {
         var name = token.lowercased()
-        for wildcard in ["*.", "+.", "."] where name.hasPrefix(wildcard) { name.removeFirst(wildcard.count); break }
+        var isWildcard = false
+        for wildcard in ["*.", "+.", "."] where name.hasPrefix(wildcard) { name.removeFirst(wildcard.count); isWildcard = true; break }
         if name.hasSuffix(".") { name.removeLast() }
         let labels = name.split(separator: ".", omittingEmptySubsequences: false)
         let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789-_")
-        guard !name.isEmpty, labels.allSatisfy({ !$0.isEmpty && $0.unicodeScalars.allSatisfy(allowed.contains) }) else { return nil }
+        // A lone word is more likely a typo or prose than a host; `.ir` or `full:host` say so explicitly.
+        guard labels.count > 1 || isWildcard, !name.isEmpty, labels.allSatisfy({ !$0.isEmpty && $0.unicodeScalars.allSatisfy(allowed.contains) }) else { return nil }
         return name
     }
 

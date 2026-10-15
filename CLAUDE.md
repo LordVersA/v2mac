@@ -72,8 +72,9 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     `~/Library/Developer/Xcode/DerivedData/v2mac-*/Build/Products/Debug/V2MacDev.app/Contents/MacOS/V2MacDev -debugConnect YES`
   - `-debugEditServer new|<row>|save` (with demo data) opens the server editor, or runs a save;
     `-debugEditProtocol <protocol>` and `-debugEditorHeight <points>` show a whole form in a snapshot.
-  - `-debugWindowRequest <settings tab>|main` opens that window after 2 seconds (also with demo
+  - `-debugWindowRequest <settings tab>|main|rule-builder` opens that window after 2 seconds (also with demo
     data), so a snapshot can show a settings tab: `-debugWindowRequest about`.
+    With `rule-builder`, `-debugRuleBuilder <step>[:<source>]` (`targets:countries`, `review`) shows a step.
   - `-debugAddCustom YES` adds four made-up servers (VLESS, Trojan, Shadowsocks) to Custom Configs
     in the dev build's own data. They do not connect; they are for trying the lists by hand.
   - `-debugDemoData YES` uses an in-memory store filled with made-up servers. Use it for UI checks

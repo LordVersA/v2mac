@@ -425,6 +425,12 @@ final class AppModel {
         NSApp.activate()
     }
 
+    func openRuleBuilder(_ openWindow: OpenWindowAction) {
+        NSApp.setActivationPolicy(.regular)
+        openWindow(id: RuleBuilderView.windowID)
+        NSApp.activate()
+    }
+
     func openLogs(_ openWindow: OpenWindowAction) {
         NSApp.setActivationPolicy(.regular)
         openWindow(id: "logs")
@@ -590,13 +596,13 @@ final class AppModel {
         }
     }
 
-    /// `-debugWindowRequest <settings tab>|main`: what a click on a notification does. Works with
+    /// `-debugWindowRequest <settings tab>|main|rule-builder`: what a click on a notification does. Works with
     /// demo data, so `-debugSnapshot` can show a settings tab.
     private func windowRequestHook() {
         guard let target = UserDefaults.standard.string(forKey: "debugWindowRequest") else { return }
         Task {
             try? await Task.sleep(for: .seconds(2))
-            windowRequest = WindowRequest(code: target == "main" ? "main" : "settings:\(target)")
+            windowRequest = WindowRequest(code: ["main", RuleBuilderView.windowID].contains(target) ? target : "settings:\(target)")
             try? await Task.sleep(for: .seconds(1))
             print("[v2mac-debug] window request handled: \(windowRequest == nil), settings tab \(settingsTab.rawValue)")
         }

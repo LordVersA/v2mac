@@ -32,13 +32,10 @@ struct RoutingSettings: View {
 /// Spec 8.6: the user's own rules, edited as text and applied with one button,
 /// so typing does not restart the core on every key.
 private struct CustomRulesSection: View {
-    enum List: String, CaseIterable, Identifiable {
-        case proxy = "Proxy", direct = "Direct", block = "Block"
-        var id: Self { self }
-        var key: String { "customRules\(rawValue)" }
-    }
+    typealias List = RuleList
 
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
     @AppStorage("customRulesProxy") private var proxy = ""
     @AppStorage("customRulesDirect") private var direct = ""
     @AppStorage("customRulesBlock") private var block = ""
@@ -73,6 +70,7 @@ private struct CustomRulesSection: View {
                     .foregroundStyle(.orange)
             }
             HStack {
+                Button("Rule Builder…", systemImage: "wand.and.stars") { model.openRuleBuilder(openWindow) }
                 Spacer()
                 Button("Revert") { drafts = [:] }.disabled(!changed)
                 Button("Apply") {
@@ -94,5 +92,9 @@ private struct CustomRulesSection: View {
             """)
             .foregroundStyle(.secondary)
         }
+        // The rule builder saves straight to the lists; show what it wrote.
+        .onChange(of: proxy) { drafts[.proxy] = nil }
+        .onChange(of: direct) { drafts[.direct] = nil }
+        .onChange(of: block) { drafts[.block] = nil }
     }
 }

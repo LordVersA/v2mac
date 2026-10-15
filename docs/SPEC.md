@@ -631,8 +631,8 @@ comment). `RuleMatchers` turns each list into Xray `domain` and `ip` entries:
   `geosite:`, `geoip:`, `ext:<file>:<tag>` (a file whose name contains "ip" is
   an IP list).
 - IP addresses and CIDR ranges, v4 and v6.
-- Plain domains and `*.`, `+.`, `.` wildcards → `domain:<name>` (the domain
-  and its subdomains).
+- Plain domains with at least one dot, and `*.`, `+.`, `.` wildcards →
+  `domain:<name>` (the domain and its subdomains). A lone word is skipped.
 - Clash rules `DOMAIN`, `DOMAIN-SUFFIX`, `DOMAIN-KEYWORD`, `DOMAIN-REGEX`,
   `IP-CIDR`, `IP-CIDR6`, `GEOIP`, `GEOSITE`, also as `- ` payload lines; the
   policy column is ignored, the list decides.
@@ -644,6 +644,26 @@ entries switch `domainStrategy` to `IPIfNonMatch` with the DoH `dns` section of
 Bypass mode. Direct mode uses only the Block list. Full configs (8.2) keep their
 own routing. Apply restarts a running core; a live switch keeps the core only
 when the rules are unchanged.
+
+**Rule Builder.** A window (`rule-builder`, opened from the Custom rules
+section) writes rules in three steps: the list (Proxy, Direct, Block, or a
+common setup that fills in the rest); what to match; a review. What to match
+comes from three panes:
+
+- Countries: every two-letter list in `geoip.dat`, searchable by local or
+  English name and code, and on a map (a click on a country adds or removes it,
+  found by MapKit reverse geocoding). Each country gives `geoip:<cc>`,
+  `domain:<tld>` (`uk` for GB) and `geosite:category-<cc>` / `geosite:<cc>`
+  where the site file has them; each of the three can be turned off.
+- Services: popular services as tiles, each mapped to the lists the files
+  contain, and every list of `geosite.dat` plus the non-country lists of
+  `geoip.dat`, searchable. List names are read from the files themselves
+  (`GeoTags`), so a rule never names a list the core lacks.
+- Domains & IPs: free text in the formats above.
+
+The review shows each rule and marks the ones already in the list. Add Rules
+appends (or replaces the list, when chosen) under a dated `# Rule Builder`
+comment, saves and restarts a running core.
 
 ## 9. Core process management
 
@@ -1260,7 +1280,7 @@ With the setting off nothing is counted or shown.
 | | Username / Password (warning shown when LAN is on and these are empty) | Empty |
 | Routing | Mode: Global / Bypass regions / Direct | Global |
 | | Bypass regions list: enable, status, Update Now, auto-update interval | None enabled |
-| | Custom rules: Proxy / Direct / Block lists, applied with a button (section 8.6) | Empty |
+| | Custom rules: Proxy / Direct / Block lists, applied with a button, and the Rule Builder (section 8.6) | Empty |
 | Subscriptions | Auto-update subscriptions | On |
 | | Auto-update route: Without proxy / Via proxy | Without proxy |
 | | Default interval when the provider sends none | 12 h |

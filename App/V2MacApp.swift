@@ -42,6 +42,14 @@ struct V2MacApp: App {
         .defaultSize(width: 760, height: 460)
         .defaultLaunchBehavior(.suppressed)
 
+        Window("Rule Builder", id: RuleBuilderView.windowID) {
+            RuleBuilderView()
+                .environment(model)
+        }
+        .defaultSize(width: 940, height: 640)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+
         Settings {
             SettingsView()
                 .environment(model)
@@ -64,6 +72,7 @@ struct WindowRequestHandler: View {
                 model.windowRequest = nil
                 switch request {
                 case .main: model.openMainWindow(openWindow)
+                case .ruleBuilder: model.openRuleBuilder(openWindow)
                 case .settings(let tab): model.openSettings(openSettings, tab: tab)
                 }
             }

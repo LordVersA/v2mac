@@ -47,10 +47,12 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
 enum WindowRequest: Equatable, Sendable {
     case main
     case settings(SettingsTab)
+    case ruleBuilder
 
     var code: String {
         switch self {
         case .main: "main"
+        case .ruleBuilder: RuleBuilderView.windowID
         case .settings(let tab): "settings:\(tab.rawValue)"
         }
     }
@@ -58,6 +60,8 @@ enum WindowRequest: Equatable, Sendable {
     init(code: String) {
         if code.hasPrefix("settings:"), let tab = SettingsTab(rawValue: String(code.dropFirst(9))) {
             self = .settings(tab)
+        } else if code == RuleBuilderView.windowID {
+            self = .ruleBuilder
         } else {
             self = .main
         }
