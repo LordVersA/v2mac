@@ -5,14 +5,23 @@ import Testing
 
 @Suite(.tags(.integration), .serialized, .enabled(if: TestSupport.coreAvailable))
 struct LatencyIntegrationTests {
+    /// A copy of the core for this suite alone: `xrayCount` counts processes by path, and other
+    /// suites run the original at the same time.
+    static let xray: URL = {
+        let copy = FileManager.default.temporaryDirectory.appendingPathComponent("xray-latency-\(getpid())")
+        try? FileManager.default.removeItem(at: copy)
+        try? FileManager.default.copyItem(at: TestSupport.xray, to: copy)
+        return copy
+    }()
+
     func tester(_ options: LatencyOptions = LatencyOptions()) -> RealDelayTester {
-        RealDelayTester(executable: TestSupport.xray, assetDirectory: TestSupport.vendorCore, options: options)
+        RealDelayTester(executable: Self.xray, assetDirectory: TestSupport.vendorCore, options: options)
     }
 
     func xrayCount() -> Int {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
-        p.arguments = ["-f", TestSupport.xray.path]
+        p.arguments = ["-f", Self.xray.path]
         let pipe = Pipe()
         p.standardOutput = pipe
         try? p.run()
@@ -27,7 +36,7 @@ struct LatencyIntegrationTests {
         let liveConfig = try ConfigBuilder.buildGlobal(outbound: ["protocol": "freedom"], options: options)
         let liveDir = try TestSupport.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: liveDir) }
-        let live = CoreRunner(executable: TestSupport.xray, assetDirectory: TestSupport.vendorCore, runDirectory: liveDir)
+        let live = CoreRunner(executable: Self.xray, assetDirectory: TestSupport.vendorCore, runDirectory: liveDir)
         try await live.start(config: liveConfig, readyPort: options.inbound.port)
         let livePid = try #require(pid_t(String(contentsOf: liveDir.appendingPathComponent("xray.pid"), encoding: .utf8)))
 
