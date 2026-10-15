@@ -13,5 +13,35 @@
       "file": "region-ir-geoip.dat",
       "tags": ["ir"]
     }
+  },
+  {
+    "id": "cn",
+    "name": "China",
+    "attribution": "Loyalsoldier/v2ray-rules-dat (GPL-3.0)",
+    "geosite": {
+      "url": "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat",
+      "file": "region-cn-geosite.dat",
+      "tags": ["cn"]
+    },
+    "geoip": {
+      "url": "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat",
+      "file": "region-cn-geoip.dat",
+      "tags": ["cn"]
+    }
+  },
+  {
+    "id": "ru",
+    "name": "Russia",
+    "attribution": "Loyalsoldier/v2ray-rules-dat (GPL-3.0)",
+    "geosite": {
+      "url": "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat",
+      "file": "region-ru-geosite.dat",
+      "tags": ["category-ru", "tld-ru"]
+    },
+    "geoip": {
+      "url": "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat",
+      "file": "region-ru-geoip.dat",
+      "tags": ["ru"]
+    }
   }
 ]

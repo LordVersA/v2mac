@@ -13,7 +13,7 @@
 - **Favorites:** star the servers you like and find them in one list. A subscription update never removes them without asking.
 - **Latency tests:** real-delay and TCP ping for a whole group at once, sorted by speed.
 - **Optional automatic selection:** off by default; chooses a working server using real HTTP response delay, monitors the running proxy, and falls back to peers in group order. Manual choices stay selected while they respond.
-- **Routing:** Global, Direct, or Bypass regions (Iran included) to send local traffic direct.
+- **Routing:** Global, Direct, or Bypass regions (Iran, China, Russia) to send local traffic direct.
 - **TUN mode:** one switch routes all traffic on the Mac through the proxy, including apps with no proxy setting. No paid developer account or system extension needed.
 - **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel. This is not a system kill switch; port-53 DNS goes directly to the network.
 - **Menu bar control:** connect, switch server, live speed, and a local address you can copy.

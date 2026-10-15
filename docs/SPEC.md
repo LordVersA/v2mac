@@ -65,7 +65,7 @@ Answers given during the design interview.
 | 11 | Inbound | One `mixed` port (SOCKS5 + HTTP), default `127.0.0.1:10808`. |
 | 12 | LAN | Localhost by default; "Allow LAN" toggle; optional username/password. |
 | 13 | Routing | Presets only. Default is Global. |
-| 14 | Region bypass | Generic list of region packs; v1 ships one (Iran); not enabled by default; downloaded on enable; auto-updatable. |
+| 14 | Region bypass | Generic list of region packs: Iran, China, Russia; not enabled by default; downloaded on enable; auto-updatable. |
 | 15 | Core delivery | Pinned core in the bundle + in-app updater with checksum verification and "Revert to bundled". |
 | 16 | Latency | Real delay through a throwaway core (primary) + TCP ping (secondary). |
 | 17 | Main window | Sidebar + server table + inspector, floating glass connection bar. |
@@ -879,6 +879,11 @@ Defined in a bundled `RegionPacks.json`; adding a region is a data change.
     "geoip":   { "url": "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/latest/download/geoip-lite.dat",
                  "file": "region-ir-geoip.dat",  "tags": ["ir"] } } ]
 ```
+
+Shipped packs: Iran (Chocolate4U lite files, tag `ir`), China and Russia
+(Loyalsoldier/v2ray-rules-dat, GPL-3.0: geosite `cn` / `category-ru` + `tld-ru`,
+geoip `cn` / `ru`). Loyalsoldier's files hold every country, so they are large
+(about 11 MB geosite, 17 MB geoip); each pack keeps its own copy.
 
 - Checksum URL is `<url>.sha256sum`; the first whitespace-separated token is
   the hash.
