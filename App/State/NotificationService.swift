@@ -49,10 +49,13 @@ enum WindowRequest: Equatable, Sendable {
     case settings(SettingsTab)
     case ruleBuilder
 
+    /// The Rule Builder's window id; here so state code does not need the view.
+    static let ruleBuilderID = "rule-builder"
+
     var code: String {
         switch self {
         case .main: "main"
-        case .ruleBuilder: RuleBuilderView.windowID
+        case .ruleBuilder: Self.ruleBuilderID
         case .settings(let tab): "settings:\(tab.rawValue)"
         }
     }
@@ -60,7 +63,7 @@ enum WindowRequest: Equatable, Sendable {
     init(code: String) {
         if code.hasPrefix("settings:"), let tab = SettingsTab(rawValue: String(code.dropFirst(9))) {
             self = .settings(tab)
-        } else if code == RuleBuilderView.windowID {
+        } else if code == Self.ruleBuilderID {
             self = .ruleBuilder
         } else {
             self = .main

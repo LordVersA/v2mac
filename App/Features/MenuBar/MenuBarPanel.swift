@@ -209,6 +209,10 @@ struct MenuBarPanel: View {
                 .padding(.horizontal, 4)
                 .padding(.bottom, 2)
 
+            if connection.killSwitch.isBlocking, connection.phase == .off {
+                PanelCard { KillSwitchNotice(connection: connection) }
+            }
+
             if connection.phase == .connected {
                 PanelCard {
                     exitRow
@@ -258,6 +262,15 @@ struct MenuBarPanel: View {
                     TunToggle(connection: connection, showsLabel: false)
                 }
                 if let failure = connection.tun.failureMessage {
+                    Text(failure).font(.caption).foregroundStyle(.orange).lineLimit(3)
+                }
+                Divider()
+                HStack {
+                    Text("System Proxy")
+                    Spacer()
+                    SystemProxyToggle(connection: connection, showsLabel: false)
+                }
+                if let failure = connection.systemProxy.failure {
                     Text(failure).font(.caption).foregroundStyle(.orange).lineLimit(3)
                 }
                 Divider()

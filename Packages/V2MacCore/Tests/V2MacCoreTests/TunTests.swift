@@ -226,20 +226,25 @@ import Testing
     @Test func launchCommandCarriesScriptAndConfigInline() throws {
         let command = TunHelper.launchCommand(
             appPID: 42, stateDirectory: URL(fileURLWithPath: "/it's/run"), core: URL(fileURLWithPath: "/x/xray"),
-            coreSHA256: "abc", config: #"{"a":1}"#, rootDirectory: URL(fileURLWithPath: "/var/run/v2mac-tun-501")
+            coreSHA256: "abc", config: #"{"a":1}"#, rootDirectory: URL(fileURLWithPath: "/var/run/v2mac-tun-501"),
+            killSwitchRules: "block all", killSwitchAnchor: "com.apple/v2mac", killSwitchMarker: URL(fileURLWithPath: "/var/run/v2mac-killswitch-501")
         )
         #expect(command.hasPrefix("/bin/sh -c '"))
-        #expect(command.hasSuffix(#" 'v2mac-tun-helper' '42' '/it'\''s/run' '/x/xray' 'abc' '{"a":1}' '/var/run/v2mac-tun-501' > /dev/null 2>&1 &"#))
+        #expect(command.hasSuffix(#" 'v2mac-tun-helper' '42' '/it'\''s/run' '/x/xray' 'abc' '{"a":1}' '/var/run/v2mac-tun-501' 'block all' 'com.apple/v2mac' '/var/run/v2mac-killswitch-501' > /dev/null 2>&1 &"#))
         #expect(command.range(of: #"\.sh['\s]"#, options: .regularExpression) == nil, "no script file a user process could change")
     }
 
     @Test func appleScriptEscapesQuotesAndBackslashes() {
         let script = TunHelper.appleScript(command: #"echo "a\b""#, prompt: "Allow?")
         #expect(script == #"do shell script "echo \"a\\b\"" with prompt "Allow?" with administrator privileges"#)
+        let saved = TunHelper.appleScript(command: "true", prompt: "Allow?", user: "me", password: #"p"w"#)
+        #expect(saved == #"do shell script "true" user name "me" password "p\"w" with administrator privileges"#)
     }
 
-    @Test func rootDirectoryIsPerUser() {
+    @Test func rootDirectoryIsPerUserAndPerApp() {
         #expect(TunHelper.rootDirectory(uid: 501).path == "/var/run/v2mac-tun-501")
+        #expect(TunHelper.rootDirectory(name: "v2mac-dev", uid: 501).path == "/var/run/v2mac-dev-tun-501")
+        #expect(KillSwitch.marker(name: "v2mac", uid: 501).path == "/var/run/v2mac-killswitch-501")
     }
 
     @Test func helperWithoutPidFileIsNotAlive() throws {
@@ -273,6 +278,12 @@ import Testing
         var flag: URL { state.appendingPathComponent(TunHelper.onFlag) }
         var session: URL { state.appendingPathComponent(TunHelper.sessionFlag) }
         var childRunning: Bool { FileManager.default.fileExists(atPath: marker.path) }
+        /// The kill switch's marker, which holds pf's token while the block is armed.
+        var ksMarker: URL { dir.appendingPathComponent("ks-marker") }
+        /// What the stand-ins for `pfctl` and `networksetup` were asked, one call per line.
+        var calls: [String] {
+            ((try? String(contentsOf: dir.appendingPathComponent("calls"), encoding: .utf8)) ?? "").split(separator: "\n").map(String.init)
+        }
 
         func cleanUp() {
             if helper.isRunning { helper.terminate() }
@@ -285,7 +296,8 @@ import Testing
     /// `hash` replaces the core's real SHA-256.
     /// `store` gives the helper a stand-in dynamic store in `dir/store`, whose primary service
     /// `A` has DNS `192.168.1.1`.
-    func start(core: String, hash: String? = nil, store: Bool = false) async throws -> Session {
+    /// `anchors: false` makes the stand-in `pfctl` report a main ruleset without Apple's anchors.
+    func start(core: String, hash: String? = nil, store: Bool = false, anchors: Bool = true) async throws -> Session {
         let fm = FileManager.default
         let dir = try TestSupport.makeTempDirectory()
         let storeDir = dir.appendingPathComponent("store")
@@ -314,8 +326,10 @@ import Testing
         let helper = Process()
         helper.executableURL = URL(fileURLWithPath: "/bin/sh")
         let sha = try await TunHelper.sha256(of: fake)
-        helper.arguments = ["-c", (store ? Self.fakeStore(storeDir) : Self.noSystemChanges) + TunHelper.script, "v2mac-tun-helper", "\(app.processIdentifier)", state.path, fake.path,
-                            hash ?? sha, #"{"log":{}}"#, root.path]
+        helper.arguments = ["-c", (store ? Self.fakeStore(storeDir) : Self.noSystemChanges) + Self.fakeFirewall(dir, anchors: anchors) + TunHelper.script,
+                            "v2mac-tun-helper", "\(app.processIdentifier)", state.path, fake.path,
+                            hash ?? sha, #"{"log":{}}"#, root.path, KillSwitch.rules(tunInterface: "utun123"), "com.apple/v2mac-test",
+                            dir.appendingPathComponent("ks-marker").path]
         try helper.run()
         return Session(dir: dir, state: state, root: root, marker: marker, helper: helper, app: app)
     }
@@ -324,6 +338,30 @@ import Testing
 
     /// Shell functions take the place of the commands that change this Mac's DNS settings.
     static let noSystemChanges = "scutil() { cat > /dev/null; }\ndscacheutil() { :; }\nkillall() { :; }\n"
+
+    /// Stand-ins for `pfctl` and `networksetup` that write each call to `dir/calls`. There are two
+    /// network services with a device, one disabled and one without a device (a VPN).
+    static func fakeFirewall(_ dir: URL, anchors: Bool) -> String {
+        """
+        CALLS='\(dir.appendingPathComponent("calls").path)'
+        pfctl() {
+          echo "pfctl $*" >> "$CALLS"
+          case "$*" in
+            "-s rules") \(anchors ? #"echo 'anchor "com.apple/*" all'"# : ":") ;;
+            -E) echo 'pf enabled'; echo 'Token : 42' ;;
+          esac
+          return 0
+        }
+        networksetup() {
+          echo "networksetup $*" >> "$CALLS"
+          [ "$1" = -listnetworkserviceorder ] && printf '%s\\n' 'An asterisk (*) denotes that a network service is disabled.' \\
+            '(1) Wi-Fi' '(Hardware Port: Wi-Fi, Device: en0)' '' '(2) VPN (Work)' '(Hardware Port: com.example.vpn, Device: )' '' \\
+            '(*) Bluetooth PAN' '(Hardware Port: Bluetooth PAN, Device: en9)' '' '(3) USB 10/100 LAN' '(Hardware Port: USB 10/100 LAN, Device: en7)'
+          return 0
+        }
+
+        """
+    }
 
     /// A stand-in for `scutil` that keeps each key of the dynamic store, and with `--prefs` each
     /// path of the saved settings, in a file: a list of `ServerAddresses`, or for `…/IPv4` the
@@ -489,7 +527,9 @@ import Testing
 
         let command = TunHelper.launchCommand(
             appPID: getpid(), stateDirectory: state, core: fake, coreSHA256: try await TunHelper.sha256(of: fake),
-            config: #"{"it's": "quoted \\ text"}"#, rootDirectory: root
+            config: #"{"it's": "quoted \\ text"}"#, rootDirectory: root,
+            killSwitchRules: KillSwitch.rules(tunInterface: "utun123"), killSwitchAnchor: "com.apple/v2mac-test",
+            killSwitchMarker: dir.appendingPathComponent("ks-marker")
         )
         let source = TunHelper.appleScript(command: command, prompt: "unused")
             .replacingOccurrences(of: " with administrator privileges", with: "")
@@ -503,6 +543,101 @@ import Testing
         #expect(try String(contentsOf: root.appendingPathComponent("config.json"), encoding: .utf8) == #"{"it's": "quoted \\ text"}"# + "\n")
         try fm.removeItem(at: state.appendingPathComponent(TunHelper.sessionFlag))
         #expect(await wait { !fm.fileExists(atPath: root.path) })
+    }
+
+    func write(_ text: String, to name: String, in s: Session) throws {
+        try text.write(to: s.state.appendingPathComponent(name), atomically: true, encoding: .utf8)
+    }
+
+    @Test func killSwitchArmsTakesOnlyAddressesAndLiftsWhenAsked() async throws {
+        let s = try await start(core: liveCore)
+        defer { s.cleanUp() }
+        let fm = FileManager.default
+        #expect(await wait { TunHelper.isAlive(rootDirectory: s.root) })
+        try? await Task.sleep(for: .milliseconds(500))
+        #expect(!s.calls.contains { $0.hasPrefix("pfctl") }, "nothing is armed before the app asks")
+
+        try write("1.2.3.4\nevil; rm -rf /\n2606:4700::1\n0.0.0.0/0\n", to: KillSwitch.allowFile, in: s)
+        try write("", to: KillSwitch.flag, in: s)
+        #expect(await wait { (try? String(contentsOf: s.ksMarker, encoding: .utf8)) == "42\n" })
+        #expect(s.calls.contains("pfctl -a com.apple/v2mac-test -f \(s.root.path)/pf.rules"))
+        #expect(try String(contentsOf: s.root.appendingPathComponent("pf.rules"), encoding: .utf8) == KillSwitch.rules(tunInterface: "utun123") + "\n")
+        let allow = s.root.appendingPathComponent("allow")
+        #expect(await wait { s.calls.contains("pfctl -a com.apple/v2mac-test -t v2mac_allow -T replace -f \(allow.path)") })
+        #expect(try String(contentsOf: allow, encoding: .utf8) == "1.2.3.4\n2606:4700::1\n")
+        #expect((try fm.attributesOfItem(atPath: allow.path)[.posixPermissions] as? Int) == 0o600)
+
+        // A new server's address replaces the table again.
+        try write("1.2.3.4\n5.6.7.8\n", to: KillSwitch.allowFile, in: s)
+        #expect(await wait { (try? String(contentsOf: allow, encoding: .utf8)) == "1.2.3.4\n5.6.7.8\n" })
+
+        try fm.removeItem(at: s.state.appendingPathComponent(KillSwitch.flag))
+        #expect(await wait { !fm.fileExists(atPath: s.ksMarker.path) })
+        #expect(s.calls.contains("pfctl -X 42"))
+        #expect(s.calls.contains("pfctl -a com.apple/v2mac-test -F rules"))
+        #expect(!s.calls.contains("pfctl -a com.apple/v2mac-test -F all"), "flushing all would clear pf's states for everyone")
+        #expect(s.helper.isRunning)
+    }
+
+    @Test func killSwitchOutlivesACrashedAppButNotAQuit() async throws {
+        let fm = FileManager.default
+        let crashed = try await start(core: liveCore)
+        defer { crashed.cleanUp() }
+        try write("", to: KillSwitch.flag, in: crashed)
+        #expect(await wait { fm.fileExists(atPath: crashed.ksMarker.path) })
+        crashed.app.terminate()
+        #expect(await wait { !crashed.helper.isRunning })
+        #expect(fm.fileExists(atPath: crashed.ksMarker.path), "the block stays when the app dies with it on")
+        #expect(!crashed.calls.contains("pfctl -X 42"))
+
+        let quit = try await start(core: liveCore)
+        defer { quit.cleanUp() }
+        try write("", to: KillSwitch.flag, in: quit)
+        #expect(await wait { fm.fileExists(atPath: quit.ksMarker.path) })
+        // Quitting: the app takes its flag away, then ends the session.
+        try fm.removeItem(at: quit.state.appendingPathComponent(KillSwitch.flag))
+        try fm.removeItem(at: quit.session)
+        #expect(await wait { !quit.helper.isRunning })
+        #expect(!fm.fileExists(atPath: quit.ksMarker.path))
+        #expect(quit.calls.contains("pfctl -X 42"))
+    }
+
+    @Test func killSwitchRefusesWhenPfWouldNotEvaluateItsAnchor() async throws {
+        let s = try await start(core: liveCore, anchors: false)
+        defer { s.cleanUp() }
+        let flag = s.state.appendingPathComponent(KillSwitch.flag)
+        try write("", to: KillSwitch.flag, in: s)
+        #expect(await wait { !FileManager.default.fileExists(atPath: flag.path) }, "the helper takes the request back")
+        let error = try String(contentsOf: s.root.appendingPathComponent(KillSwitch.errorFile), encoding: .utf8)
+        #expect(error.contains("Apple's anchors"))
+        #expect(!FileManager.default.fileExists(atPath: s.ksMarker.path))
+        #expect(!s.calls.contains("pfctl -E"))
+    }
+
+    @Test func systemProxyFollowsThePortFileOnServicesWithADevice() async throws {
+        let s = try await start(core: liveCore)
+        defer { s.cleanUp() }
+        let fm = FileManager.default
+        try write("10808\n", to: SystemProxy.flag, in: s)
+        #expect(await wait { s.calls.contains("networksetup -setsocksfirewallproxy USB 10/100 LAN 127.0.0.1 10808 off") })
+        let set = s.calls.filter { $0.hasPrefix("networksetup -setwebproxy ") }
+        #expect(set == ["networksetup -setwebproxy Wi-Fi 127.0.0.1 10808 off", "networksetup -setwebproxy USB 10/100 LAN 127.0.0.1 10808 off"])
+        #expect(s.calls.contains("networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 10808 off"))
+
+        try write("10901", to: SystemProxy.flag, in: s)
+        #expect(await wait { s.calls.contains("networksetup -setwebproxy Wi-Fi 127.0.0.1 10901 off") })
+
+        // Not a port: treated like no request.
+        try write("80; reboot", to: SystemProxy.flag, in: s)
+        #expect(await wait { s.calls.contains("networksetup -setwebproxystate Wi-Fi off") })
+        #expect(!s.calls.contains { $0.contains("reboot") })
+
+        try write("10808", to: SystemProxy.flag, in: s)
+        #expect(await wait { s.calls.filter { $0 == "networksetup -setwebproxy Wi-Fi 127.0.0.1 10808 off" }.count == 2 })
+        let before = s.calls.filter { $0.hasSuffix("proxystate Wi-Fi off") }.count
+        try fm.removeItem(at: s.session)
+        #expect(await wait { !s.helper.isRunning })
+        #expect(s.calls.filter { $0.hasSuffix("proxystate Wi-Fi off") }.count == before + 3, "the session's end turns the proxies off")
     }
 
     @Test func refusesACoreThatChangedAfterItWasHashed() async throws {

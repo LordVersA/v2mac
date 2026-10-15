@@ -60,9 +60,13 @@ targets:
       - App/State/NotificationService.swift
       - App/Features/Settings/SettingsTab.swift
       - App/Support/AppPaths.swift
+      - App/Support/Keychain.swift
+      - App/State/KillSwitchController.swift
+      - App/State/SystemProxyController.swift
       - App/Support/ServerName.swift
       - App/Models/Profile.swift
       - App/Models/ServerGroup.swift
+      - App/Models/GroupColor.swift
       - Packages/V2MacCore/Tests/V2MacCoreTests/TestHTTPServer.swift
     dependencies:
       - package: V2MacCore

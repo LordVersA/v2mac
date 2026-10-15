@@ -83,7 +83,8 @@ enum Prefs {
             "checkAppUpdates": true,
             "allowLAN": false,
             "proxyUsername": "",
-            "proxyPassword": "",
+            "systemProxy": false,
+            "killSwitch": false,
             "autoUpdateSubscriptions": true,
             "subscriptionUpdateViaProxy": false,
             "defaultIntervalHours": 12,
@@ -114,6 +115,10 @@ enum Prefs {
         ])
         defaults.register(defaults: Dictionary(uniqueKeysWithValues: NotificationKind.allCases.map { ($0.key, $0.defaultOn) }))
         if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
+        // The proxy password used to be kept in the preferences file; it moves to the keychain once.
+        if let old = defaults.string(forKey: "proxyPassword"), old.isEmpty || Keychain.set(old, for: .proxyPassword) {
+            defaults.removeObject(forKey: "proxyPassword")
+        }
         // macOS puts a new menu bar icon at the far left, where a notch hides it first. This is
         // AppKit's own (undocumented) key for a dragged icon, in points from the right edge of
         // the screen; seeding it starts the icon beside the system ones. A position the user
@@ -168,8 +173,39 @@ enum Prefs {
             port: port,
             allowLAN: defaults.bool(forKey: "allowLAN"),
             username: defaults.string(forKey: "proxyUsername"),
-            password: defaults.string(forKey: "proxyPassword")
+            password: proxyPassword
         )
+    }
+
+    /// Kept in the keychain (spec 13).
+    static var proxyPassword: String {
+        get { Keychain.string(.proxyPassword) ?? "" }
+        set { Keychain.set(newValue, for: .proxyPassword) }
+    }
+
+    /// An administrator account the user chose to save, so the root helper starts without the
+    /// system's prompt (spec 9.5). The password is in the keychain.
+    static var adminAccount: (user: String, password: String)? {
+        guard let user = defaults.string(forKey: "adminUser"), !user.isEmpty,
+              let password = Keychain.string(.adminPassword) else { return nil }
+        return (user, password)
+    }
+
+    static func setAdminAccount(_ account: (user: String, password: String)?) {
+        defaults.set(account?.user, forKey: "adminUser")
+        Keychain.set(account?.password, for: .adminPassword)
+    }
+
+    /// Spec 9.9: point the system proxy at the local port while connected.
+    static var systemProxy: Bool {
+        get { defaults.bool(forKey: "systemProxy") }
+        set { defaults.set(newValue, forKey: "systemProxy") }
+    }
+
+    /// Spec 9.8: block traffic outside the connection while one is wanted.
+    static var killSwitch: Bool {
+        get { defaults.bool(forKey: "killSwitch") }
+        set { defaults.set(newValue, forKey: "killSwitch") }
     }
 
     /// Changing servers swaps the outbound in the running core instead of restarting it.

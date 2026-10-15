@@ -152,6 +152,11 @@ extension ConfigBuilder {
 
     /// Server names an outbound dials, IP addresses and this Mac's own names left out.
     static func dialedNames(_ outbound: JSONValue) -> [String] {
+        dialedHosts(outbound).filter { IPv4Address($0) == nil && IPv6Address($0) == nil }
+    }
+
+    /// Server addresses an outbound dials, names and IP addresses, this Mac's own left out.
+    static func dialedHosts(_ outbound: JSONValue) -> [String] {
         let settings = outbound["settings"]
         var hosts = [settings?["address"]?.stringValue]
         for list in ["vnext", "servers"] { hosts += (settings?[list]?.arrayValue ?? []).map { $0["address"]?.stringValue } }
@@ -162,7 +167,7 @@ extension ConfigBuilder {
                 return host
             }
         }
-        return hosts.compactMap { $0 }.filter { !$0.isEmpty && !isLoopback($0) && IPv4Address($0) == nil && IPv6Address($0) == nil }
+        return hosts.compactMap { $0 }.filter { !$0.isEmpty && !isLoopback($0) }
     }
 
     /// Makes an outbound resolve the names it dials with the core's resolver (IPv4 first).

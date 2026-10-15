@@ -3,7 +3,8 @@ import Observation
 import V2MacCore
 
 /// TUN mode: a root helper, started once per app session after the administrator prompt,
-/// runs a second Xray that captures all system traffic and feeds it to the core.
+/// runs a second Xray that captures all system traffic and feeds it to the core. The same
+/// session sets the system proxy and holds the kill switch (`startSession`).
 @MainActor @Observable
 final class TunController {
     enum State: Equatable {
@@ -25,12 +26,16 @@ final class TunController {
     private let logs: LogStore
     private var port: Int?
     private var watcher: Task<Void, Never>?
-    private let stateDirectory: URL
-    private let rootDirectory: URL
+    /// The app's run directory, where the helper's flag files go.
+    let stateDirectory: URL
+    let rootDirectory: URL
+    @ObservationIgnored private var starting: Task<LaunchResult, Never>?
     private let primaryInterface: @MainActor (String?) -> String?
     private let authorize: @MainActor (String) async -> LaunchResult
     private let helperIsAlive: @MainActor (URL) -> Bool
     private let interfaceExists: @MainActor (String) -> Bool
+    /// The core the helper copies and runs as the forwarder.
+    private let core: @MainActor () -> URL
     private var preparationGeneration = 0
 
     private var sessionFlag: URL { stateDirectory.appendingPathComponent(TunHelper.sessionFlag) }
@@ -63,11 +68,12 @@ final class TunController {
         }
     }
 
-    init(logs: LogStore, stateDirectory: URL = AppPaths.runDirectory, rootDirectory: URL = TunHelper.rootDirectory(),
+    init(logs: LogStore, stateDirectory: URL = AppPaths.runDirectory, rootDirectory: URL = TunHelper.rootDirectory(name: AppPaths.dataFolderName),
          primaryInterface: @escaping @MainActor (String?) -> String? = { NetworkInterfaces.primary(excluding: $0) },
          authorize: @escaping @MainActor (String) async -> LaunchResult = { await runAsRoot($0) },
          helperIsAlive: @escaping @MainActor (URL) -> Bool = { TunHelper.isAlive(rootDirectory: $0) },
-         interfaceExists: @escaping @MainActor (String) -> Bool = { NetworkInterfaces.exists($0) }) {
+         interfaceExists: @escaping @MainActor (String) -> Bool = { NetworkInterfaces.exists($0) },
+         core: @escaping @MainActor () -> URL = { AppPaths.coreExecutable }) {
         self.logs = logs
         self.stateDirectory = stateDirectory
         self.rootDirectory = rootDirectory
@@ -75,6 +81,7 @@ final class TunController {
         self.authorize = authorize
         self.helperIsAlive = helperIsAlive
         self.interfaceExists = interfaceExists
+        self.core = core
         // Flags left by a crash would start a new helper with the TUN already wanted.
         removeFlags()
     }
@@ -95,44 +102,64 @@ final class TunController {
             fail("TUN mode is waiting for a network connection.")
             return nil
         }
-        if let port, helperIsAlive(rootDirectory) {
+        if !isSessionAlive {
+            watcher?.cancel()
+            state = .authorizing
+        }
+        let result = await startSession()
+        guard preparationGeneration == generation, isEnabled, !Task.isCancelled else { return nil }
+        switch result {
+        case .cancelled:
+            fail("Administrator access was cancelled; the system tunnel is inactive.")
+            return nil
+        case .failed(let message):
+            fail("TUN mode could not start: \(message)")
+            return nil
+        case .started:
+            guard let port else { return nil }
+            if state == .authorizing { state = .off }
             return TunLink(port: port, outboundInterface: primary, resolvers: NetworkInterfaces.dnsServers())
         }
+    }
 
-        watcher?.cancel()
+    var isSessionAlive: Bool { port != nil && helperIsAlive(rootDirectory) }
+
+    /// Starts the root helper for this app session unless it already runs: one administrator
+    /// prompt, or none with a saved administrator password, covers TUN mode, the system proxy and
+    /// the kill switch. Callers that ask at the same time share one start.
+    func startSession() async -> LaunchResult {
+        if isSessionAlive { return .started }
+        if let starting { return await starting.value }
+        let task = Task { await launchSession() }
+        starting = task
+        let result = await task.value
+        starting = nil
+        return result
+    }
+
+    private func launchSession() async -> LaunchResult {
         port = nil
         interfaceName = nil
         do {
             let newPort = Self.pickPort()
             let name = NetworkInterfaces.freeUtunName()
             let command = try await sessionCommand(port: newPort, interface: name)
-            state = .authorizing
-            logs.append("[v2mac] TUN mode: asking for administrator access")
+            logs.append("[v2mac] Asking for administrator access")
             let authorization = await authorize(command)
-            guard preparationGeneration == generation, isEnabled else { removeFlags(); return nil }
-            switch authorization {
-            case .cancelled:
-                removeFlags()
-                fail("Administrator access was cancelled; the system tunnel is inactive.")
-                return nil
-            case .failed(let message):
-                throw TunError(message: message)
-            case .started:
-                break
+            guard case .started = authorization else {
+                try? FileManager.default.removeItem(at: sessionFlag)
+                return authorization
             }
             guard await helperAppeared() else {
-                throw TunError(message: "The TUN helper did not start.")
+                try? FileManager.default.removeItem(at: sessionFlag)
+                return .failed("The helper did not start.")
             }
-            guard isEnabled, !Task.isCancelled else { removeFlags(); return nil }
             port = newPort
             interfaceName = name
-            state = .off
-            return TunLink(port: newPort, outboundInterface: primary, resolvers: NetworkInterfaces.dnsServers())
+            return .started
         } catch {
-            removeFlags()
-            guard preparationGeneration == generation, isEnabled else { return nil }
-            fail("TUN mode could not start: \(error.localizedDescription)")
-            return nil
+            try? FileManager.default.removeItem(at: sessionFlag)
+            return .failed(error.localizedDescription)
         }
     }
 
@@ -168,11 +195,6 @@ final class TunController {
     }
 
     // MARK: Internals
-
-    private struct TunError: LocalizedError {
-        let message: String
-        var errorDescription: String? { message }
-    }
 
     enum LaunchResult {
         case started, cancelled
@@ -216,8 +238,9 @@ final class TunController {
     }
 
     private func removeFlags() {
-        try? FileManager.default.removeItem(at: onFlag)
-        try? FileManager.default.removeItem(at: sessionFlag)
+        for name in [TunHelper.onFlag, TunHelper.sessionFlag, SystemProxy.flag, KillSwitch.flag, KillSwitch.allowFile] {
+            try? FileManager.default.removeItem(at: stateDirectory.appendingPathComponent(name))
+        }
     }
 
     /// A stable port outside the range the system hands to outgoing connections, so it is
@@ -228,15 +251,18 @@ final class TunController {
     }
 
     private func sessionCommand(port: Int, interface: String) async throws -> String {
-        let core = AppPaths.coreExecutable
+        let core = core()
         let coreSHA256 = try await TunHelper.sha256(of: core)
         let config = try ConfigBuilder.tunForwarder(interfaceName: interface, corePort: port, logLevel: .warning).data()
         try FileManager.default.createDirectory(at: stateDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        removeFlags()
+        // A helper that is gone left its TUN flag; the proxy and kill switch requests stay.
+        try? FileManager.default.removeItem(at: onFlag)
         FileManager.default.createFile(atPath: sessionFlag.path, contents: nil)
         return TunHelper.launchCommand(
             appPID: ProcessInfo.processInfo.processIdentifier, stateDirectory: stateDirectory,
-            core: core, coreSHA256: coreSHA256, config: String(decoding: config, as: UTF8.self), rootDirectory: rootDirectory
+            core: core, coreSHA256: coreSHA256, config: String(decoding: config, as: UTF8.self), rootDirectory: rootDirectory,
+            killSwitchRules: KillSwitch.rules(tunInterface: interface), killSwitchAnchor: KillSwitch.anchor(name: AppPaths.dataFolderName),
+            killSwitchMarker: KillSwitch.marker(name: AppPaths.dataFolderName)
         )
     }
 
@@ -249,20 +275,28 @@ final class TunController {
         return false
     }
 
-    /// Runs `command` as root through the system's administrator prompt.
-    private static func runAsRoot(_ command: String) async -> LaunchResult {
-        let source = TunHelper.appleScript(
-            command: command,
-            prompt: "V2Mac needs administrator access to turn on TUN mode, which routes all traffic on this Mac through the proxy."
-        )
-        return await withCheckedContinuation { continuation in
+    /// Runs `command` as root with the saved administrator account, or else through the system's
+    /// administrator prompt. A saved password that no longer works is forgotten.
+    static func runAsRoot(_ command: String) async -> LaunchResult {
+        let prompt = String(localized: "V2Mac needs administrator access for TUN mode, the system proxy or the kill switch.")
+        if let account = Prefs.adminAccount {
+            let result = await osascript(TunHelper.appleScript(command: command, prompt: prompt, user: account.user, password: account.password))
+            guard case .failed(let message) = result, message.contains("-60007") else { return result }
+            Prefs.setAdminAccount(nil)
+        }
+        return await osascript(TunHelper.appleScript(command: command, prompt: prompt))
+    }
+
+    /// The script goes in on standard input, so a saved password never shows in the process list.
+    static func osascript(_ source: String) async -> LaunchResult {
+        await withCheckedContinuation { continuation in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", source]
             let errors = Pipe()
+            let input = Pipe()
             process.standardError = errors
             process.standardOutput = FileHandle.nullDevice
-            process.standardInput = FileHandle.nullDevice
+            process.standardInput = input
             process.terminationHandler = { finished in
                 let text = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
                 if finished.terminationStatus == 0 {
@@ -276,6 +310,8 @@ final class TunController {
             }
             do {
                 try process.run()
+                input.fileHandleForWriting.write(Data(source.utf8))
+                try? input.fileHandleForWriting.close()
             } catch {
                 process.terminationHandler = nil
                 continuation.resume(returning: .failed(error.localizedDescription))

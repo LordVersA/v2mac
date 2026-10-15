@@ -30,7 +30,9 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   `osascript -e 'tell application id "io.github.lordversa.v2mac.dev" to quit'`, System Events
   `process "V2MacDev"`. Never `pkill V2Mac`, `tell application "V2Mac"`, or the release bundle id.
 - If a check really needs the installed app restarted, ask the user to do it.
-- The dev instance shares `/var/run/v2mac-tun-<uid>` with the installed app: do not turn TUN mode on in it.
+- TUN mode, the system proxy and the kill switch change system-wide settings (routes, DNS, proxies,
+  pf). Do not turn them on in the dev instance while the installed app is in use. The dev build's
+  root helper has its own folder (`/var/run/v2mac-dev-tun-<uid>`) and pf anchor (`com.apple/v2mac-dev`).
 
 ## Releasing
 - A release is made by pushing a tag, not by a normal commit. The user says when:
@@ -145,6 +147,11 @@ closure (`onNotice`, `onFailure`, `onFound`, `onFinished`), and `AppModel.wireNo
 them into text and posts through `NotificationService`. Every kind is a `NotificationKind` case with
 its own switch (`notify_<kind>`) in Settings → Notifications. A new one needs the case, a row in
 `NotificationSettings`, and a row in the spec table.
+
+**Root helper** (spec 9.5). One root shell script per app session, started through
+`osascript` (or with a saved administrator account) by `TunController.startSession`, serves TUN
+mode, the system proxy (`SystemProxyController`, spec 9.9) and the kill switch
+(`KillSwitchController`, spec 9.8). It reads only flag files and checked data from `run/`.
 
 **TUN mode** (spec 9.5) runs two Xray processes: the normal core as the user, and a root
 *forwarder* with a fixed config (TUN inbound → SOCKS to the core's `tun-in` port). The root helper

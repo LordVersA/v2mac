@@ -293,7 +293,7 @@ struct RuleBuilderView: View {
         dismissWindow(id: RuleBuilderView.windowID)
     }
 
-    static let windowID = "rule-builder"
+    static let windowID = WindowRequest.ruleBuilderID
 
     // MARK: Footer
 

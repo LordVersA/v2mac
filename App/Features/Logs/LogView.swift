@@ -96,6 +96,12 @@ struct FailureActions: View {
             }
             Button("Show Logs", action: showLogs)
                 .controlSize(.small)
+            // A failed connection with the kill switch up blocks everything until it ends.
+            if connection.killSwitch.isBlocking {
+                Button("Disconnect") { connection.disconnect() }
+                    .controlSize(.small)
+                    .help("Lift the kill switch until the next connection")
+            }
         }
     }
 }

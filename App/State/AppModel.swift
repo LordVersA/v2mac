@@ -69,6 +69,7 @@ final class AppModel {
         subscriptions.onMissingFavorites = { [weak self] ids in self?.missingFavoriteIDs.formUnion(ids) }
         let connection = self.connection
         latency.physicalInterface = { connection.tun.physicalInterface }
+        latency.beforeTesting = { hosts in await connection.killSwitch.allow(hosts) }
         connection.automaticCandidates = { [weak self] activeID in
             guard let self, let active = profile(id: activeID), let group = active.group else { return [] }
             return group.profiles.filter { !$0.isStale || $0.id == activeID }

@@ -31,6 +31,7 @@ struct GeneralSettings: View {
             }
             Toggle("Check for app updates", isOn: $checkUpdates)
             AppUpdateRow()
+            AdminAccessSection()
             DiagnosticsSection()
         }
         .formStyle(.grouped)

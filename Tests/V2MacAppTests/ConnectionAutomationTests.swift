@@ -27,7 +27,7 @@ struct ConnectionAutomationTests {
     }
 
     private func withController(
-        policy: TunFailurePolicy = .continueProxy, auto: Bool = false, tunEnabled: Bool = false,
+        policy: TunFailurePolicy = .continueProxy, auto: Bool = false, tunEnabled: Bool = false, killSwitch: Bool = false,
         authorize: @escaping @MainActor (String) async -> TunController.LaunchResult = { _ in .cancelled },
         helperIsAlive: @escaping @MainActor (URL) -> Bool = { _ in false },
         interfaceExists: @escaping @MainActor (String) -> Bool = { _ in false },
@@ -35,7 +35,7 @@ struct ConnectionAutomationTests {
     ) async throws {
         let defaults = UserDefaults.standard
         let keys = ["autoSelectServer", "tunFailurePolicy", "tunEnabled", "checkExit", "proxyPort", "wasRunning", "activeProfileID",
-                    "latencyURL", "latencyTimeout", "routingMode"]
+                    "latencyURL", "latencyTimeout", "routingMode", "killSwitch"]
         let saved = keys.map { ($0, defaults.object(forKey: $0)) }
         defer {
             for (key, value) in saved { if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) } }
@@ -44,6 +44,7 @@ struct ConnectionAutomationTests {
         defaults.set(auto, forKey: "autoSelectServer")
         defaults.set(policy.rawValue, forKey: "tunFailurePolicy")
         defaults.set(tunEnabled, forKey: "tunEnabled")
+        defaults.set(killSwitch, forKey: "killSwitch")
         defaults.set(false, forKey: "checkExit")
         defaults.set("http://example.com/probe", forKey: "latencyURL")
         defaults.set(0.5, forKey: "latencyTimeout")
@@ -56,7 +57,8 @@ struct ConnectionAutomationTests {
         let tun = TunController(logs: logs, stateDirectory: directory.appendingPathComponent("tun"),
                                 rootDirectory: directory.appendingPathComponent("helper"),
                                 primaryInterface: { _ in "en0" }, authorize: authorize,
-                                helperIsAlive: helperIsAlive, interfaceExists: interfaceExists)
+                                helperIsAlive: helperIsAlive, interfaceExists: interfaceExists,
+                                core: { Self.vendor.appendingPathComponent("xray") })
         let controller = ConnectionController(logs: logs, executable: { Self.vendor.appendingPathComponent("xray") },
                                               assetDirectory: Self.vendor, runDirectory: directory.appendingPathComponent("run"),
                                               tun: tun, monitorsLifecycle: false, healthInterval: .milliseconds(200))
@@ -84,6 +86,20 @@ struct ConnectionAutomationTests {
             #expect(controller.tun.failureMessage?.contains("cancelled") == true)
             #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("run/xray.pid").path))
             #expect(!Prefs.wasRunning)
+        }
+    }
+
+    @Test func killSwitchThatCannotGoUpKeepsTheConnectionDown() async throws {
+        try await withController(killSwitch: true) { controller, directory in
+            controller.setActive(try server())
+            controller.connectActive()
+            #expect(await wait { if case .failed = controller.phase { true } else { false } })
+            #expect(controller.localError?.contains("kill switch") == true)
+            #expect(controller.killSwitch.state == .failed("Administrator access was cancelled."))
+            #expect(!controller.isRunning)
+            #expect(!Prefs.wasRunning)
+            #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("tun/\(KillSwitch.flag)").path))
+            #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("run/xray.pid").path))
         }
     }
 

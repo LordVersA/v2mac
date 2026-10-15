@@ -32,7 +32,7 @@ on the Mac through the same connection.
 | Not in v1 | Note |
 |---|---|
 | TUN / system-wide VPN | Excluded from v1; added later as TUN mode (section 9.5). |
-| Setting the macOS system proxy | The app only exposes local ports. |
+| Setting the macOS system proxy | Added later as a switch (section 9.9). |
 | QR import, file import, URL schemes | Added later: links from other apps, dropped files and QR pictures (section 12.3, Importing). |
 | Editing a server | Not in v1; added later as the server editor (section 12.7). |
 | Custom routing rules, rule-set manager | Custom rules came later (section 8.6); no remote rule-set manager. |
@@ -800,12 +800,20 @@ one interface; the app's own `utun` is not counted as a network change.
 `Scripts/check-tun.sh` checks a running tunnel: routes, resolvers, and a capture on the
 physical interface while lookups and connections run.
 
-**Protection contract.** Neither TUN failure policy is a persistent kill switch.
-Removing a TUN interface removes its routes; direct traffic may resume during a
-failure or after the app/helper crashes. "Stop connection" prevents the app from
-continuing with only a local proxy, but cannot block other apps' direct traffic.
-The optional firewall-backed fail-closed design and its bootstrap/DNS exceptions
-are specified in `docs/FAIL_CLOSED_DESIGN.md`; enforcement is not shipped.
+**Protection contract.** Neither TUN failure policy is a kill switch. Removing a TUN
+interface removes its routes; direct traffic may resume during a failure or after the
+app/helper crashes. "Stop connection" prevents the app from continuing with only a local
+proxy, but cannot block other apps' direct traffic. The kill switch (section 9.8) does.
+
+**One session, three uses.** The same root helper also sets the system proxy (9.9) and
+holds the kill switch (9.8); whichever needs it first starts it, with one administrator
+prompt per app session. Settings → General → "Administrator access" can save an
+administrator account: the password is kept in the keychain, checked before it is saved,
+and handed to `osascript` on standard input (`do shell script … user name … password …`),
+so no prompt appears and the password is never in the process list. A saved password the
+system refuses (`-60007`) is forgotten and the prompt is shown instead. The helper's
+folder is named after the data folder (`/var/run/v2mac-dev-tun-<uid>` for the
+development build), so the two apps never share one.
 
 **Known limits.** "Without proxy" downloads (subscriptions, updates) still go
 through the tunnel while it is up. Latency tests are bound to the physical
@@ -864,6 +872,69 @@ The test URL must be HTTP(S) with a public destination; local/private literals,
 IPv6 literals and embedded credentials are rejected to avoid URLSession's SOCKS
 bypass. The first 2xx/3xx response headers count as a response; redirects are not
 followed, so a redirect cannot turn a local direct request into a health result.
+
+### 9.8 Kill switch
+
+Settings → Connection → "Kill switch", off by default. While it is on and a
+connection is wanted, this Mac can reach only the connection: everything else that
+leaves is refused, also while the core restarts, after it failed and when V2Mac
+stops unexpectedly.
+
+**Rules.** The root helper (9.5) loads them into the pf anchor `com.apple/<data folder
+name>`; the system's own `/etc/pf.conf` evaluates every anchor under `com.apple`, so
+the main ruleset is not touched. Before loading, the helper checks that the main
+ruleset still has `anchor "com.apple/*"` and refuses otherwise. It enables pf with a
+token of its own (`pfctl -E`) and keeps the token in a marker file,
+`/var/run/<name>-killswitch-<uid>`, outside its own folder. The rules
+(`KillSwitch.rules`), all stateless (nothing inbound is filtered, so replies need no
+state and connections open before the block keep working):
+
+- pass loopback, and everything out on the session's `utun`;
+- pass DHCP (v4 and v6), name lookups (port 53, TCP and UDP), the local network
+  (private, link-local and multicast ranges, v4 and v6);
+- pass the table `v2mac_allow`;
+- `block return out quick all`.
+
+**Allowed servers.** Before each connect and switch the app resolves the server
+addresses the core dials (every outbound's, for a full config) and writes the
+addresses to `run/killswitch.allow`; latency, speed and TCP tests and automatic
+selection add the servers they test. The list only grows during a session. The
+helper copies only lines that look like an address into a root-only file and replaces
+the table with it. A server behind a CDN may answer the core with an address the app
+did not see; that connection is then refused, not leaked.
+
+**Lifetime.** The app writes `run/killswitch.on` before the session starts; the helper
+arms and writes the marker, or writes `killswitch.error`, removes the flag, and the
+connect stops with "The kill switch could not be turned on … V2Mac did not connect".
+Disconnecting, turning the setting off and quitting remove the flag: the helper
+flushes the anchor's rules and tables (never `-F all`, which would clear pf's states
+for everyone) and releases its token. A helper that ends because the app died with
+the flag in place leaves the block up. On the next launch the marker without a helper
+shows "Kill switch is blocking all traffic" with "Allow Traffic", which starts a helper
+without the flag, and that helper lifts the block; connecting again replaces it with a
+new one. Nothing survives a reboot.
+
+**What it means for routing.** Direct mode, bypassed regions and "without proxy"
+downloads cannot reach the internet while the block is up. Name lookups and the local
+network stay reachable, so a network can still see which names are looked up.
+
+### 9.9 System proxy
+
+A switch in the connection bar ("Proxy"), the menu bar panel ("System Proxy") and
+Settings → Proxy, off by default. While it is on and the core runs, the root helper
+(9.5) points the web, secure web and SOCKS proxies of every enabled network service
+that has a device (Wi-Fi, Ethernet, …; VPN services are left alone) at
+`127.0.0.1:<port>` with `networksetup`, with local addresses and `*.local` bypassed.
+The app asks for it by writing the port to `run/proxy.on`; the helper reads it with
+shell builtins on each turn of its loop and takes only a port between 1024 and 65535.
+Disconnecting, turning the switch off, quitting and a helper that ends turn the three
+proxies off again. With credentials set (section 13) apps must send them too; browsers
+ask once.
+
+Beside each switch a dot shows where the system's settings point now
+(`SCDynamicStoreCopyProxies`, read every two seconds while it is on screen): green when
+every enabled proxy is this app's port, red for anything else (another address or port,
+automatic configuration), grey when none is set.
 
 ---
 
@@ -1028,6 +1099,9 @@ scrolls. Panel, top to bottom. Related rows share a translucent rounded card (a
 hierarchical fill, so the panel's glass shows through), as the modules of
 Control Centre do; the connect control and the last row stand outside one:
 
+When the kill switch blocks traffic while nothing is connected (9.8), a card under the
+connect control says so with "Allow Traffic".
+
 1. Connect control (dimmed and disabled with no server selected) with state text ("Connected", "Connecting…", "Off", error),
    the active server's name, group and last delay beside it. The control is a
    tinted glass button in a ring: faint while off, a turning arc while starting
@@ -1044,7 +1118,7 @@ Control Centre do; the connect control and the last row stand outside one:
 5. The active group's name as the title of the switch list: up to six rows — the active server, then the fastest
    tested servers of the active server's group. Click = activate. "Test" runs
    a real delay test of the whole group and turns into progress with "Stop".
-6. Routing mode picker.
+6. Routing mode picker, TUN switch, System Proxy switch with its dot (9.9).
 7. Local address with a copy button.
 8. "Update available" row when relevant.
 9. Open v2mac · Settings… · Quit.
@@ -1318,9 +1392,11 @@ With the setting off nothing is counted or shown.
 | | Restart core after sleep or network change | On |
 | | Count traffic usage (section 12.8) | On |
 | | Check for app updates | On |
+| | Administrator access: account and password, kept in the keychain (section 9.5) | Not saved |
 | Proxy | Port | 10808 |
-| | Allow connections from LAN (shows the Mac's LAN address) | Off |
-| | Username / Password (warning shown when LAN is on and these are empty) | Empty |
+| | Set as system proxy, with its dot (section 9.9) | Off |
+| | Username / Password, optional; the password is kept in the keychain (an older one in the preferences moves there on launch) | Empty |
+| | Allow connections from LAN (shows the Mac's LAN address; warning when it is on and there are no credentials) | Off |
 | Routing | Mode: Global / Bypass regions / Direct | Global |
 | | Bypass regions list: enable, status, Update Now, auto-update interval | None enabled |
 | | Custom rules: Proxy / Direct / Block lists, applied with a button, and the Rule Builder (section 8.6) | Empty |
@@ -1334,6 +1410,7 @@ With the setting off nothing is counted or shown.
 | Connection | Switch servers without restarting | On |
 | | Automatically select a working server | Off |
 | | If TUN fails: Keep local proxy running / Stop connection | Keep local proxy running |
+| | Kill switch (section 9.8) | Off |
 | Connection | Allow insecure servers | Off |
 | Notifications | One switch per kind | See section 12.6 |
 | Connection | Show where traffic comes out | On |
@@ -1364,11 +1441,19 @@ or DNS while connected restarts the core.
 └─ run/
    ├─ config.json                0600, exists only while running
    ├─ xray.pid
-   └─ tun.session, tun.on        flag files for the TUN helper (section 9.5)
+   ├─ tun.session, tun.on        flag files for the root helper (section 9.5)
+   ├─ proxy.on                   the port the system proxy should use (section 9.9)
+   └─ killswitch.on, killswitch.allow   the kill switch's request and servers (section 9.8)
 
-/var/run/v2mac-tun-<uid>/        root-owned, exists only while the TUN helper runs
+/var/run/v2mac-tun-<uid>/        root-owned, exists only while the root helper runs
 ├─ xray, config.json             the copies the helper runs
+├─ pf.rules, allow               the kill switch's rules and servers (allow: root only)
+├─ killswitch.error              why the kill switch could not go up
 └─ pid, xray.log
+
+/var/run/v2mac-killswitch-<uid>  pf's enable token while the kill switch is up
+
+Keychain (login): service = bundle id, accounts proxyPassword and adminPassword.
 
 v2mac.app/Contents/
 ├─ MacOS/v2mac
@@ -1463,11 +1548,16 @@ v2mac/
   upstream.
 - The app only ever terminates a process whose PID it recorded and whose
   executable path matches its own core.
-- TUN mode is the only part that runs as root, and only after the system's
-  administrator prompt. What runs as root is a fixed forwarder config and a
-  copy of the core in a root-owned directory; see section 9.5. The helper also
-  changes the system's DNS servers to fixed public addresses while the tunnel
-  is up, in memory only.
+- The root helper (TUN mode, system proxy, kill switch) is the only part that
+  runs as root, and only after the system's administrator prompt or with an
+  administrator account the user saved. What runs as root is a fixed forwarder
+  config, fixed firewall rules and a copy of the core in a root-owned directory;
+  see section 9.5. From the app it takes only flags, a port and a list of
+  addresses, each checked. The helper also changes the system's DNS servers to
+  fixed public addresses while the tunnel is up, in memory only, and the system
+  proxy while asked to.
+- A saved administrator password lets any process that can read V2Mac's keychain
+  item act as administrator through it; the setting says so.
 
 ---
 

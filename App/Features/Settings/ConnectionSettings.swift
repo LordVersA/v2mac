@@ -7,6 +7,7 @@ struct ConnectionSettings: View {
     @AppStorage("liveSwitch") private var liveSwitch = true
     @AppStorage("autoSelectServer") private var autoSelectServer = false
     @AppStorage("tunFailurePolicy") private var tunFailurePolicy = TunFailurePolicy.continueProxy.rawValue
+    @AppStorage("killSwitch") private var killSwitch = false
     @AppStorage("allowInsecure") private var allowInsecure = false
     @AppStorage("checkExit") private var checkExit = true
     @AppStorage("menuBarCountry") private var menuBarCountry = true
@@ -45,7 +46,13 @@ struct ConnectionSettings: View {
             } header: {
                 Text("System tunnel")
             } footer: {
-                note("Applies when administrator access is cancelled, the tunnel cannot start, or it stops. Stop connection also stops the local proxy. This is not a system kill switch: direct traffic can resume when TUN disappears. Port-53 DNS currently goes directly to the network to let the core resolve its server.")
+                note("Applies when administrator access is cancelled, the tunnel cannot start, or it stops. Stop connection also stops the local proxy. Direct traffic can resume when the tunnel disappears unless the kill switch is on.")
+            }
+            Section {
+                Toggle("Kill switch", isOn: Binding(get: { killSwitch }, set: { on in model.connection.setKillSwitchEnabled(on) }))
+                killSwitchState
+            } footer: {
+                note("While V2Mac is connected or reconnecting, this Mac can reach only the server, the local network and name servers. Everything else is blocked, also when the connection drops or V2Mac stops unexpectedly, until you disconnect. Direct mode and bypassed regions cannot reach the internet while it is on. It needs administrator access once each time V2Mac opens.")
             }
             Section {
                 Toggle("Switch servers without restarting", isOn: $liveSwitch)
@@ -116,7 +123,18 @@ struct ConnectionSettings: View {
         .onChange(of: coreSettings) { restartSoon() }
     }
 
-    private func note(_ text: String) -> some View {
+    @ViewBuilder
+    private var killSwitchState: some View {
+        switch model.connection.killSwitch.state {
+        case .off: EmptyView()
+        case .arming: Text("Turning on…").font(.caption).foregroundStyle(.secondary)
+        case .armed: Label("On: only the connection can reach the internet", systemImage: "lock.shield.fill").font(.caption).foregroundStyle(.green)
+        case .failed(let message): Text(message).font(.caption).foregroundStyle(.red)
+        case .leftOver: KillSwitchNotice(connection: model.connection)
+        }
+    }
+
+    private func note(_ text: LocalizedStringKey) -> some View {
         Text(text).font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
     }
 

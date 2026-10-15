@@ -32,6 +32,8 @@ final class LatencyService {
     @ObservationIgnored private var speedPending: [UUID: Int] = [:]
     /// Set while TUN mode is up: tests must leave through this interface, not the tunnel.
     var physicalInterface: @MainActor () -> String? = { nil }
+    /// Gets the servers a test dials past the kill switch, when it is up (spec 9.8).
+    var beforeTesting: @MainActor (_ hosts: [String]) async -> Void = { _ in }
     /// A run ended by itself: how many servers, and the fastest one that answered (spec 12.6).
     @ObservationIgnored var onFinished: @MainActor (_ tested: Int, _ best: (id: UUID, ms: Int)?) -> Void = { _, _ in }
     @ObservationIgnored private var best: (id: UUID, ms: Int)?
@@ -71,6 +73,7 @@ final class LatencyService {
         enqueue(delay: targets.map(\.id)) { [weak self] generation in
             // Read when the request's turn comes, so it uses the settings and interface of that moment.
             guard let self else { return }
+            await self.beforeTesting(Self.hosts(of: latencyTargets))
             let tester = self.tester(options: Prefs.latencyOptions)
             await tester.run(latencyTargets) { [weak self] result in
                 await self?.record(result, kind: "real", generation: generation)
@@ -87,6 +90,7 @@ final class LatencyService {
         let latencyTargets = targets.map { LatencyTarget(id: $0.id, config: $0.config, kind: $0.kind) }
         enqueue(delay: targets.map(\.id), speed: true) { [weak self] generation in
             guard let self else { return }
+            await self.beforeTesting(Self.hosts(of: latencyTargets))
             var options = Prefs.latencyOptions
             options.speedURL = Prefs.speedURL
             let tester = self.tester(options: options)
@@ -98,6 +102,10 @@ final class LatencyService {
                 await self?.showSpeed(id: id, bps: bps, generation: generation)
             })
         }
+    }
+
+    private static func hosts(of targets: [LatencyTarget]) -> [String] {
+        targets.flatMap { KillSwitch.hosts(in: $0.config, kind: $0.kind) }
     }
 
     private func tester(options: LatencyOptions) -> RealDelayTester {
@@ -127,6 +135,7 @@ final class LatencyService {
         enqueue(delay: all.map(\.id)) { [weak self] generation in
             guard let self else { return }
             for id in naIDs { await self.recordNotApplicable(id, generation: generation) }
+            await self.beforeTesting(targets.map(\.host))
             await TCPPing.run(targets, interface: self.physicalInterface()) { [weak self] result in
                 await self?.record(result, kind: "tcp", generation: generation)
             }

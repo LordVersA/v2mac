@@ -1,8 +1,16 @@
 # Optional system fail-closed protection
 
-This is a design for a future, separately enabled system kill switch. The current
-"If TUN fails → Stop connection" setting stops V2Mac's local core; it cannot keep
-other applications from using direct routes after a TUN disappears.
+The kill switch in spec section 9.8 implements this design in a smaller form. It differs
+from the design below in these ways:
+
+- There is no separate privileged service. The session's root helper (spec 9.5) holds the
+  rules; they outlive the helper and the app, and a new helper lifts them.
+- Name lookups (port 53) and the local network stay reachable, so a network can still
+  see the names looked up.
+- The helper's state is shown as off, turning on, on, failed, or "left over"; there is no
+  separate IPv4/IPv6 acknowledgement.
+
+What follows is the original design.
 
 ## Protection boundary
 

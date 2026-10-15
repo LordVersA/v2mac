@@ -82,6 +82,8 @@ final class ConnectionController {
 
     let logs: LogStore
     let tun: TunController
+    let killSwitch: KillSwitchController
+    let systemProxy: SystemProxyController
     private let runner: CoreRunner
     private let executable: @MainActor () -> URL
     private let assetDirectory: URL
@@ -119,7 +121,10 @@ final class ConnectionController {
         self.executable = executable
         self.assetDirectory = assetDirectory
         self.healthInterval = healthInterval
-        self.tun = tun ?? TunController(logs: logs)
+        let tun = tun ?? TunController(logs: logs)
+        self.tun = tun
+        killSwitch = KillSwitchController(session: tun)
+        systemProxy = SystemProxyController(session: tun)
         runner = CoreRunner(
             executable: executable(),
             assetDirectory: assetDirectory,
@@ -167,6 +172,27 @@ final class ConnectionController {
         reconnectIfRunning()
     }
 
+    /// Spec 9.9. Takes effect at once while a connection is wanted.
+    func setSystemProxyEnabled(_ on: Bool) {
+        systemProxy.setEnabled(on)
+        if on, coreState == .running {
+            let port = port
+            Task { await systemProxy.apply(port: port) }
+        } else if !on {
+            systemProxy.clear()
+        }
+    }
+
+    /// Spec 9.8. Turned on while a connection is wanted, the block goes up at once.
+    func setKillSwitchEnabled(_ on: Bool) {
+        Prefs.killSwitch = on
+        if !on {
+            Task { await killSwitch.lift() }
+        } else if userWantsRunning, let server = activeServer {
+            Task { _ = await killSwitch.arm(allowing: KillSwitch.hosts(in: server.config, kind: server.kind)) }
+        }
+    }
+
     /// Restarts the core when it is up (mode, pack or port changed).
     func reconnectIfRunning() {
         switch phase {
@@ -207,6 +233,8 @@ final class ConnectionController {
         portConflict = nil
         // First, so nothing is left pointing at a core that is about to stop.
         tun.down(clearingError: true)
+        systemProxy.clear()
+        Task { await killSwitch.lift() }
         enqueue {
             self.localError = nil
             Prefs.wasRunning = false
@@ -359,6 +387,21 @@ final class ConnectionController {
         enqueue { await self.runner.stop() }
     }
 
+    /// The kill switch is on but could not go up: nothing connects without it.
+    private func stopForKillSwitchFailure() {
+        var message = "The kill switch could not be turned on."
+        if case .failed(let detail) = killSwitch.state { message += " " + detail }
+        userWantsRunning = false
+        Prefs.wasRunning = false
+        commandGeneration += 1
+        cancelAutomation()
+        cancelRecovery()
+        localError = message + " V2Mac did not connect, so no traffic went around it."
+        tun.down()
+        systemProxy.clear()
+        enqueue { await self.runner.stop() }
+    }
+
     private func cancelAutomation() {
         selectionTask?.cancel()
         selectionTask = nil
@@ -418,6 +461,7 @@ final class ConnectionController {
                                      options: Prefs.latencyOptions, outboundInterface: tun.physicalInterface,
                                      dialer: Prefs.dialer, allowInsecure: Prefs.allowInsecure)
         let targets = candidates.map { LatencyTarget(id: $0.id, config: $0.config, kind: $0.kind) }
+        await killSwitch.allow(candidates.flatMap { KillSwitch.hosts(in: $0.config, kind: $0.kind) })
         let task = Task {
             let collector = AutomaticLatencyResults()
             await tester.run(targets) { await collector.append($0) }
@@ -508,6 +552,15 @@ final class ConnectionController {
         guard commandGeneration == generation, userWantsRunning else { return }
         localError = nil
         portConflict = nil
+        // Before anything connects, so nothing leaves around the connection meanwhile (spec 9.8).
+        if Prefs.killSwitch {
+            let armed = await killSwitch.arm(allowing: KillSwitch.hosts(in: server.config, kind: server.kind))
+            guard commandGeneration == generation, userWantsRunning else { return }
+            guard armed else {
+                stopForKillSwitchFailure()
+                return
+            }
+        }
         // Before the running core stops: the administrator prompt can stay open for a while.
         let requestedTun = tun.isEnabled
         let tunLink = requestedTun ? await tun.prepare() : nil
@@ -589,6 +642,10 @@ final class ConnectionController {
             running = started.map { ($0, plan, custom) }
             Prefs.wasRunning = true
             if tunLink != nil { tun.up() }
+            if systemProxy.isEnabled {
+                let port = port
+                Task { await systemProxy.apply(port: port) }
+            }
             startHealthChecks()
         } catch {
             tun.down()

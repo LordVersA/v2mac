@@ -67,6 +67,7 @@ struct ConnectionBar: View {
     @State private var inlineRatesWidth: CGFloat = 150
     @State private var stackedRatesWidth: CGFloat = 72
     @State private var tunWidth: CGFloat = 66
+    @State private var proxyWidth: CGFloat = 70
     @State private var routingWidth: CGFloat = 70
     @State private var addressWidth: CGFloat = 132
 
@@ -92,7 +93,7 @@ struct ConnectionBar: View {
 
     private func width(of tier: Tier) -> CGFloat {
         let gap = Self.spacing
-        var width = Self.leadingPadding + Self.buttonWidth + gap + titleWidth + gap + Self.minimumGap + gap + tunWidth + Self.trailingPadding
+        var width = Self.leadingPadding + Self.buttonWidth + gap + titleWidth + gap + Self.minimumGap + gap + proxyWidth + gap + tunWidth + Self.trailingPadding
         if !connection.activeIsCustom { width += gap + routingWidth }
         if let rates = tier.rates, connection.phase == .connected {
             width += gap + sparklineWidth(rates) + gap + (rates == .inline ? inlineRatesWidth : stackedRatesWidth)
@@ -141,6 +142,8 @@ struct ConnectionBar: View {
                 RateReadout(connection: connection, layout: rates, sparklineWidth: sparklineWidth(rates), spacing: Self.spacing,
                             showsUsage: countTraffic)
             }
+            SystemProxyToggle(connection: connection)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { proxyWidth = $0 }
             TunToggle(connection: connection)
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { tunWidth = $0 }
             // A custom config has no mode to pick; the status line says so instead.
@@ -223,6 +226,7 @@ struct ConnectionBar: View {
             }
         case .off:
             status(connection.activeServer == nil ? "Double-click a server to connect" : "Off · \(routingTitle)")
+            if connection.killSwitch.isBlocking { KillSwitchNotice(connection: connection) }
         }
     }
 

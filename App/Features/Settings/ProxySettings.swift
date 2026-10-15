@@ -6,7 +6,7 @@ struct ProxySettings: View {
     @AppStorage("proxyPort") private var port = Prefs.defaultPort
     @AppStorage("allowLAN") private var allowLAN = false
     @AppStorage("proxyUsername") private var username = ""
-    @AppStorage("proxyPassword") private var password = ""
+    @State private var password = Prefs.proxyPassword
     @State private var portText = ""
     @State private var pending: Task<Void, Never>?
 
@@ -23,17 +23,44 @@ struct ProxySettings: View {
                     Text("Enter a port between 1024 and 65535.").font(.caption).foregroundStyle(.red)
                 }
             }
+            Section {
+                HStack {
+                    Toggle("Set as system proxy", isOn: Binding(
+                        get: { model.connection.systemProxy.isEnabled },
+                        set: { on in model.connection.setSystemProxyEnabled(on) }
+                    ))
+                    Spacer()
+                    SystemProxyBadge(connection: model.connection)
+                    Text(systemProxyStatus).font(.caption).foregroundStyle(.secondary)
+                }
+                if let failure = model.connection.systemProxy.failure {
+                    Text(failure).font(.caption).foregroundStyle(.red)
+                }
+            } header: {
+                Text("System proxy")
+            } footer: {
+                note("While V2Mac is connected, the web, secure web and SOCKS proxies of every network service point at 127.0.0.1:\(String(port)), and they are turned off again when you disconnect or quit. Apps that follow the system settings, such as Safari, then use the connection. Changing them needs administrator access once each time V2Mac opens.")
+            }
+            Section {
+                TextField("Username", text: $username)
+                    .onChange(of: username) { restartSoon() }
+                SecureField("Password", text: $password)
+                    .onChange(of: password) {
+                        Prefs.proxyPassword = password
+                        restartSoon()
+                    }
+            } header: {
+                Text("Authentication")
+            } footer: {
+                note("Optional. When both are set, every app and device must send them to use the proxy; browsers ask for them once. The password is kept in your keychain.")
+            }
             Section("Local network") {
                 Toggle("Allow connections from LAN", isOn: $allowLAN)
                     .onChange(of: allowLAN) { restartSoon() }
                 if allowLAN {
-                    Text("Other devices can use \(lanAddress ?? "this Mac's address"):\(port)")
+                    Text("Other devices can use \(lanAddress ?? String(localized: "this Mac's address")):\(String(port))")
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
-                TextField("Username", text: $username)
-                    .onChange(of: username) { restartSoon() }
-                SecureField("Password", text: $password)
-                    .onChange(of: password) { restartSoon() }
                 if allowLAN && !(Prefs.inbound.hasCredentials) {
                     Label("Anyone on your network can use this proxy. Set a username and password.",
                           systemImage: "exclamationmark.triangle.fill")
@@ -47,6 +74,18 @@ struct ProxySettings: View {
         .animation(.default, value: username.isEmpty || password.isEmpty)
         .onAppear { portText = String(port) }
         .onDisappear { commitPort() }
+    }
+
+    private var systemProxyStatus: LocalizedStringKey {
+        switch model.connection.systemProxy.status {
+        case .ours: "Set to V2Mac"
+        case .other: "Set to something else"
+        case .none: "Not set"
+        }
+    }
+
+    private func note(_ text: LocalizedStringKey) -> some View {
+        Text(text).font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func commitPort() {
