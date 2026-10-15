@@ -12,16 +12,21 @@
 - **Add and edit servers by hand:** fill in every option of a VLESS, VMess, Trojan, Shadowsocks, Hysteria2, WireGuard, SOCKS or HTTP server yourself (transport, TLS or REALITY, Mux), or change one you imported.
 - **Favorites:** star the servers you like and find them in one list. A subscription update never removes them without asking.
 - **Latency tests:** real-delay and TCP ping for a whole group at once, sorted by speed.
-- **Optional automatic selection:** off by default; chooses a working server using real HTTP response delay, monitors the running proxy, and falls back to peers in group order. Manual choices stay selected while they respond.
+- **Optional automatic selection:** off by default; chooses a working server using real HTTP response delay, monitors the running proxy, and falls back to peers in group order. Manual choices stay selected while they respond. Optional conditions also switch when the delay stays high or the download stays slow for as long as you set.
 - **Routing:** Global, Direct, or Bypass regions (Iran, China, Russia) to send local traffic direct.
 - **Custom routing rules:** your own Proxy, Direct and Block lists on top of any mode. Paste domains, IP ranges, geosite/geoip tags, Clash rules, hosts files or Adblock lists, or build them in the **Rule Builder** by picking countries on a map and services from a list. [More below](#custom-routing-rules).
 - **TUN mode:** one switch routes all traffic on the Mac through the proxy, including apps with no proxy setting and every DNS lookup. No paid developer account or system extension needed. `Scripts/check-tun.sh` checks that nothing leaks.
-- **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel. This is not a system kill switch: while the tunnel is down, traffic goes out directly.
+- **System proxy:** one switch in the menu bar or the window points the macOS system proxy at V2Mac while it is connected. A dot shows whether the system proxy is V2Mac (green), something else (red) or not set (grey).
+- **Kill switch:** optional, off by default. While V2Mac is connected or reconnecting, only the server, the local network and name servers can be reached; everything else is blocked, also when the connection drops or V2Mac stops unexpectedly, until you disconnect. It uses the macOS firewall (pf).
+- **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel.
+- **Administrator access once:** TUN mode, the system proxy and the kill switch share one administrator prompt per launch, or none if you save the password in the keychain.
 - **Menu bar control:** connect, switch server, live speed, and a local address you can copy.
 - **Reliable:** restarts the core after a crash, sleep or network change, and reconnects on launch.
 - **Quick import:** click a `vless://`, `vmess://`, `trojan://`, `ss://` or `hy2://` link anywhere, or a provider's "add to app" button (`v2mac://install-config?url=…`), paste a screenshot of a QR code, or drop config files and QR pictures on the window.
-- **Shortcuts:** connect, disconnect, switch TUN mode or the routing mode from Shortcuts and Spotlight, or with a keyboard shortcut you give them there.
-- **Also:** upload and download speed in the menu bar, LAN sharing with a password, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
+- **Control Center, Shortcuts and Siri:** a V2Mac switch for Control Center and the menu bar; connect, disconnect, and set TUN mode, the routing mode, the system proxy or the kill switch from Shortcuts, Spotlight and Siri, or with a keyboard shortcut you give them there.
+- **Backup:** export subscriptions, servers, favorites and settings to a `.v2m` file and restore them on another Mac.
+- **Languages:** English, Persian (right to left), Simplified Chinese and Russian.
+- **Also:** upload and download speed in the menu bar, LAN sharing with a password kept in the keychain, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
 - **Private:** no analytics or telemetry.
 
 ## Screenshots

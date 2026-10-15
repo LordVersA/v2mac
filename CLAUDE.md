@@ -47,7 +47,7 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
 
 ## Building and testing
 - `Scripts/fetch-core.sh` once, then `xcodegen generate` (the `.xcodeproj` is generated and git-ignored;
-  rerun `xcodegen generate` after adding, moving or deleting files under `App/`, or editing `project.yml`).
+  rerun `xcodegen generate` after adding, moving or deleting files under `App/` or `Extensions/`, or editing `project.yml`).
 - App: `xcodebuild -project v2mac.xcodeproj -scheme v2mac -configuration Debug -destination 'platform=macOS' build`
 - Package tests: `cd Packages/V2MacCore && swift test`
   - One suite or test: `swift test --filter RoutingTests` / `swift test --filter RoutingTests/bypassRules`
@@ -77,6 +77,8 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   - `-debugWindowRequest <settings tab>|main|rule-builder` opens that window after 2 seconds (also with demo
     data), so a snapshot can show a settings tab: `-debugWindowRequest about`.
     With `rule-builder`, `-debugRuleBuilder <step>[:<source>]` (`targets:countries`, `review`) shows a step.
+  - `-debugBackupRoundTrip <path>` (with demo data) writes a backup there, removes the servers, restores
+    the file twice and prints what came back.
   - `-debugAddCustom YES` adds four made-up servers (VLESS, Trojan, Shadowsocks) to Custom Configs
     in the dev build's own data. They do not connect; they are for trying the lists by hand.
   - `-debugDemoData YES` uses an in-memory store filled with made-up servers. Use it for UI checks
