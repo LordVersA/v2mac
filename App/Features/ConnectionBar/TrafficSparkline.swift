@@ -33,7 +33,8 @@ struct TrafficSparkline: View {
         // Headroom, so the highest point does not touch the top edge.
         .chartYScale(domain: 0...(peak * 1.2))
         .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.25)], startPoint: .leading, endPoint: .trailing))
-        .animation(.smooth(duration: 0.9), value: last)
+        // No animation on new samples: a 0.9 s spring every second kept Charts re-laying out all
+        // three marks on every frame, ~65% CPU, even with every window closed.
         .accessibilityHidden(true)
     }
 
