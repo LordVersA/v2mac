@@ -515,6 +515,12 @@ vendored binary; this is the guard against upstream format drift.
                 "destOverride": ["http", "tls", "quic"] } }
 ```
 
+With Allow LAN on, every `freedom` outbound (also in full configs) starts its
+`finalRules` with a block of `127.0.0.0/8`, `0.0.0.0/32`, `::1/128` and `::/128`,
+so another device cannot use the proxy to reach the API, the metrics or any
+other service that listens only on this Mac. Freedom checks the address it
+dials, so a domain that resolves to loopback is refused as well.
+
 With credentials: `"auth": "password", "accounts": [{"user": "...",
 "pass": "..."}]`.
 
@@ -540,6 +546,8 @@ Take the stored config and:
 1. Replace `inbounds` with the single mixed inbound above.
 2. Replace `log`; set `metrics`; ensure `stats: {}`; merge the two
    `policy.system.statsInbound*` flags.
+   Remove `api`: its `listen` would open a control port for the core, possibly
+   to the network.
 3. In `routing.rules`, rewrite any `inboundTag` that named a removed
    `socks` / `http` / `mixed` inbound to `mixed-in`; drop rules that referenced
    only other removed inbounds.

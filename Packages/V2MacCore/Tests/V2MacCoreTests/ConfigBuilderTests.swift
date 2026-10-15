@@ -55,6 +55,11 @@ import Testing
         #expect(c["inbounds"]?[0]?["settings"]?["auth"]?.stringValue == "noauth")
     }
 
+    @Test func fullConfigLosesItsOwnAPI() throws {
+        let config: JSONValue = ["api": ["tag": "api", "listen": "0.0.0.0:8080", "services": ["HandlerService"]], "outbounds": []]
+        #expect(try ConfigBuilder.buildCustom(config: config, options: RunOptions(metricsPort: 1))["api"] == nil)
+    }
+
     @Test func outboundMustBeObject() {
         #expect(throws: ConfigBuilderError.outboundNotAnObject) {
             try ConfigBuilder.buildGlobal(outbound: "x", options: RunOptions(metricsPort: 1))

@@ -103,6 +103,22 @@ public enum ConfigBuilder {
         ["system": ["statsInboundUplink": true, "statsInboundDownlink": true]]
     }
 
+    /// Loopback and "this host" ranges: through these, a LAN client would reach the API, the
+    /// metrics and every other service that listens only on this Mac.
+    static let loopbackRanges: JSONValue = ["127.0.0.0/8", "0.0.0.0/32", "::1/128", "::/128"]
+
+    /// With LAN access on, every `freedom` outbound refuses loopback targets. Freedom checks
+    /// the address it actually dials, so a domain that resolves to 127.0.0.1 is refused too.
+    static func blockingLoopback(of config: JSONValue, when allowLAN: Bool) -> JSONValue {
+        guard allowLAN, case .array(let outbounds)? = config["outbounds"] else { return config }
+        return config.setting("outbounds", to: .array(outbounds.map { outbound in
+            guard outbound["protocol"]?.stringValue == "freedom" else { return outbound }
+            let settings = outbound["settings"] ?? [:]
+            let rules: [JSONValue] = [["action": "block", "ip": loopbackRanges]] + (settings["finalRules"]?.arrayValue ?? [])
+            return outbound.setting("settings", to: settings.setting("finalRules", to: .array(rules)))
+        }))
+    }
+
     static func metricsSection(port: Int) -> JSONValue {
         ["tag": .string(metricsTag), "listen": .string("127.0.0.1:\(port)")]
     }

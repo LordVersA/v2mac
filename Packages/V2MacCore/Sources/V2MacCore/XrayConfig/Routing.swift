@@ -92,10 +92,11 @@ extension ConfigBuilder {
         ]
         if let dns = options.dns.map(dnsSection) ?? sections.dns { config = config.setting("dns", to: dns) }
         if let port = options.apiPort { config = config.setting("api", to: apiSection(port: port)) }
-        return config
+        return blockingLoopback(of: config, when: options.inbound.allowLAN)
     }
 
-    /// Spec 8.2: run a full Xray config as written, replacing only inbounds, log, metrics and stats.
+    /// Spec 8.2: run a full Xray config as written, replacing only inbounds, log, metrics and stats,
+    /// and dropping its `api` section, which could open a control port to the network.
     /// In TUN mode its outbounds are also bound to the physical interface. Fragment and noise
     /// settings are added to proxy outbounds that have no dialer of their own, and the DNS
     /// setting applies only when the config brings no `dns` section.
@@ -113,6 +114,7 @@ extension ConfigBuilder {
         }
 
         var out = config
+            .removing("api")
             .setting("inbounds", to: inbounds(for: options))
             .setting("log", to: logSection(options))
             .setting("metrics", to: metricsSection(port: options.metricsPort))
@@ -151,6 +153,6 @@ extension ConfigBuilder {
             }
             out = out.setting("routing", to: routing.setting("rules", to: .array(rewritten)))
         }
-        return out
+        return blockingLoopback(of: out, when: options.inbound.allowLAN)
     }
 }

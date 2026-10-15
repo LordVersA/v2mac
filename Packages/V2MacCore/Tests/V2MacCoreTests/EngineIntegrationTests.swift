@@ -79,6 +79,32 @@ struct EngineIntegrationTests {
         #expect(PortUtil.isFree(port: port))
     }
 
+    /// With LAN access on, a client of the proxy must not reach services on this Mac's loopback.
+    @Test(arguments: [false, true]) func lanClientsCannotReachLoopback(allowLAN: Bool) async throws {
+        let server = try await TestHTTPServer.start { _ in .init(status: 200) }
+        defer { server.stop() }
+        let options = RunOptions(inbound: InboundSettings(port: try PortUtil.freePort(), allowLAN: allowLAN), metricsPort: try PortUtil.freePort())
+        let config = try ConfigBuilder.buildGlobal(outbound: ["protocol": "freedom"], options: options)
+        let dir = try TestSupport.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let runner = CoreRunner(executable: TestSupport.xray, assetDirectory: TestSupport.vendorCore, runDirectory: dir)
+        try await runner.start(config: config, readyPort: options.inbound.port)
+
+        for host in ["127.0.0.1", "localhost"] {
+            let curl = Process()
+            curl.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
+            curl.arguments = ["-s", "-o", "/dev/null", "-w", "%{http_code}", "-m", "3",
+                              "-x", "socks5h://127.0.0.1:\(options.inbound.port)", "http://\(host):\(server.port)/"]
+            let pipe = Pipe()
+            curl.standardOutput = pipe
+            try curl.run()
+            let code = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            curl.waitUntilExit()
+            #expect((code == "200") == !allowLAN, "\(host): \(code)")
+        }
+        await runner.stop()
+    }
+
     @Test func badConfigFailsBeforeReady() async throws {
         let dir = try TestSupport.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
