@@ -2,13 +2,23 @@ import SwiftData
 import SwiftUI
 
 struct MenuBarIcon: View {
-    let phase: ConnectionController.Phase
-    /// The exit country, shown as two letters beside the icon while connected.
-    var countryCode: String?
+    let connection: ConnectionController
     @AppStorage("menuBarCountry") private var showsCountry = true
+    @AppStorage("menuBarSpeed") private var showsSpeed = false
+
+    private var phase: ConnectionController.Phase { connection.phase }
+
+    /// The exit country, shown as two letters over the icon while connected.
+    private var countryCode: String? {
+        guard showsCountry, case .known(let exit) = connection.exit else { return nil }
+        return exit.countryCode
+    }
 
     var body: some View {
-        if phase == .connected, showsCountry, let countryCode, let image = MenuBarBadge.image(code: countryCode) {
+        if phase == .connected, showsSpeed {
+            Image(nsImage: MenuBarSpeed.image(code: countryCode, up: connection.upRate, down: connection.downRate))
+                .accessibilityLabel("V2Mac, connected, \(Format.steadyRate(connection.downRate)) down, \(Format.steadyRate(connection.upRate)) up")
+        } else if phase == .connected, let countryCode, let image = MenuBarBadge.image(code: countryCode) {
             Image(nsImage: image).accessibilityLabel("V2Mac, connected, exit in \(countryCode)")
         } else {
             glyph
@@ -28,6 +38,45 @@ struct MenuBarIcon: View {
             Image("MenuBarGlyphFilled").accessibilityLabel("V2Mac, connected")
         case .failed:
             Image(systemName: "exclamationmark.triangle.fill").accessibilityLabel("V2Mac, connection failed")
+        }
+    }
+}
+
+/// The connected icon (with its badge, when there is one) followed by the upload rate over the
+/// download rate. One image again, drawn for the menu bar's appearance; the text column has a
+/// fixed width, so the items beside it do not move as the numbers change.
+@MainActor
+enum MenuBarSpeed {
+    private static let font = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .medium)
+    private static let textWidth = ceil(("↓ 999.9 MB/s" as NSString).size(withAttributes: [.font: font]).width)
+
+    static func image(code: String?, up: Double, down: Double) -> NSImage {
+        let icon = code.flatMap(MenuBarBadge.image(code:)) ?? NSImage(named: "MenuBarGlyphFilled") ?? NSImage()
+        let iconSize = icon.isTemplate ? NSSize(width: icon.size.width * 16 / max(icon.size.height, 1), height: 16) : icon.size
+        let lines = ["↑ " + Format.steadyRate(up), "↓ " + Format.steadyRate(down)]
+        let size = NSSize(width: iconSize.width + 4 + textWidth, height: 22)
+        return NSImage(size: size, flipped: false) { rect in
+            let dark = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .vibrantDark, .aqua, .vibrantLight])
+            let color: NSColor = dark == .darkAqua || dark == .vibrantDark ? .white : .black
+            let iconRect = NSRect(x: 0, y: (rect.height - iconSize.height) / 2, width: iconSize.width, height: iconSize.height)
+            if icon.isTemplate {
+                // A template glyph is black; tint it for the bar like the system would.
+                NSImage(size: iconSize, flipped: false) { r in
+                    icon.draw(in: r)
+                    color.set()
+                    r.fill(using: .sourceAtop)
+                    return true
+                }.draw(in: iconRect)
+            } else {
+                icon.draw(in: iconRect)
+            }
+            let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+            for (index, line) in lines.enumerated() {
+                let text = line as NSString
+                let width = text.size(withAttributes: attributes).width
+                text.draw(at: NSPoint(x: rect.width - width, y: index == 0 ? 11 : 1), withAttributes: attributes)
+            }
+            return true
         }
     }
 }

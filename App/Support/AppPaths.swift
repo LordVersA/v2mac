@@ -97,6 +97,7 @@ enum Prefs {
             "allowInsecure": false,
             "checkExit": true,
             "menuBarCountry": true,
+            "menuBarSpeed": false,
             "fragmentEnabled": false,
             "fragmentPackets": FragmentSettings.Packets.tlsHello.rawValue,
             "fragmentLength": FragmentSettings.defaultLength,

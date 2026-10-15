@@ -10,6 +10,7 @@ struct ConnectionSettings: View {
     @AppStorage("allowInsecure") private var allowInsecure = false
     @AppStorage("checkExit") private var checkExit = true
     @AppStorage("menuBarCountry") private var menuBarCountry = true
+    @AppStorage("menuBarSpeed") private var menuBarSpeed = false
     @AppStorage("fragmentEnabled") private var fragmentEnabled = false
     @AppStorage("fragmentPackets") private var fragmentPackets = FragmentSettings.Packets.tlsHello.rawValue
     @AppStorage("fragmentLength") private var fragmentLength = FragmentSettings.defaultLength
@@ -58,6 +59,11 @@ struct ConnectionSettings: View {
                 }
             } footer: {
                 note("After connecting, V2Mac asks a public service through the server for its address, city and country: ipwho.is, then ipinfo.io and Cloudflare if that does not answer. They see the server's address, not yours. No answer means traffic is not passing. Not done in Direct mode.")
+            }
+            Section {
+                Toggle("Speed in the menu bar", isOn: $menuBarSpeed)
+            } footer: {
+                note("While connected, the upload and download rate sit next to the menu bar icon.")
             }
             Section {
                 Toggle("Allow insecure servers", isOn: $allowInsecure)

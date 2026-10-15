@@ -10,18 +10,13 @@ struct V2MacApp: App {
         _model = State(initialValue: AppModel())
     }
 
-    private var exitCountry: String? {
-        if case .known(let exit) = model.connection.exit { return exit.countryCode }
-        return nil
-    }
-
     var body: some Scene {
         MenuBarExtra {
             MenuBarPanel()
                 .environment(model)
                 .modelContainer(model.container)
         } label: {
-            MenuBarIcon(phase: model.connection.phase, countryCode: exitCountry)
+            MenuBarIcon(connection: model.connection)
                 .background(WindowRequestHandler(model: model))
         }
         .menuBarExtraStyle(.window)
