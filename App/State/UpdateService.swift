@@ -182,7 +182,7 @@ final class UpdateService {
     func checkApp(manual: Bool = false) async {
         let repo = Self.repository
         guard !repo.isEmpty else {
-            if manual { appStatus = .unavailable("No update source is configured for this build.") }
+            if manual { appStatus = .unavailable(String(localized: "No update source is configured for this build.")) }
             return
         }
         guard !isInstallingApp else { return }
@@ -247,7 +247,7 @@ final class UpdateService {
     /// Lets `brew` download the release while the proxy still runs, then quits; a detached script
     /// runs `brew upgrade` once the app is gone and opens it again. Untouched on any failure here.
     private func installWithHomebrew(_ release: AppRelease, brew: BrewUpdater) async {
-        brewStep = "Downloading V2Mac \(release.version) with Homebrew…"
+        brewStep = String(localized: "Downloading V2Mac \(release.version) with Homebrew…")
         do {
             try await brew.prepare(version: release.version, routes: downloadRoutes())
             try brew.scheduleUpgrade(
@@ -267,7 +267,7 @@ final class UpdateService {
     private func reportHomebrewResult() {
         guard let result = BrewUpdater.takeResult(Self.brewStatusFile), !result.succeeded else { return }
         let reason = result.lastLine.isEmpty ? "" : " (\(result.lastLine))"
-        let message = "Homebrew could not install the update\(reason). Run “brew upgrade --cask v2mac” in Terminal to see why."
+        let message = String(localized: "Homebrew could not install the update\(reason). Run “brew upgrade --cask v2mac” in Terminal to see why.")
         appStatus = .unavailable(message)
         onHomebrewFailure(message)
     }

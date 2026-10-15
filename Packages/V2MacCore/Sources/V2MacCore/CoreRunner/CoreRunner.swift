@@ -151,11 +151,11 @@ public actor CoreRunner {
     /// `api.listen` port of the config it was started with). Connections already open finish on
     /// the old outbound. When this throws, the core may be left without that outbound: restart it.
     public func replaceOutbound(tag: String, with outbound: JSONValue, apiPort: Int) async throws {
-        guard state == .running else { throw CoreError.apiFailed("The core is not running.") }
+        guard state == .running else { throw CoreError.apiFailed(String(localized: "The core is not running.")) }
         let file = runDirectory.appendingPathComponent("outbound-\(UUID().uuidString).json")
         let data = try JSONValue.object(["outbounds": .array([outbound])]).data()
         guard FileManager.default.createFile(atPath: file.path, contents: data, attributes: [.posixPermissions: 0o600]) else {
-            throw CoreError.apiFailed("Could not write the outbound file.")
+            throw CoreError.apiFailed(String(localized: "Could not write the outbound file."))
         }
         defer { try? FileManager.default.removeItem(at: file) }
         let server = "--server=127.0.0.1:\(apiPort)"
@@ -241,7 +241,7 @@ public actor CoreRunner {
         let tmp = runDirectory.appendingPathComponent("config.json.tmp")
         try? FileManager.default.removeItem(at: tmp)
         guard FileManager.default.createFile(atPath: tmp.path, contents: data, attributes: [.posixPermissions: 0o600]) else {
-            throw CoreError.startFailed("Could not write the Xray config.")
+            throw CoreError.startFailed(String(localized: "Could not write the Xray config."))
         }
         _ = try FileManager.default.replaceItemAt(configURL, withItemAt: tmp)
     }

@@ -345,7 +345,7 @@ public struct ServerDraft: Sendable, Hashable {
         }
 
         require(address, "Enter the server address.")
-        if portNumber == nil { found.append("The port must be a number from 1 to 65535.") }
+        if portNumber == nil { found.append(String(localized: "The port must be a number from 1 to 65535.")) }
 
         switch proto {
         case .vless, .vmess:
@@ -358,19 +358,19 @@ public struct ServerDraft: Sendable, Hashable {
         case .hysteria:
             let pin = hysteriaPin
             if !pin.isEmpty, pin.count != 64 || !pin.allSatisfy(\.isHexDigit) {
-                found.append("The certificate pin must be a SHA-256 hash: 64 hexadecimal digits.")
+                found.append(String(localized: "The certificate pin must be a SHA-256 hash: 64 hexadecimal digits."))
             }
             if !csv(hopPorts).isEmpty, Int(Self.trimmed(hopInterval)) == nil {
-                found.append("The port hopping interval must be a number of seconds.")
+                found.append(String(localized: "The port hopping interval must be a number of seconds."))
             }
         case .wireguard:
             require(wgSecretKey, "Enter the private key.")
             require(wgPublicKey, "Enter the server's public key.")
-            if csv(wgAddresses).isEmpty { found.append("Enter at least one interface address.") }
+            if csv(wgAddresses).isEmpty { found.append(String(localized: "Enter at least one interface address.")) }
             number(wgMTU, "The MTU must be a number.")
             number(wgKeepAlive, "Keep-alive must be a number of seconds.")
             if !csv(wgReserved).isEmpty, reservedBytes == nil {
-                found.append("Reserved must be three numbers from 0 to 255, separated by commas.")
+                found.append(String(localized: "Reserved must be three numbers from 0 to 255, separated by commas."))
             }
         case .socks, .http:
             break
@@ -379,11 +379,11 @@ public struct ServerDraft: Sendable, Hashable {
         if proto.hasStream {
             if security == "reality" { require(realityPublicKey, "Enter the REALITY public key.") }
             if transport == "xhttp", !Self.trimmed(xhttpExtra).isEmpty, extraObject == nil {
-                found.append("The XHTTP extra options must be a JSON object.")
+                found.append(String(localized: "The XHTTP extra options must be a JSON object."))
             }
             if muxEnabled {
-                if Int(Self.trimmed(muxConcurrency)) == nil { found.append("Mux connections must be a number.") }
-                if Int(Self.trimmed(xudpConcurrency)) == nil { found.append("XUDP connections must be a number.") }
+                if Int(Self.trimmed(muxConcurrency)) == nil { found.append(String(localized: "Mux connections must be a number.")) }
+                if Int(Self.trimmed(xudpConcurrency)) == nil { found.append(String(localized: "XUDP connections must be a number.")) }
             }
         }
         return found
@@ -642,7 +642,7 @@ public struct ServerDraft: Sendable, Hashable {
         }
         let encryption = Self.trimmed(encryption)
         if proto == .vless, security == "none", encryption.isEmpty || encryption == "none" {
-            warnings.append("Xray refuses VLESS without TLS, REALITY or encryption; this server will fail to start")
+            warnings.append(String(localized: "Xray refuses VLESS without TLS, REALITY or encryption; this server will fail to start"))
         }
 
         let stream = config["streamSettings"]

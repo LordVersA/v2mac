@@ -70,7 +70,7 @@ struct InspectorView: View {
         return VStack(spacing: 10) {
             Text(name.flag ?? "🌐").font(.system(size: 44)).accessibilityHidden(true)
             Text(name.title).font(.title3.bold()).multilineTextAlignment(.center).textSelection(.enabled)
-            if let group = profile.group { GroupTag(name: group.name, color: group.tint) }
+            if let group = profile.group { GroupTag(name: group.displayName, color: group.tint) }
 
             Button(isActive ? "Active Server" : "Connect", systemImage: isActive ? "checkmark.circle.fill" : "power") {
                 model.activate(profile)
@@ -113,21 +113,21 @@ struct InspectorView: View {
 
     /// What the table's Type column leaves out.
     private static func details(of profile: Profile) -> [Detail] {
-        var rows = [Detail(title: "Protocol", value: profile.protocolName)]
-        if !profile.transport.isEmpty { rows.append(Detail(title: "Transport", value: profile.transport)) }
-        if !profile.security.isEmpty { rows.append(Detail(title: "Security", value: profile.security)) }
+        var rows = [Detail(title: String(localized: "Protocol"), value: profile.protocolName)]
+        if !profile.transport.isEmpty { rows.append(Detail(title: String(localized: "Transport"), value: profile.transport)) }
+        if !profile.security.isEmpty { rows.append(Detail(title: String(localized: "Security"), value: profile.security)) }
         let config = profile.config
         let stream = config?["streamSettings"]
         let sni = stream?["tlsSettings"]?["serverName"]?.stringValue
             ?? stream?["realitySettings"]?["serverName"]?.stringValue
             ?? stream?["wsSettings"]?["host"]?.stringValue
-        if let sni, !sni.isEmpty { rows.append(Detail(title: "SNI / Host", value: sni)) }
+        if let sni, !sni.isEmpty { rows.append(Detail(title: String(localized: "SNI / Host"), value: sni)) }
         let fingerprint = stream?["tlsSettings"]?["fingerprint"]?.stringValue
             ?? stream?["realitySettings"]?["fingerprint"]?.stringValue
-        if let fingerprint, !fingerprint.isEmpty { rows.append(Detail(title: "Fingerprint", value: fingerprint)) }
+        if let fingerprint, !fingerprint.isEmpty { rows.append(Detail(title: String(localized: "Fingerprint"), value: fingerprint)) }
         let settings = config?["settings"]
         let flow = settings?["vnext"]?[0]?["users"]?[0]?["flow"]?.stringValue ?? settings?["flow"]?.stringValue
-        if let flow, !flow.isEmpty { rows.append(Detail(title: "Flow", value: flow)) }
+        if let flow, !flow.isEmpty { rows.append(Detail(title: String(localized: "Flow"), value: flow)) }
         return rows
     }
 }
@@ -143,7 +143,7 @@ private struct InspectorLive: View {
             LabeledContent {
                 Text(exit.ip).font(.callout.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
             } label: {
-                Text("\(exit.flag.map { $0 + " " } ?? "")\(exit.place() ?? "Unknown place")")
+                Text(verbatim: (exit.flag.map { $0 + " " } ?? "") + (exit.place() ?? String(localized: "Unknown place")))
             }
         case .failed:
             Label("No answer through this server", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)

@@ -7,8 +7,8 @@ public enum TunFailurePolicy: String, CaseIterable, Sendable {
     public var stopsProxy: Bool { self == .stopProxy }
     public var title: String {
         switch self {
-        case .continueProxy: "Keep local proxy running"
-        case .stopProxy: "Stop connection"
+        case .continueProxy: String(localized: "Keep local proxy running")
+        case .stopProxy: String(localized: "Stop connection")
         }
     }
 }

@@ -57,7 +57,13 @@ enum AppPaths {
 enum PackUpdateInterval: String, CaseIterable, Identifiable {
     case never, daily, weekly
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .never: String(localized: "Never")
+        case .daily: String(localized: "Daily")
+        case .weekly: String(localized: "Weekly")
+        }
+    }
     /// Seconds between automatic updates, nil for never.
     var seconds: TimeInterval? {
         switch self {
@@ -382,10 +388,10 @@ enum Format {
         let days = Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
         let expired = date <= Date()
         let text: String
-        if expired { text = "Expired" }
-        else if days <= 0 { text = "Expires today" }
-        else if !long || days < 60 { text = "\(days) day\(days == 1 ? "" : "s") left" }
-        else { text = "Until \(date.formatted(.dateTime.month(.abbreviated).day().year()))" }
+        if expired { text = String(localized: "Expired") }
+        else if days <= 0 { text = String(localized: "Expires today") }
+        else if !long || days < 60 { text = days == 1 ? String(localized: "1 day left") : String(localized: "\(days) days left") }
+        else { text = String(localized: "Until \(date.formatted(.dateTime.month(.abbreviated).day().year()))") }
         return (text, expired, expired || days < 7)
     }
 

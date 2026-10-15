@@ -96,7 +96,7 @@ public enum SubscriptionParser {
                 } catch let skip as LinkSkip {
                     skipped.append(SkippedEntry(index: i + 1, reason: skip.reason))
                 } catch {
-                    skipped.append(SkippedEntry(index: i + 1, reason: "invalid JSON"))
+                    skipped.append(SkippedEntry(index: i + 1, reason: String(localized: "invalid JSON")))
                 }
             }
             return (profiles, skipped)
@@ -247,17 +247,17 @@ enum JSONProfile {
     private static let nonProxyProtocols: Set<String> = ["freedom", "blackhole", "dns", "loopback"]
 
     static func make(from value: JSONValue, number: Int) throws -> ParsedProfile {
-        guard case .object = value else { throw LinkSkip("not a JSON object") }
+        guard case .object = value else { throw LinkSkip(String(localized: "not a JSON object")) }
         if let outbounds = value["outbounds"]?.arrayValue {
             if outbounds.contains(where: { $0["type"] != nil && $0["protocol"] == nil }) {
-                throw LinkSkip("sing-box configs are not supported")
+                throw LinkSkip(String(localized: "sing-box configs are not supported"))
             }
             return custom(value, outbounds: outbounds, number: number)
         }
         if let proto = value["protocol"]?.stringValue {
             return outbound(value, protocolName: proto)
         }
-        throw LinkSkip("JSON entry has neither \"outbounds\" nor \"protocol\"")
+        throw LinkSkip(String(localized: "JSON entry has neither \"outbounds\" nor \"protocol\""))
     }
 
     private static func custom(_ config: JSONValue, outbounds: [JSONValue], number: Int) -> ParsedProfile {

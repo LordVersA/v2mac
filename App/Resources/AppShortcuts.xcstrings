@@ -1,0 +1,162 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Connect ${applicationName}": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Connect ${applicationName}"
+            ]
+          }
+        },
+        "fa": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName} را وصل کن"
+            ]
+          }
+        },
+        "ru": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Подключи ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "连接${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Disconnect ${applicationName}": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Disconnect ${applicationName}"
+            ]
+          }
+        },
+        "fa": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName} را قطع کن"
+            ]
+          }
+        },
+        "ru": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Отключи ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "断开${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Is ${applicationName} connected": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Is ${applicationName} connected",
+              "${applicationName} status"
+            ]
+          }
+        },
+        "fa": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "آیا ${applicationName} وصل است",
+              "وضعیت ${applicationName}"
+            ]
+          }
+        },
+        "ru": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Подключён ли ${applicationName}",
+              "Статус ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName}连接了吗",
+              "${applicationName}状态"
+            ]
+          }
+        }
+      }
+    },
+    "Turn ${applicationName} on or off": {
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Turn ${applicationName} on or off",
+              "Toggle ${applicationName}"
+            ]
+          }
+        },
+        "fa": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName} را روشن یا خاموش کن",
+              "تغییر وضعیت ${applicationName}"
+            ]
+          }
+        },
+        "ru": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Включи или выключи ${applicationName}",
+              "Переключи ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "开关${applicationName}",
+              "切换${applicationName}"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "version": "1.3"
+}

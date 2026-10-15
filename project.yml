@@ -1,6 +1,7 @@
 name: v2mac
 options:
   bundleIdPrefix: io.github.lordversa
+  developmentLanguage: en
   deploymentTarget:
     macOS: "26.0"
   createIntermediateGroups: true
@@ -8,6 +9,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     ARCHS: arm64
     ONLY_ACTIVE_ARCH: NO
     MARKETING_VERSION: "0.1.0"

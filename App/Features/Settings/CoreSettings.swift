@@ -9,8 +9,8 @@ struct CoreSettings: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("Version", value: updates.coreVersion ?? "Unknown")
-                LabeledContent("Source", value: updates.coreIsUpdatedCopy ? "Updated copy" : "Bundled")
+                LabeledContent("Version", value: updates.coreVersion ?? String(localized: "Unknown"))
+                LabeledContent("Source", value: updates.coreIsUpdatedCopy ? String(localized: "Updated copy") : String(localized: "Bundled"))
                 statusRow
             } header: {
                 Text("Xray-core")

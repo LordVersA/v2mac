@@ -21,7 +21,7 @@ public enum ShareLinkParser {
     public static func parse(_ link: String) throws -> ParsedProfile {
         let trimmed = link.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let scheme = knownScheme(of: trimmed) else {
-            throw LinkSkip("unsupported scheme")
+            throw LinkSkip(String(localized: "unsupported scheme"))
         }
         var profile: ParsedProfile
         switch scheme {
@@ -33,7 +33,7 @@ public enum ShareLinkParser {
         case "socks", "socks5": profile = try parseSocks(trimmed)
         case "http", "https": profile = try parseHTTP(trimmed)
         case "wireguard": profile = try parseWireguard(trimmed)
-        default: throw LinkSkip("unsupported scheme")
+        default: throw LinkSkip(String(localized: "unsupported scheme"))
         }
         profile.originalLink = trimmed
         return profile
@@ -42,7 +42,7 @@ public enum ShareLinkParser {
     // MARK: Helpers
 
     private static func url(_ link: String) throws -> RawURL {
-        guard let u = RawURL(link) else { throw LinkSkip("malformed link") }
+        guard let u = RawURL(link) else { throw LinkSkip(String(localized: "malformed link")) }
         return u
     }
 
@@ -84,7 +84,7 @@ public enum ShareLinkParser {
         let u = try url(link)
         let address = try u.validatedHost()
         let port = try u.port()
-        guard let id = u.decodedUserinfo, !id.isEmpty else { throw LinkSkip("missing UUID") }
+        guard let id = u.decodedUserinfo, !id.isEmpty else { throw LinkSkip(String(localized: "missing UUID")) }
         let stream = try StreamBuilder.build(StreamParams(query: u.query), defaultSecurity: "none")
         let settings = compact([
             "address": .string(address),
@@ -95,7 +95,7 @@ public enum ShareLinkParser {
         ])
         var warnings: [String] = []
         if stream.security == "none", (u.query["encryption"] ?? "none") == "none" {
-            warnings.append("Xray refuses VLESS without TLS, REALITY or encryption; this server will fail to start")
+            warnings.append(String(localized: "Xray refuses VLESS without TLS, REALITY or encryption; this server will fail to start"))
         }
         return profile(
             name: u.displayName(address: address, port: port),
@@ -108,7 +108,7 @@ public enum ShareLinkParser {
     // MARK: VMess
 
     private static func parseVmess(_ link: String) throws -> ParsedProfile {
-        guard let u = RawURL(link) else { throw LinkSkip("malformed link") }
+        guard let u = RawURL(link) else { throw LinkSkip(String(localized: "malformed link")) }
         if u.userinfo != nil { return try parseVmessURL(u) }
         return try parseVmessBase64(u)
     }
@@ -116,7 +116,7 @@ public enum ShareLinkParser {
     private static func parseVmessURL(_ u: RawURL) throws -> ParsedProfile {
         let address = try u.validatedHost()
         let port = try u.port()
-        guard var id = u.decodedUserinfo, !id.isEmpty else { throw LinkSkip("missing UUID") }
+        guard var id = u.decodedUserinfo, !id.isEmpty else { throw LinkSkip(String(localized: "missing UUID")) }
         if let colon = id.firstIndex(of: ":") { id = String(id[..<colon]) }
         let stream = try StreamBuilder.build(StreamParams(query: u.query), defaultSecurity: "none")
         let settings: JSONValue = [
@@ -139,7 +139,7 @@ public enum ShareLinkParser {
         guard let text = Base64Tolerant.decodeString(payload),
               let json = try? JSONValue.parse(Data(text.utf8)),
               case .object(let f) = json
-        else { throw LinkSkip("invalid vmess payload") }
+        else { throw LinkSkip(String(localized: "invalid vmess payload")) }
 
         func string(_ key: String) -> String? {
             switch f[key] {
@@ -149,11 +149,11 @@ public enum ShareLinkParser {
             }
         }
 
-        guard let address = string("add") else { throw LinkSkip("missing server address") }
+        guard let address = string("add") else { throw LinkSkip(String(localized: "missing server address")) }
         guard let portText = string("port"), let port = Int(portText), (1...65535).contains(port) else {
-            throw LinkSkip("invalid or missing port")
+            throw LinkSkip(String(localized: "invalid or missing port"))
         }
-        guard let id = string("id") else { throw LinkSkip("missing UUID") }
+        guard let id = string("id") else { throw LinkSkip(String(localized: "missing UUID")) }
 
         var p = StreamParams()
         p.network = string("net") ?? ""
@@ -198,7 +198,7 @@ public enum ShareLinkParser {
         let u = try url(link)
         let address = try u.validatedHost()
         let port = try u.port()
-        guard let password = u.decodedUserinfo, !password.isEmpty else { throw LinkSkip("missing password") }
+        guard let password = u.decodedUserinfo, !password.isEmpty else { throw LinkSkip(String(localized: "missing password")) }
         let stream = try StreamBuilder.build(StreamParams(query: u.query), defaultSecurity: "tls")
         let settings: JSONValue = [
             "address": .string(address),
@@ -230,9 +230,9 @@ public enum ShareLinkParser {
             } else if let b = Base64Tolerant.decodeString(info.removingPercentEncoding ?? info) {
                 decoded = b
             } else {
-                throw LinkSkip("invalid shadowsocks credentials")
+                throw LinkSkip(String(localized: "invalid shadowsocks credentials"))
             }
-            guard let colon = decoded.firstIndex(of: ":") else { throw LinkSkip("invalid shadowsocks credentials") }
+            guard let colon = decoded.firstIndex(of: ":") else { throw LinkSkip(String(localized: "invalid shadowsocks credentials")) }
             method = String(decoded[..<colon])
             password = String(decoded[decoded.index(after: colon)...])
         } else {
@@ -246,17 +246,17 @@ public enum ShareLinkParser {
             guard let text = Base64Tolerant.decodeString(payload),
                   let at = text.lastIndex(of: "@"),
                   let colon = text.firstIndex(of: ":"), colon < at
-            else { throw LinkSkip("invalid shadowsocks payload") }
+            else { throw LinkSkip(String(localized: "invalid shadowsocks payload")) }
             method = String(text[..<colon])
             password = String(text[text.index(after: colon)..<at])
             guard let hp = RawURL("ss://\(text[text.index(after: at)...])") else {
-                throw LinkSkip("invalid shadowsocks payload")
+                throw LinkSkip(String(localized: "invalid shadowsocks payload"))
             }
             address = try hp.validatedHost()
             port = try hp.port()
         }
 
-        guard !method.isEmpty, !password.isEmpty else { throw LinkSkip("invalid shadowsocks credentials") }
+        guard !method.isEmpty, !password.isEmpty else { throw LinkSkip(String(localized: "invalid shadowsocks credentials")) }
         var params = StreamParams(query: query)
         if let plugin = query["plugin"] { try applyShadowsocksPlugin(plugin, to: &params) }
 
@@ -298,7 +298,7 @@ public enum ShareLinkParser {
                 p.network = "grpc"
                 p.serviceName = options["servicename"] ?? "GunService"
             default:
-                throw LinkSkip("shadowsocks plugin mode \"\(mode)\" is not supported")
+                throw LinkSkip(String(localized: "shadowsocks plugin mode \"\(mode)\" is not supported"))
             }
             p.host = options["host"]
             if options["tls"] != nil {
@@ -307,13 +307,13 @@ public enum ShareLinkParser {
             }
         case "obfs-local", "simple-obfs":
             let obfs = options["obfs"]?.lowercased() ?? ""
-            guard obfs == "http" else { throw LinkSkip("shadowsocks plugin obfs \"\(obfs)\" is not supported") }
+            guard obfs == "http" else { throw LinkSkip(String(localized: "shadowsocks plugin obfs \"\(obfs)\" is not supported")) }
             p.network = "raw"
             p.headerType = "http"
             p.host = options["obfs-host"]
             p.path = options["obfs-uri"]
         default:
-            throw LinkSkip("shadowsocks plugin \"\(name)\" is not supported")
+            throw LinkSkip(String(localized: "shadowsocks plugin \"\(name)\" is not supported"))
         }
     }
 
@@ -324,9 +324,9 @@ public enum ShareLinkParser {
         let address = try u.validatedHost()
 
         // Authority port may be "443", "443,5000-6000" or "20000-30000".
-        guard let portText = u.portText else { throw LinkSkip("invalid or missing port") }
+        guard let portText = u.portText else { throw LinkSkip(String(localized: "invalid or missing port")) }
         var segments = csv(portText)
-        guard !segments.isEmpty else { throw LinkSkip("invalid or missing port") }
+        guard !segments.isEmpty else { throw LinkSkip(String(localized: "invalid or missing port")) }
         let first = segments.removeFirst()
         let port: Int
         if let single = Int(first) {
@@ -335,16 +335,16 @@ public enum ShareLinkParser {
             port = start
             segments.insert(first, at: 0)
         } else {
-            throw LinkSkip("invalid or missing port")
+            throw LinkSkip(String(localized: "invalid or missing port"))
         }
-        guard (1...65535).contains(port) else { throw LinkSkip("invalid or missing port") }
+        guard (1...65535).contains(port) else { throw LinkSkip(String(localized: "invalid or missing port")) }
         if let mport = u.query["mport"] { segments += csv(mport) }
 
         // Hysteria's pin is the leaf certificate's SHA-256 in hex, usually written with colons.
         var pin: String?
         if let raw = u.query["pinsha256"] {
             let hex = raw.lowercased().filter { $0 != ":" }
-            guard hex.count == 64, hex.allSatisfy(\.isHexDigit) else { throw LinkSkip("invalid pinSHA256") }
+            guard hex.count == 64, hex.allSatisfy(\.isHexDigit) else { throw LinkSkip(String(localized: "invalid pinSHA256")) }
             pin = hex
         }
 
@@ -373,7 +373,7 @@ public enum ShareLinkParser {
             "hysteriaSettings": .object(hysteria),
         ]
         if let obfs = u.query["obfs"] {
-            guard obfs.lowercased() == "salamander" else { throw LinkSkip("unsupported obfs \"\(obfs)\"") }
+            guard obfs.lowercased() == "salamander" else { throw LinkSkip(String(localized: "unsupported obfs \"\(obfs)\"")) }
             let pw = u.query["obfs-password"] ?? ""
             stream["finalmask"] = ["udp": [["type": "salamander", "settings": ["password": .string(pw)]]]]
         }
@@ -464,14 +464,14 @@ public enum ShareLinkParser {
         let u = try url(link)
         let address = try u.validatedHost()
         let port = try u.port()
-        guard let secret = u.decodedUserinfo, !secret.isEmpty else { throw LinkSkip("missing WireGuard private key") }
-        guard let publicKey = u.query["publickey"] else { throw LinkSkip("missing WireGuard public key") }
+        guard let secret = u.decodedUserinfo, !secret.isEmpty else { throw LinkSkip(String(localized: "missing WireGuard private key")) }
+        guard let publicKey = u.query["publickey"] else { throw LinkSkip(String(localized: "missing WireGuard public key")) }
 
         let addresses = csv(u.query["address"]).map { entry -> String in
             if entry.contains("/") { return entry }
             return entry.contains(":") ? "\(entry)/128" : "\(entry)/32"
         }
-        guard !addresses.isEmpty else { throw LinkSkip("missing WireGuard interface address") }
+        guard !addresses.isEmpty else { throw LinkSkip(String(localized: "missing WireGuard interface address")) }
 
         var warnings: [String] = []
         var reserved: JSONValue?
@@ -480,7 +480,7 @@ public enum ShareLinkParser {
             if ints.count == 3, ints.allSatisfy({ (0...255).contains($0) }) {
                 reserved = .array(ints.map { .number(Double($0)) })
             } else {
-                warnings.append("Ignored an invalid \"reserved\" value")
+                warnings.append(String(localized: "Ignored an invalid \"reserved\" value"))
             }
         }
 

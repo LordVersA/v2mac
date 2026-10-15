@@ -57,7 +57,7 @@ private struct CustomRulesSection: View {
         let invalid = RuleMatchers(parsing: text.wrappedValue).invalid
         Section {
             Picker("Send to", selection: $list) {
-                ForEach(List.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(List.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
             TextEditor(text: text)
@@ -65,7 +65,7 @@ private struct CustomRulesSection: View {
                 .frame(minHeight: 140)
                 .scrollContentBackground(.hidden)
             if !invalid.isEmpty {
-                Label("Skipped, not a rule: \(invalid.prefix(3).joined(separator: ", "))\(invalid.count > 3 ? " and \(invalid.count - 3) more" : "")",
+                Label(invalid.count > 3 ? "Skipped, not a rule: \(invalid.prefix(3).joined(separator: ", ")) and \(invalid.count - 3) more" : "Skipped, not a rule: \(invalid.joined(separator: ", "))",
                       systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
             }

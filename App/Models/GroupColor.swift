@@ -23,7 +23,21 @@ enum GroupColor: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .blue: String(localized: "Blue")
+        case .indigo: String(localized: "Indigo")
+        case .purple: String(localized: "Purple")
+        case .pink: String(localized: "Pink")
+        case .red: String(localized: "Red")
+        case .orange: String(localized: "Orange")
+        case .yellow: String(localized: "Yellow")
+        case .green: String(localized: "Green")
+        case .mint: String(localized: "Mint")
+        case .teal: String(localized: "Teal")
+        case .gray: String(localized: "Gray")
+        }
+    }
 
     /// The colour a subscription gets until one is chosen: they differ from one to the next.
     static func automatic(_ index: Int) -> GroupColor {

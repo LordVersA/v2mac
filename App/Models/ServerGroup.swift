@@ -44,4 +44,7 @@ extension ServerGroup {
 
     /// The group for pasted configs: it has no subscription to update from.
     var isManual: Bool { subscriptionURL.isEmpty }
+
+    /// The stored name is English for Custom Configs; it is shown in the user's language.
+    var displayName: String { isManual ? String(localized: "Custom Configs") : name }
 }

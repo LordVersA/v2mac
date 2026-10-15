@@ -175,7 +175,7 @@ struct ConnectionSettings: View {
     }
 
     @ViewBuilder
-    private func rangeField(_ title: String, text: Binding<String>, example: String) -> some View {
+    private func rangeField(_ title: LocalizedStringKey, text: Binding<String>, example: String) -> some View {
         TextField(title, text: text, prompt: Text(example))
         if !RangeText.isValid(text.wrappedValue) {
             Text("Enter a number or a range such as \(example). Until then \(example) is used.")

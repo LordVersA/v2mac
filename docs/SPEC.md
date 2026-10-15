@@ -38,7 +38,7 @@ on the Mac through the same connection.
 | Custom routing rules, rule-set manager | Custom rules came later (section 8.6); no remote rule-set manager. |
 | Viewing outbound JSON / exporting generated config | Not selected. |
 | Per-server usage history, speed text in the menu bar | Not selected. |
-| Localisation | English only, plain string literals. |
+| Localisation | Added later: English, Persian, Simplified Chinese and Russian (section 13, Language). |
 | Intel Macs, macOS 15 and earlier | arm64, macOS 26+ only. |
 | Developer ID signing, notarization, Sparkle | Planned after v1. |
 | Mux, global sniffing options | Outbounds are used as provided. TLS fragment, noise packets and DNS came later (section 8.4). |
@@ -1441,7 +1441,8 @@ newer V2Mac".
 
 | Tab | Setting | Default |
 |---|---|---|
-| General | Launch at login (`SMAppService.mainApp`) | Off |
+| General | Language: Same as the system / English / فارسی / 简体中文 / Русский. Stored as the app's own `AppleLanguages`; takes effect when V2Mac opens again ("Restart Now"). Persian lays the app out right to left: macOS does not do that for a language it does not offer itself, so `AppLanguage.applyLayoutDirection` sets `AppleTextDirection` and `NSForceRightToLeftWritingDirection` in the argument domain at launch | Same as the system |
+| | Launch at login (`SMAppService.mainApp`) | Off |
 | | Reconnect on launch | On |
 | | Restart core after sleep or network change | On |
 | | Count traffic usage (section 12.8) | On |

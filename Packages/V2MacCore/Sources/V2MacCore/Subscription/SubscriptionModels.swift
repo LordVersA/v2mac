@@ -59,14 +59,14 @@ public enum SubscriptionError: Error, Sendable, Equatable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidURL: "The subscription URL is not valid."
-        case .http(let code): "The server answered HTTP \(code)."
-        case .tooLarge: "The subscription is larger than 10 MB."
+        case .invalidURL: String(localized: "The subscription URL is not valid.")
+        case .http(let code): String(localized: "The server answered HTTP \(code).")
+        case .tooLarge: String(localized: "The subscription is larger than 10 MB.")
         case .network(let message): message
-        case .unrecognisedFormat: "Unrecognised subscription format."
-        case .unsupportedFormat(let name): "\(name) subscriptions are not supported."
+        case .unrecognisedFormat: String(localized: "Unrecognised subscription format.")
+        case .unsupportedFormat(let name): String(localized: "\(name) subscriptions are not supported.")
         case .noServers(let skipped):
-            skipped > 0 ? "No usable servers (\(skipped) skipped)." : "The subscription contains no servers."
+            skipped > 0 ? String(localized: "No usable servers (\(skipped) skipped).") : String(localized: "The subscription contains no servers.")
         }
     }
 }

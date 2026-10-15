@@ -21,19 +21,19 @@ public enum CoreError: Error, Sendable, Equatable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .coreNotFound:
-            "Xray core not found. Reinstall the app or revert to the bundled core."
+            String(localized: "Xray core not found. Reinstall the app or revert to the bundled core.")
         case .portInUse(let port):
-            "Port \(port) is already in use."
+            String(localized: "Port \(port) is already in use.")
         case .alreadyRunning:
-            "The core is already running."
+            String(localized: "The core is already running.")
         case .cancelled:
-            "Start was cancelled."
+            String(localized: "Start was cancelled.")
         case .startFailed(let message):
             message
         case .exitedBeforeReady(let code, let detail):
-            detail ?? "Xray exited during startup (exit \(code))."
+            detail ?? String(localized: "Xray exited during startup (exit \(code)).")
         case .readyTimeout:
-            "Xray did not become ready in time."
+            String(localized: "Xray did not become ready in time.")
         case .apiFailed(let detail):
             detail
         }

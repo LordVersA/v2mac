@@ -83,9 +83,9 @@ public enum DNSQueryStrategy: String, Sendable, CaseIterable, Identifiable {
 
     public var title: String {
         switch self {
-        case .useIP: "IPv4 and IPv6"
-        case .useIPv4: "IPv4 only"
-        case .useIPv6: "IPv6 only"
+        case .useIP: String(localized: "IPv4 and IPv6")
+        case .useIPv4: String(localized: "IPv4 only")
+        case .useIPv6: String(localized: "IPv6 only")
         }
     }
 }

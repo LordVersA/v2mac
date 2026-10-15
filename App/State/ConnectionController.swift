@@ -48,7 +48,7 @@ final class ConnectionController {
     /// Invalidates queued work and results after a manual command, disconnect or settings change.
     private var commandGeneration = 0
     private var pendingConnectionGeneration: Int?
-    private static let noWorkingServer = "No working server answered in this group."
+    private static let noWorkingServer = String(localized: "No working server answered in this group.")
     /// Set when a restart was the app's own doing (sleep, network change), not the user's.
     @ObservationIgnored private var announceReconnect = false
     /// Supplied by the region pack service: rules for enabled, downloaded packs.
@@ -114,7 +114,7 @@ final class ConnectionController {
 
     var isRunning: Bool { coreState == .running }
     var localAddress: String { "127.0.0.1:\(port)" }
-    var connectedTitle: String { tun.isOn ? "System tunnel active" : "Local proxy connected" }
+    var connectedTitle: String { tun.isOn ? String(localized: "System tunnel active") : String(localized: "Local proxy connected") }
 
     init(logs: LogStore, executable: @escaping @MainActor () -> URL = { AppPaths.coreExecutable },
          assetDirectory: URL = AppPaths.assetsDirectory, runDirectory: URL = AppPaths.runDirectory,
@@ -378,27 +378,27 @@ final class ConnectionController {
     }
 
     private func stopForTunFailure() {
-        let message = tun.failureMessage ?? "The system tunnel could not start."
+        let message = tun.failureMessage ?? String(localized: "The system tunnel could not start.")
         userWantsRunning = false
         Prefs.wasRunning = false
         commandGeneration += 1
         cancelAutomation()
         cancelRecovery()
-        localError = message + " Connection stopped by the TUN failure policy."
+        localError = message + " " + String(localized: "Connection stopped by the TUN failure policy.")
         tun.down()
         enqueue { await self.runner.stop() }
     }
 
     /// The kill switch is on but could not go up: nothing connects without it.
     private func stopForKillSwitchFailure() {
-        var message = "The kill switch could not be turned on."
+        var message = String(localized: "The kill switch could not be turned on.")
         if case .failed(let detail) = killSwitch.state { message += " " + detail }
         userWantsRunning = false
         Prefs.wasRunning = false
         commandGeneration += 1
         cancelAutomation()
         cancelRecovery()
-        localError = message + " V2Mac did not connect, so no traffic went around it."
+        localError = message + " " + String(localized: "V2Mac did not connect, so no traffic went around it.")
         tun.down()
         systemProxy.clear()
         enqueue { await self.runner.stop() }

@@ -101,14 +101,14 @@ struct RawURL: Sendable {
     /// Validated TCP/UDP port from `portText`.
     func port() throws -> Int {
         guard let text = portText, let p = Int(text), (1...65535).contains(p) else {
-            throw LinkSkip("invalid or missing port")
+            throw LinkSkip(String(localized: "invalid or missing port"))
         }
         return p
     }
 
     func validatedHost() throws -> String {
         let h = host.trimmingCharacters(in: .whitespaces)
-        guard !h.isEmpty else { throw LinkSkip("missing server address") }
+        guard !h.isEmpty else { throw LinkSkip(String(localized: "missing server address")) }
         return h
     }
 

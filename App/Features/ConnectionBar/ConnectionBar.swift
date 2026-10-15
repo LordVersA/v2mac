@@ -189,11 +189,11 @@ struct ConnectionBar: View {
     }
 
     private var title: String {
-        connection.activeServer?.name ?? "No server selected"
+        connection.activeServer?.name ?? String(localized: "No server selected")
     }
 
     private var routingTitle: String {
-        connection.activeIsCustom ? "Custom routing" : connection.routingMode.title
+        connection.activeIsCustom ? String(localized: "Custom routing") : connection.routingMode.title
     }
 
     @ViewBuilder
@@ -205,15 +205,15 @@ struct ConnectionBar: View {
                 FailureActions(connection: connection) { model.openLogs(openWindow) }
             }
         case .connecting:
-            status("Connecting…")
+            status(String(localized: "Connecting…"))
         case .switching:
-            status("Switching…")
+            status(String(localized: "Switching…"))
         case .connected:
             switch connection.exit {
             case .known(let exit):
                 // The green button and the routing menu already say "connected" and the mode.
                 status([connection.connectedTitle, exit.flag, exit.place(), exit.ip].compactMap { $0 }.joined(separator: "  "))
-                    .help("Where your traffic comes out: \(exit.place() ?? "unknown place"), \(exit.ip)")
+                    .help("Where your traffic comes out: \(exit.place() ?? String(localized: "unknown place")), \(exit.ip)")
             case .failed:
                 status("\(connection.connectedTitle) · \(routingTitle)")
                 Text("No answer through this server").font(.caption).foregroundStyle(.orange).lineLimit(1)
@@ -225,7 +225,7 @@ struct ConnectionBar: View {
                 Text("No response through the running proxy").font(.caption).foregroundStyle(.orange)
             }
         case .off:
-            status(connection.activeServer == nil ? "Double-click a server to connect" : "Off · \(routingTitle)")
+            status(connection.activeServer == nil ? String(localized: "Double-click a server to connect") : String(localized: "Off · \(routingTitle)"))
             if connection.killSwitch.isBlocking { KillSwitchNotice(connection: connection) }
         }
     }
@@ -249,10 +249,10 @@ struct ConnectionBar: View {
             copy("http://127.0.0.1:\(port)")
             if case .known(let exit) = connection.exit {
                 Divider()
-                copy(exit.ip, label: "Exit address \(exit.ip)")
+                copy(exit.ip, label: String(localized: "Exit address \(exit.ip)"))
             }
             Divider()
-            copy("export http_proxy=http://127.0.0.1:\(port) https_proxy=http://127.0.0.1:\(port) all_proxy=socks5://127.0.0.1:\(port)", label: "Shell export lines")
+            copy("export http_proxy=http://127.0.0.1:\(port) https_proxy=http://127.0.0.1:\(port) all_proxy=socks5://127.0.0.1:\(port)", label: String(localized: "Shell export lines"))
         } label: {
             Label(connection.localAddress, systemImage: copied ? "checkmark" : "doc.on.doc")
                 .font(.caption.monospaced())

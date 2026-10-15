@@ -51,7 +51,7 @@ final class KillSwitchController {
         FileManager.default.createFile(atPath: flag.path, contents: nil)
         switch await session.startSession() {
         case .started: break
-        case .cancelled: return fail("Administrator access was cancelled.", current)
+        case .cancelled: return fail(String(localized: "Administrator access was cancelled."), current)
         case .failed(let message): return fail(message, current)
         }
         let deadline = ContinuousClock.now + .seconds(10)
@@ -64,11 +64,11 @@ final class KillSwitchController {
             if !FileManager.default.fileExists(atPath: flag.path) {
                 let file = session.rootDirectory.appendingPathComponent(KillSwitch.errorFile)
                 let detail = (try? String(contentsOf: file, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
-                return fail(detail.flatMap { $0.isEmpty ? nil : $0 } ?? "The firewall rules could not be loaded.", current)
+                return fail(detail.flatMap { $0.isEmpty ? nil : $0 } ?? String(localized: "The firewall rules could not be loaded."), current)
             }
             try? await Task.sleep(for: .milliseconds(100))
         }
-        return current == generation ? fail("The firewall did not answer.", current) : false
+        return current == generation ? fail(String(localized: "The firewall did not answer."), current) : false
     }
 
     /// Lets the core reach these servers while the block is up, for tests and new servers.

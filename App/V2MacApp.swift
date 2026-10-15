@@ -7,6 +7,7 @@ struct V2MacApp: App {
     @State private var model: AppModel
 
     init() {
+        AppLanguage.applyLayoutDirection()
         _model = State(initialValue: AppModel())
     }
 

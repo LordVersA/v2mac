@@ -118,7 +118,7 @@ struct ServerListView: View {
         }
         .searchable(text: $model.searchText, prompt: "Search")
         .toolbar { toolbar(model: appModel, latency: latency, isTesting: isTesting, isUpdating: isUpdating) }
-        .navigationTitle(showsFavorites ? "Favorites" : (selectedGroup?.name ?? "All Servers"))
+        .navigationTitle(showsFavorites ? String(localized: "Favorites") : (selectedGroup?.displayName ?? String(localized: "All Servers")))
         #if DEBUG
         .navigationSubtitle("Dev build")
         #endif
@@ -181,11 +181,11 @@ struct ServerListView: View {
 /// the system's own menu indicator sits off-centre and changes size between a plain menu and a
 /// split button.
 private struct ToolbarSplitButton<MenuContent: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     let systemImage: String
     let isSpinning: Bool
-    let help: String
-    let menuHelp: String
+    let help: LocalizedStringKey
+    let menuHelp: LocalizedStringKey
     let action: () -> Void
     @ViewBuilder let menu: () -> MenuContent
 
@@ -212,7 +212,7 @@ private struct ToolbarSplitButton<MenuContent: View>: View {
             .focusable(false)
             // A menu keeps a minimum width of its own; this trims it to the width of the icon half.
             .padding(.horizontal, -1.5)
-            .accessibilityLabel("\(title) options")
+            .accessibilityLabel(Text("\(Text(title)) options"))
             .help(menuHelp)
         }
         .buttonStyle(.plain)
@@ -612,12 +612,10 @@ private struct GroupHeader: View {
             if let expires = group.expiresAt { expiry(expires, compact: compact) }
             Spacer(minLength: 8)
             if let url = group.supportURL.flatMap(URL.init(string:)) {
-                linkBadge("Support", systemImage: "bubble.left", url: url, compact: compact)
-                    .help("Open support")
+                linkBadge("Support", systemImage: "bubble.left", url: url, compact: compact, help: "Open support")
             }
             if let url = group.webPageURL.flatMap(URL.init(string:)) {
-                linkBadge("Account", systemImage: "person.crop.circle", url: url, compact: compact)
-                    .help("Open account page")
+                linkBadge("Account", systemImage: "person.crop.circle", url: url, compact: compact, help: "Open account page")
             }
             updateStatus(compact: compact)
         }
@@ -626,7 +624,7 @@ private struct GroupHeader: View {
     }
 
     /// Small capsule link; the narrow row keeps only the icon.
-    private func linkBadge(_ title: String, systemImage: String, url: URL, compact: Bool) -> some View {
+    private func linkBadge(_ title: LocalizedStringKey, systemImage: String, url: URL, compact: Bool, help: LocalizedStringKey) -> some View {
         Link(destination: url) {
             Label(title, systemImage: systemImage)
                 .labelStyle(BadgeLabelStyle(iconOnly: compact))
@@ -636,7 +634,8 @@ private struct GroupHeader: View {
                 .background(.quaternary, in: .capsule)
                 .contentShape(.capsule)
         }
-        .accessibilityLabel("Open \(title.lowercased()) page")
+        .help(help)
+        .accessibilityLabel(help)
     }
 
     // MARK: Traffic
@@ -666,9 +665,9 @@ private struct GroupHeader: View {
 
     private func trafficHelp(used: Int64, total: Int64) -> String {
         var parts: [String] = []
-        if total > 0 { parts.append("\(Format.bytes(max(total - used, 0))) left") } else { parts.append("No limit") }
+        if total > 0 { parts.append(String(localized: "\(Format.bytes(max(total - used, 0))) left")) } else { parts.append(String(localized: "No limit")) }
         if let up = group.uploadBytes, let down = group.downloadBytes {
-            parts.append("Uploaded \(Format.bytes(up)), downloaded \(Format.bytes(down))")
+            parts.append(String(localized: "Uploaded \(Format.bytes(up)), downloaded \(Format.bytes(down))"))
         }
         return parts.joined(separator: " · ")
     }
@@ -691,7 +690,7 @@ private struct GroupHeader: View {
     @ViewBuilder
     private func updateStatus(compact: Bool) -> some View {
         if let error = group.lastUpdateError {
-            Label(compact ? "Update failed" : error, systemImage: "exclamationmark.triangle.fill")
+            Label(compact ? String(localized: "Update failed") : error, systemImage: "exclamationmark.triangle.fill")
                 .labelStyle(CompactLabelStyle())
                 .foregroundStyle(.orange)
                 .help(error)
@@ -703,9 +702,10 @@ private struct GroupHeader: View {
     }
 
     private func updateHelp(_ updated: Date) -> String {
-        var text = "Updated \(updated.formatted(.relative(presentation: .named))) \(group.lastUpdateViaProxy == true ? "via proxy" : "without proxy")"
-        if let interval = group.serverIntervalHours { text += " · refreshes every \(interval) h" }
-        if group.lastSkippedCount > 0 { text += " · \(group.lastSkippedCount) skipped" }
+        let relative = updated.formatted(.relative(presentation: .named))
+        var text = group.lastUpdateViaProxy == true ? String(localized: "Updated \(relative) via proxy") : String(localized: "Updated \(relative) without proxy")
+        if let interval = group.serverIntervalHours { text += " · " + String(localized: "refreshes every \(interval) h") }
+        if group.lastSkippedCount > 0 { text += " · " + String(localized: "\(group.lastSkippedCount) skipped") }
         return text
     }
 }

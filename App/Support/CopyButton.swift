@@ -2,13 +2,13 @@ import SwiftUI
 
 /// A button that copies text and shows a checkmark for a moment, so the click visibly did something.
 struct CopyButton: View {
-    let title: String
+    let title: LocalizedStringKey
     let systemImage: String
     let text: () -> String
 
     @State private var copied = false
 
-    init(_ title: String, systemImage: String = "doc.on.doc", text: @escaping () -> String) {
+    init(_ title: LocalizedStringKey, systemImage: String = "doc.on.doc", text: @escaping () -> String) {
         self.title = title
         self.systemImage = systemImage
         self.text = text

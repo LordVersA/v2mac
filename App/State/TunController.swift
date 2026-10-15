@@ -46,11 +46,11 @@ final class TunController {
     /// Short progress note for the connection status line; nil when there is nothing to say.
     var statusNote: String? {
         switch state {
-        case .on: "System tunnel active"
-        case .starting: "TUN starting…"
-        case .authorizing: "TUN waiting for administrator access"
-        case .off: isEnabled ? "System tunnel inactive" : nil
-        case .failed: "System tunnel unavailable"
+        case .on: String(localized: "System tunnel active")
+        case .starting: String(localized: "TUN starting…")
+        case .authorizing: String(localized: "TUN waiting for administrator access")
+        case .off: isEnabled ? String(localized: "System tunnel inactive") : nil
+        case .failed: String(localized: "System tunnel unavailable")
         }
     }
 
@@ -99,7 +99,7 @@ final class TunController {
     func prepare() async -> TunLink? {
         let generation = preparationGeneration
         guard let primary = primaryInterface(interfaceName) else {
-            fail("TUN mode is waiting for a network connection.")
+            fail(String(localized: "TUN mode is waiting for a network connection."))
             return nil
         }
         if !isSessionAlive {
@@ -110,10 +110,10 @@ final class TunController {
         guard preparationGeneration == generation, isEnabled, !Task.isCancelled else { return nil }
         switch result {
         case .cancelled:
-            fail("Administrator access was cancelled; the system tunnel is inactive.")
+            fail(String(localized: "Administrator access was cancelled; the system tunnel is inactive."))
             return nil
         case .failed(let message):
-            fail("TUN mode could not start: \(message)")
+            fail(String(localized: "TUN mode could not start: \(message)"))
             return nil
         case .started:
             guard let port else { return nil }
@@ -152,7 +152,7 @@ final class TunController {
             }
             guard await helperAppeared() else {
                 try? FileManager.default.removeItem(at: sessionFlag)
-                return .failed("The helper did not start.")
+                return .failed(String(localized: "The helper did not start."))
             }
             port = newPort
             interfaceName = name
@@ -167,7 +167,7 @@ final class TunController {
     func up() {
         guard port != nil, let name = interfaceName else { return }
         guard FileManager.default.createFile(atPath: onFlag.path, contents: nil) else {
-            fail("TUN mode could not start: its request file could not be written.")
+            fail(String(localized: "TUN mode could not start: its request file could not be written."))
             return
         }
         if state != .on { state = .starting }
@@ -215,7 +215,7 @@ final class TunController {
                 port = nil
                 interfaceName = nil
                 try? FileManager.default.removeItem(at: onFlag)
-                fail("The TUN helper stopped. Reconnect to start it again.")
+                fail(String(localized: "The TUN helper stopped. Reconnect to start it again."))
                 return
             } else if state == .on {
                 // The helper restarts a forwarder that died; give it time.
@@ -224,7 +224,7 @@ final class TunController {
             } else if ContinuousClock.now > deadline {
                 let detail = TunHelper.failureDetail(rootDirectory: rootDirectory)
                 try? FileManager.default.removeItem(at: onFlag)
-                fail("TUN mode could not start" + (detail.map { ": \($0)" } ?? "."))
+                fail(detail.map { String(localized: "TUN mode could not start: \($0)") } ?? String(localized: "TUN mode could not start."))
                 return
             }
             try? await Task.sleep(for: state == .on ? .seconds(2) : .milliseconds(200))
@@ -305,7 +305,7 @@ final class TunController {
                     continuation.resume(returning: .cancelled)
                 } else {
                     let detail = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    continuation.resume(returning: .failed(detail.isEmpty ? "The administrator prompt failed." : detail))
+                    continuation.resume(returning: .failed(detail.isEmpty ? String(localized: "The administrator prompt failed.") : detail))
                 }
             }
             do {

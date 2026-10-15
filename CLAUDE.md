@@ -95,6 +95,17 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
 - The menu bar glyph PDFs in the asset catalog are generated: edit the SVGs in `Design/` and run
   `Scripts/make-glyphs.sh` (needs `rsvg-convert`).
 - `README.fa.md` is the Persian translation of `README.md`. Change both together.
+- The app is translated into Persian (`fa`), Simplified Chinese (`zh-Hans`) and Russian (`ru`) in String
+  Catalogs: `App/Resources/Localizable.xcstrings`, `App/Resources/AppShortcuts.xcstrings` (Siri phrases)
+  and `Extensions/Control/Localizable.xcstrings`. Every new user-visible string needs all three.
+  - Views take `LocalizedStringKey` (a literal is enough); a `String` that reaches the screen is made
+    with `String(localized:)`, also in the package, whose strings look in the app's catalog at run time.
+    A helper that takes `title: String` and passes it to `Text` shows it untranslated.
+  - `xcodebuild -exportLocalizations -project v2mac.xcodeproj -localizationPath <dir> -exportLanguage fa`
+    lists the app's keys; package keys are not in it: build the package with
+    `-Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc <dir>` and add them
+    to the app catalog as `"extractionState": "manual"` entries.
+  - Check a language with the dev build: `-AppleLanguages "(fa)"` plus `-debugSnapshot`.
 
 ## Architecture
 

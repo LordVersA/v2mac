@@ -26,12 +26,12 @@ public enum CoreUpdateError: Error, Sendable, Equatable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .noRelease: "No macOS arm64 build was found in the latest releases."
-        case .malformedResponse: "GitHub's answer could not be read."
-        case .checksumMissing: "The release has no SHA-256 checksum."
-        case .unpackFailed: "The downloaded archive could not be unpacked."
-        case .missingFile(let name): "The archive does not contain \(name)."
-        case .verificationFailed(let detail): "The new core failed its self-test: \(detail)"
+        case .noRelease: String(localized: "No macOS arm64 build was found in the latest releases.")
+        case .malformedResponse: String(localized: "GitHub's answer could not be read.")
+        case .checksumMissing: String(localized: "The release has no SHA-256 checksum.")
+        case .unpackFailed: String(localized: "The downloaded archive could not be unpacked.")
+        case .missingFile(let name): String(localized: "The archive does not contain \(name).")
+        case .verificationFailed(let detail): String(localized: "The new core failed its self-test: \(detail)")
         }
     }
 }
@@ -183,7 +183,7 @@ public enum CoreUpdater {
 
         let versionRun = try await run(binary.path, ["version"])
         guard versionRun.status == 0, let version = versionRun.output.split(separator: "\n").first.map(String.init) else {
-            throw CoreUpdateError.verificationFailed("it does not start on this Mac")
+            throw CoreUpdateError.verificationFailed(String(localized: "it does not start on this Mac"))
         }
 
         var configs: [URL] = []

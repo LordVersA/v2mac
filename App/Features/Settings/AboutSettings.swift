@@ -77,7 +77,7 @@ struct AboutSettings: View {
 
 /// Where the About tab and the About panel point. Add a row in `AboutSettings` for every new link.
 enum AboutLinks {
-    static let tagline = "A free, open-source Xray client for macOS."
+    static var tagline: String { String(localized: "A free, open-source Xray client for macOS.") }
     static let repositoryText = "github.com/LordVersA/v2mac"
     static let repository = URL(string: "https://github.com/LordVersA/v2mac")!
     static let releases = URL(string: "https://github.com/LordVersA/v2mac/releases")!
@@ -100,7 +100,7 @@ enum AboutLinks {
         }
         let credits = NSMutableAttributedString(string: tagline + "\n", attributes: plain)
         credits.append(link(repositoryText, repository))
-        credits.append(NSAttributedString(string: "\nMade by ", attributes: plain))
+        credits.append(NSAttributedString(string: "\n" + String(localized: "Made by") + " ", attributes: plain))
         credits.append(link("LordVersa", author))
         NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
         NSApp.activate()
@@ -108,12 +108,12 @@ enum AboutLinks {
 }
 
 private struct AboutLinkRow: View {
-    let title: String
+    let title: LocalizedStringKey
     let systemImage: String
-    let detail: String
+    let detail: LocalizedStringKey
     let url: URL
 
-    init(_ title: String, systemImage: String, detail: String, url: URL) {
+    init(_ title: LocalizedStringKey, systemImage: String, detail: LocalizedStringKey, url: URL) {
         self.title = title
         self.systemImage = systemImage
         self.detail = detail

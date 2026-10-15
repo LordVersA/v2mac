@@ -14,16 +14,16 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .connection: "Connection lost or failed"
-        case .reconnected: "Reconnected"
-        case .tun: "TUN mode stopped"
-        case .expiry: "Subscription expiring"
-        case .traffic: "Traffic running out"
-        case .updateFailed: "Automatic update failed"
-        case .serversChanged: "Servers added or removed"
-        case .appUpdate: "V2Mac update available"
-        case .coreUpdate: "Xray core update available"
-        case .testFinished: "Delay test finished"
+        case .connection: String(localized: "Connection lost or failed")
+        case .reconnected: String(localized: "Reconnected")
+        case .tun: String(localized: "TUN mode stopped")
+        case .expiry: String(localized: "Subscription expiring")
+        case .traffic: String(localized: "Traffic running out")
+        case .updateFailed: String(localized: "Automatic update failed")
+        case .serversChanged: String(localized: "Servers added or removed")
+        case .appUpdate: String(localized: "V2Mac update available")
+        case .coreUpdate: String(localized: "Xray core update available")
+        case .testFinished: String(localized: "Delay test finished")
         }
     }
 
@@ -112,7 +112,7 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         content.userInfo = ["kind": kind.rawValue, "open": open.code]
         if let usePort {
             // The button's title carries the port, so the category is registered per notification.
-            let action = UNNotificationAction(identifier: Self.usePortAction, title: "Use Port \(usePort)")
+            let action = UNNotificationAction(identifier: Self.usePortAction, title: String(localized: "Use Port \(String(usePort))"))
             center.setNotificationCategories([
                 UNNotificationCategory(identifier: Self.portCategory, actions: [action], intentIdentifiers: []),
             ])
@@ -130,7 +130,7 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     func sendTest() {
         let content = UNMutableNotificationContent()
         content.title = "V2Mac"
-        content.body = "Notifications are working."
+        content.body = String(localized: "Notifications are working.")
         content.sound = .default
         content.userInfo = ["open": WindowRequest.settings(.notifications).code]
         center.add(UNNotificationRequest(identifier: "test", content: content, trigger: nil))

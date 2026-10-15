@@ -11,10 +11,10 @@ enum AddSubscriptionError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notAConfig: "This is not a share link or an Xray config."
-        case .alreadyAdded: "These configs are already in Custom Configs."
-        case .duplicate: "This subscription is already added."
-        case .needsConnection: "Connect first to fetch through the proxy."
+        case .notAConfig: String(localized: "This is not a share link or an Xray config.")
+        case .alreadyAdded: String(localized: "These configs are already in Custom Configs.")
+        case .duplicate: String(localized: "This subscription is already added.")
+        case .needsConnection: String(localized: "Connect first to fetch through the proxy.")
         }
     }
 }

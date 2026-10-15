@@ -33,10 +33,10 @@ public enum DownloadError: Error, Sendable, Equatable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .http(let code): "The server answered HTTP \(code)."
-        case .tooLarge: "The download is larger than allowed."
-        case .checksumMalformed: "The published checksum could not be read."
-        case .checksumMismatch(let file): "Checksum mismatch for \(file); the download was discarded."
+        case .http(let code): String(localized: "The server answered HTTP \(code).")
+        case .tooLarge: String(localized: "The download is larger than allowed.")
+        case .checksumMalformed: String(localized: "The published checksum could not be read.")
+        case .checksumMismatch(let file): String(localized: "Checksum mismatch for \(file); the download was discarded.")
         case .network(let message): message
         }
     }

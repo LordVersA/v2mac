@@ -116,7 +116,7 @@ struct ServerEditorSheet: View {
             let parsed: ParsedProfile
             if let json {
                 guard let only = try SubscriptionParser.parse(text: json).profiles.first else {
-                    throw DraftError(["This is not an Xray config or outbound that V2Mac can run."])
+                    throw DraftError([String(localized: "This is not an Xray config or outbound that V2Mac can run.")])
                 }
                 var named = only
                 let name = jsonName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -220,16 +220,16 @@ struct ServerEditorSheet: View {
         }
     }
 
-    private func secret(_ title: LocalizedStringKey, _ text: Binding<String>, prompt: String = "") -> some View {
+    private func secret(_ title: LocalizedStringKey, _ text: Binding<String>, prompt: LocalizedStringKey = "") -> some View {
         TextField(title, text: text, prompt: Text(prompt))
     }
 
     /// A menu of the usual values, plus the server's own value when it is none of them.
-    private func picker(_ title: LocalizedStringKey, _ selection: Binding<String>, _ options: [String], empty: String = "Default") -> some View {
+    private func picker(_ title: LocalizedStringKey, _ selection: Binding<String>, _ options: [String], empty: LocalizedStringKey = "Default") -> some View {
         let current = selection.wrappedValue
         return Picker(title, selection: selection) {
             ForEach(options.contains(current) ? options : options + [current], id: \.self) { option in
-                Text(option.isEmpty ? empty : option).tag(option)
+                (option.isEmpty ? Text(empty) : Text(verbatim: option)).tag(option)
             }
         }
     }

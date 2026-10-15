@@ -10,10 +10,10 @@ struct UsageDetails: View {
         let usage = connection.usage
         VStack(alignment: .leading, spacing: 12) {
             section("This Session", up: usage.sessionUp, down: usage.sessionDown,
-                    note: usage.sessionStart.map { "Since \($0.formatted(date: .abbreviated, time: .shortened))" })
+                    note: usage.sessionStart.map { String(localized: "Since \($0.formatted(date: .abbreviated, time: .shortened))") })
             Divider()
             section("Total", up: usage.totalUp, down: usage.totalDown,
-                    note: usage.totalSince.map { "Since \($0.formatted(date: .abbreviated, time: .omitted))" })
+                    note: usage.totalSince.map { String(localized: "Since \($0.formatted(date: .abbreviated, time: .omitted))") })
             Button("Reset Total") { connection.resetTotalUsage() }
                 .controlSize(.small)
                 .disabled(usage.total == 0)
@@ -22,7 +22,7 @@ struct UsageDetails: View {
         .frame(width: 240, alignment: .leading)
     }
 
-    private func section(_ title: String, up: Int64, down: Int64, note: String?) -> some View {
+    private func section(_ title: LocalizedStringKey, up: Int64, down: Int64, note: String?) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(title).font(.headline)

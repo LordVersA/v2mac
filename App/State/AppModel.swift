@@ -138,45 +138,51 @@ final class AppModel {
             // One id: the latest state of the connection replaces the one before it.
             switch notice {
             case .failed(let server, let message):
-                notifications.post(.connection, title: "Could not connect", body: "\(server): \(message)", id: "connection")
+                notifications.post(.connection, title: String(localized: "Could not connect"), body: "\(server): \(message)", id: "connection")
             case .lost(let server):
-                notifications.post(.connection, title: "Connection lost", body: "\(server) stopped and could not be restarted.", id: "connection")
+                notifications.post(.connection, title: String(localized: "Connection lost"),
+                                   body: String(localized: "\(server) stopped and could not be restarted."), id: "connection")
             case .reconnected(let server):
-                notifications.post(.reconnected, title: "Reconnected", body: "Connected to \(server) again.", id: "connection")
+                notifications.post(.reconnected, title: String(localized: "Reconnected"), body: String(localized: "Connected to \(server) again."), id: "connection")
             case .portInUse(let busy, let suggested):
                 notifications.post(
-                    .connection, title: "Port \(busy) is in use",
-                    body: suggested.map { "Another app is using it. V2Mac can use port \($0) instead." } ?? "Another app is using it. Choose another port in Settings.",
+                    .connection, title: String(localized: "Port \(String(busy)) is in use"),
+                    body: suggested.map { String(localized: "Another app is using it. V2Mac can use port \(String($0)) instead.") }
+                        ?? String(localized: "Another app is using it. Choose another port in Settings."),
                     id: "connection", usePort: suggested
                 )
             }
         }
         connection.onTunFailure = { message in
-            notifications.post(.tun, title: "TUN mode stopped", body: message, id: "tun")
+            notifications.post(.tun, title: String(localized: "TUN mode stopped"), body: message, id: "tun")
         }
 
         subscriptions.onNotice = { notice in
             switch notice {
             case .updateFailed(let group, let message):
-                notifications.post(.updateFailed, title: "Could not update \(group)", body: message, open: .settings(.servers))
+                notifications.post(.updateFailed, title: String(localized: "Could not update \(group)"), body: message, open: .settings(.servers))
             case .serversChanged(let group, let added, let removed, let activeRemoved):
                 var parts: [String] = []
-                if added > 0 { parts.append("\(added) added") }
-                if removed > 0 { parts.append("\(removed) removed") }
+                if added > 0 { parts.append(String(localized: "\(added) added")) }
+                if removed > 0 { parts.append(String(localized: "\(removed) removed")) }
                 var body = parts.joined(separator: ", ") + "."
-                if activeRemoved { body += " The server in use is no longer in the subscription." }
-                notifications.post(.serversChanged, title: "\(group) was updated", body: body)
+                if activeRemoved { body += " " + String(localized: "The server in use is no longer in the subscription.") }
+                notifications.post(.serversChanged, title: String(localized: "\(group) was updated"), body: body)
             case .expiry(let group, let level, let expiresAt):
                 let body: String
                 switch level {
-                case .expired: body = "This subscription has expired."
-                case .lastDay: body = "This subscription expires in less than a day."
-                default: body = "This subscription expires in \(UsageAlert.daysLeft(expiresAt: expiresAt)) days."
+                case .expired: body = String(localized: "This subscription has expired.")
+                case .lastDay: body = String(localized: "This subscription expires in less than a day.")
+                default: body = String(localized: "This subscription expires in \(UsageAlert.daysLeft(expiresAt: expiresAt)) days.")
                 }
                 notifications.post(.expiry, title: group, body: body)
             case .traffic(let group, let level, let used, let total):
-                let amount = "\(ByteCountFormatter.string(fromByteCount: used, countStyle: .binary)) of \(ByteCountFormatter.string(fromByteCount: total, countStyle: .binary)) used"
-                let body = level == .out ? "The traffic quota is used up (\(amount))." : "\(Int(Double(used) / Double(total) * 100))% of the traffic quota is used (\(amount))."
+                let usedText = ByteCountFormatter.string(fromByteCount: used, countStyle: .binary)
+                let totalText = ByteCountFormatter.string(fromByteCount: total, countStyle: .binary)
+                let percent = Int(Double(used) / Double(total) * 100)
+                let body = level == .out
+                    ? String(localized: "The traffic quota is used up (\(usedText) of \(totalText) used).")
+                    : String(localized: "\(percent)% of the traffic quota is used (\(usedText) of \(totalText) used).")
                 notifications.post(.traffic, title: group, body: body)
             }
         }
@@ -187,25 +193,26 @@ final class AppModel {
             case .app(let tag):
                 guard Prefs.announcedTag("notifiedAppTag") != tag else { return }
                 Prefs.setAnnouncedTag(tag, "notifiedAppTag")
-                notifications.post(.appUpdate, title: "V2Mac \(VersionCompare.normalized(tag)) is available", body: "Open Settings to install it.", id: "appUpdate", open: .settings(.general))
+                notifications.post(.appUpdate, title: String(localized: "V2Mac \(VersionCompare.normalized(tag)) is available"),
+                                   body: String(localized: "Open Settings to install it."), id: "appUpdate", open: .settings(.general))
             case .core(let tag):
                 guard Prefs.announcedTag("notifiedCoreTag") != tag else { return }
                 Prefs.setAnnouncedTag(tag, "notifiedCoreTag")
-                notifications.post(.coreUpdate, title: "Xray core \(tag) is available", body: "Open Settings to install it.", id: "coreUpdate", open: .settings(.core))
+                notifications.post(.coreUpdate, title: String(localized: "Xray core \(tag) is available"),
+                                   body: String(localized: "Open Settings to install it."), id: "coreUpdate", open: .settings(.core))
             }
         }
 
         updates.onHomebrewFailure = { message in
-            notifications.post(.appUpdate, title: "V2Mac was not updated", body: message, id: "appUpdate", open: .settings(.general))
+            notifications.post(.appUpdate, title: String(localized: "V2Mac was not updated"), body: message, id: "appUpdate", open: .settings(.general))
         }
 
         latency.onFinished = { [weak self] tested, best in
             guard !NSApp.isActive else { return }
-            let fastest = best.flatMap { best in self?.profile(id: best.id).map { "Fastest: \($0.name), \(best.ms) ms." } }
-            notifications.post(
-                .testFinished, title: "Test finished",
-                body: "\(tested) \(tested == 1 ? "server" : "servers") tested. " + (fastest ?? "None answered."), id: "test"
-            )
+            let fastest = best.flatMap { best in self?.profile(id: best.id).map { String(localized: "Fastest: \($0.name), \(best.ms) ms.") } }
+            let count = tested == 1 ? String(localized: "1 server tested.") : String(localized: "\(tested) servers tested.")
+            notifications.post(.testFinished, title: String(localized: "Test finished"),
+                               body: count + " " + (fastest ?? String(localized: "None answered.")), id: "test")
         }
 
         notifications.start()
@@ -346,7 +353,7 @@ final class AppModel {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
         let found = QRCodeReader.messages(in: cgImage)
         if found.isEmpty {
-            addDraft = AddDraft(kind: .custom, error: "No QR code was found in the picture.")
+            addDraft = AddDraft(kind: .custom, error: String(localized: "No QR code was found in the picture."))
             showAddSheet = true
         } else {
             importText(found.joined(separator: "\n"))
@@ -804,6 +811,7 @@ final class AppModel {
             let top = NSScreen.screens.first?.frame.maxY ?? 0
             let frames = windows.map { "\(Int($0.frame.minX)),\(Int(top - $0.frame.maxY)) \(Int($0.frame.width))x\(Int($0.frame.height))" }
             print("[v2mac-debug] snapshot: \(windows.count) windows: \(frames.joined(separator: " | "))")
+            print("[v2mac-debug] layout \(NSApp.userInterfaceLayoutDirection == .rightToLeft ? "rtl" : "ltr"), localizations \(Bundle.main.preferredLocalizations)")
         }
     }
 

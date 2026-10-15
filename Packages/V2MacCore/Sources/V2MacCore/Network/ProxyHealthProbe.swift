@@ -3,7 +3,7 @@ import Foundation
 /// Tests the running proxy with an HTTP response. It never retries over a direct connection.
 public enum ProxyHealthProbe {
     public static func measure(route: FetchRoute, url: URL, timeout: TimeInterval) async -> LatencyOutcome {
-        guard case .proxy = route, isSuitable(url) else { return .invalid("Use a public HTTP or HTTPS test URL.") }
+        guard case .proxy = route, isSuitable(url) else { return .invalid(String(localized: "Use a public HTTP or HTTPS test URL.")) }
         let session = SessionFactory.make(route: route, timeout: timeout, resourceTimeout: timeout, delegate: ResponseHeadersOnly())
         defer { session.invalidateAndCancel() }
         let start = ContinuousClock.now

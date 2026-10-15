@@ -24,11 +24,19 @@ enum RuleList: String, CaseIterable, Identifiable {
         }
     }
 
+    var title: String {
+        switch self {
+        case .proxy: String(localized: "Proxy")
+        case .direct: String(localized: "Direct")
+        case .block: String(localized: "Block")
+        }
+    }
+
     var summary: String {
         switch self {
-        case .proxy: "Send through the server, whatever the mode says."
-        case .direct: "Connect without the proxy, from your own network."
-        case .block: "Refuse the connection, for ads, trackers or anything unwanted."
+        case .proxy: String(localized: "Send through the server, whatever the mode says.")
+        case .direct: String(localized: "Connect without the proxy, from your own network.")
+        case .block: String(localized: "Refuse the connection, for ads, trackers or anything unwanted.")
         }
     }
 }
@@ -40,9 +48,9 @@ struct RuleBuilderView: View {
         case action, targets, review
         var title: String {
             switch self {
-            case .action: "Action"
-            case .targets: "Choose"
-            case .review: "Review"
+            case .action: String(localized: "Action")
+            case .targets: String(localized: "Choose")
+            case .review: String(localized: "Review")
             }
         }
     }
@@ -50,6 +58,13 @@ struct RuleBuilderView: View {
     enum Source: String, CaseIterable, Identifiable {
         case countries = "Countries", services = "Services", manual = "Domains & IPs"
         var id: Self { self }
+        var title: String {
+            switch self {
+            case .countries: String(localized: "Countries")
+            case .services: String(localized: "Services")
+            case .manual: String(localized: "Domains & IPs")
+            }
+        }
         var symbol: String {
             switch self {
             case .countries: "globe.europe.africa.fill"
@@ -158,14 +173,14 @@ struct RuleBuilderView: View {
         guard catalog.isLoaded else { return [] }
         var out: [QuickStart] = []
         if let code = Locale.current.region?.identifier.lowercased(), let home = catalog.country(code) {
-            out.append(QuickStart(title: "Keep \(home.flag) \(home.name) direct", symbol: "house.fill", list: .direct, countries: [code]))
+            out.append(QuickStart(title: String(localized: "Keep \(home.flag) \(home.name) direct"), symbol: "house.fill", list: .direct, countries: [code]))
         }
-        out.append(QuickStart(title: "Block ads and trackers", symbol: "eye.slash.fill", list: .block, services: catalog.available(["geosite:category-ads-all"])))
-        out.append(QuickStart(title: "AI services through the proxy", symbol: "sparkles", list: .proxy,
+        out.append(QuickStart(title: String(localized: "Block ads and trackers"), symbol: "eye.slash.fill", list: .block, services: catalog.available(["geosite:category-ads-all"])))
+        out.append(QuickStart(title: String(localized: "AI services through the proxy"), symbol: "sparkles", list: .proxy,
                               services: catalog.available(["geosite:category-ai-!cn", "geosite:openai", "geosite:anthropic"])))
-        out.append(QuickStart(title: "Telegram through the proxy", symbol: "paperplane.fill", list: .proxy,
+        out.append(QuickStart(title: String(localized: "Telegram through the proxy"), symbol: "paperplane.fill", list: .proxy,
                               services: catalog.available(["geosite:telegram", "geoip:telegram"])))
-        out.append(QuickStart(title: "Streaming through the proxy", symbol: "play.tv.fill", list: .proxy,
+        out.append(QuickStart(title: String(localized: "Streaming through the proxy"), symbol: "play.tv.fill", list: .proxy,
                               services: catalog.available(["geosite:youtube", "geosite:netflix", "geoip:netflix", "geosite:spotify"])))
         return out.filter { !$0.countries.isEmpty || !$0.services.isEmpty }
     }
@@ -184,7 +199,7 @@ struct RuleBuilderView: View {
         VStack(spacing: 0) {
             Picker("Source", selection: $source) {
                 ForEach(Source.allCases) { source in
-                    Label("\(source.rawValue)\(count(source).map { " (\($0))" } ?? "")", systemImage: source.symbol).tag(source)
+                    Label(source.title + (count(source).map { " (\($0))" } ?? ""), systemImage: source.symbol).tag(source)
                 }
             }
             .pickerStyle(.segmented)
@@ -243,7 +258,7 @@ struct RuleBuilderView: View {
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 Label {
-                    Text("\(toWrite.count) \(toWrite.count == 1 ? "rule" : "rules") for the \(list.rawValue) list")
+                    Text(toWrite.count == 1 ? "1 rule for the \(list.title) list" : "\(toWrite.count) rules for the \(list.title) list")
                         .font(.title2.weight(.semibold))
                 } icon: {
                     Image(systemName: list.symbol).foregroundStyle(list.tint)
@@ -258,7 +273,7 @@ struct RuleBuilderView: View {
                 .fixedSize()
             }
             if replace, !list.saved.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Label("The \(list.rawValue) list's current rules will be removed.", systemImage: "exclamationmark.triangle.fill")
+                Label("The \(list.title) list's current rules will be removed.", systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
             }
             if rules.isEmpty {
@@ -303,7 +318,7 @@ struct RuleBuilderView: View {
                 .keyboardShortcut(.cancelAction)
             Spacer()
             if step == .targets, !generated.isEmpty {
-                Text("\(generated.count) \(generated.count == 1 ? "rule" : "rules") so far")
+                Text(generated.count == 1 ? "1 rule so far" : "\(generated.count) rules so far")
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
@@ -368,7 +383,7 @@ private struct ActionCard: View {
                 Image(systemName: list.symbol)
                     .font(.system(size: 30))
                     .foregroundStyle(list.tint)
-                Text(list.rawValue).font(.title3.weight(.semibold))
+                Text(list.title).font(.title3.weight(.semibold))
                 Text(list.summary)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -394,13 +409,13 @@ private struct RuleRow: View {
 
     private var kind: (symbol: String, text: String) {
         switch rule.split(separator: ":").first.map(String.init) {
-        case "geoip": ("map.fill", "IP ranges")
-        case "geosite": ("list.bullet.rectangle.fill", "Site list")
-        case "domain": ("globe", "Domain and subdomains")
-        case "full": ("globe", "Exact domain")
-        case "keyword": ("text.magnifyingglass", "Domain keyword")
-        case "regexp": ("asterisk", "Pattern")
-        default: ("number", "Address")
+        case "geoip": ("map.fill", String(localized: "IP ranges"))
+        case "geosite": ("list.bullet.rectangle.fill", String(localized: "Site list"))
+        case "domain": ("globe", String(localized: "Domain and subdomains"))
+        case "full": ("globe", String(localized: "Exact domain"))
+        case "keyword": ("text.magnifyingglass", String(localized: "Domain keyword"))
+        case "regexp": ("asterisk", String(localized: "Pattern"))
+        default: ("number", String(localized: "Address"))
         }
     }
 
@@ -449,7 +464,7 @@ private struct ManualEntry: View {
                     Text("Accepted formats").font(.headline)
                     ForEach(Self.examples, id: \.0) { example in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(example.0).font(.callout.monospaced())
+                            Text(verbatim: example.0).font(.callout.monospaced())
                             Text(example.1).font(.caption).foregroundStyle(.secondary)
                         }
                     }
@@ -461,7 +476,7 @@ private struct ManualEntry: View {
         }
     }
 
-    static let examples: [(String, String)] = [
+    static let examples: [(String, LocalizedStringKey)] = [
         ("example.com", "The domain and all its subdomains"),
         ("*.example.com", "Same, written as a wildcard"),
         ("full:www.example.com", "Only this exact name"),

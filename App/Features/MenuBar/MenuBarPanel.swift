@@ -227,14 +227,14 @@ struct MenuBarPanel: View {
             if !recent.isEmpty || !candidates.isEmpty {
                 PanelCard {
                     if !recent.isEmpty {
-                        PanelSectionTitle("Recent")
+                        PanelSectionTitle(String(localized: "Recent"))
                         rows(recent, showsGroup: true)
                     }
                     if !recent.isEmpty, !candidates.isEmpty { Divider() }
                     if !candidates.isEmpty {
                         HStack(spacing: 5) {
                             if let group = active?.group { GroupDot(color: group.tint) }
-                            PanelSectionTitle(active?.group?.name ?? "Switch Server")
+                            PanelSectionTitle(active?.group?.displayName ?? String(localized: "Switch Server"))
                             Spacer()
                             PanelTestButton(latency: model.latency) { testGroup(of: active) }
                         }
@@ -329,7 +329,7 @@ struct MenuBarPanel: View {
             HStack(spacing: 8) {
                 if let flag = exit.flag { Text(flag).font(.title3) }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(exit.place() ?? "Unknown place").font(.callout)
+                    Text(exit.place() ?? String(localized: "Unknown place")).font(.callout)
                     Text(exit.ip).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
                 }
                 Spacer()
@@ -391,17 +391,17 @@ struct MenuBarPanel: View {
 
     private var statusTitle: String {
         switch connection.phase {
-        case .off: "Off"
-        case .connecting: "Connecting…"
-        case .switching: "Switching…"
+        case .off: String(localized: "Off")
+        case .connecting: String(localized: "Connecting…")
+        case .switching: String(localized: "Switching…")
         case .connected: connection.connectedTitle
-        case .failed: "Connection failed"
+        case .failed: String(localized: "Connection failed")
         }
     }
 
     private func serverDetail(_ server: ActiveServer, profile: Profile?) -> String {
         var parts: [String] = []
-        if !server.groupName.isEmpty { parts.append(server.groupName) }
+        if let group = profile?.group { parts.append(group.displayName) } else if !server.groupName.isEmpty { parts.append(server.groupName) }
         if let p = profile, p.delayState == .ok, let ms = p.delayMs { parts.append("\(ms) ms") }
         return parts.joined(separator: " · ")
     }
@@ -548,7 +548,7 @@ private struct PanelSubscription: View {
             .help("Expires \(date.formatted(date: .long, time: .omitted))")
     }
 
-    private func link(_ title: String, systemImage: String, url: URL) -> some View {
+    private func link(_ title: LocalizedStringKey, systemImage: String, url: URL) -> some View {
         Link(destination: url) {
             Label(title, systemImage: systemImage)
                 .labelStyle(CompactLabelStyle())
@@ -558,7 +558,7 @@ private struct PanelSubscription: View {
                 .background(.quaternary, in: .capsule)
                 .contentShape(.capsule)
         }
-        .accessibilityLabel("Open \(title.lowercased()) page")
+        .accessibilityLabel(title)
     }
 }
 
@@ -651,7 +651,7 @@ private struct SwitchRow: View {
                     if let group {
                         HStack(spacing: 4) {
                             GroupDot(color: group.tint)
-                            Text(group.name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            Text(group.displayName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
                     }
                 }

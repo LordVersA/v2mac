@@ -11,6 +11,7 @@ struct GeneralSettings: View {
 
     var body: some View {
         Form {
+            LanguagePicker()
             Toggle("Launch at login", isOn: Binding(get: { loginEnabled }, set: { setLogin($0) }))
             if SMAppService.mainApp.status == .requiresApproval {
                 HStack {
@@ -44,7 +45,7 @@ struct GeneralSettings: View {
             if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             loginError = nil
         } catch {
-            loginError = "Could not change the login item: \(error.localizedDescription)"
+            loginError = String(localized: "Could not change the login item: \(error.localizedDescription)")
         }
         loginEnabled = SMAppService.mainApp.status == .enabled || SMAppService.mainApp.status == .requiresApproval
     }

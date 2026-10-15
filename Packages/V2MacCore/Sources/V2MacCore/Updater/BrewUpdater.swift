@@ -9,9 +9,9 @@ public enum BrewUpdateError: Error, Sendable, Equatable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .failed(let command, let output):
-            output.isEmpty ? "brew \(command) failed." : "brew \(command) failed: \(output)"
+            output.isEmpty ? String(localized: "brew \(command) failed.") : String(localized: "brew \(command) failed: \(output)")
         case .notInTap(let version):
-            "Homebrew does not offer V2Mac \(version) yet. Try again later."
+            String(localized: "Homebrew does not offer V2Mac \(version) yet. Try again later.")
         }
     }
 }

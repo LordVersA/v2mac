@@ -134,7 +134,7 @@ struct ServerRow: Identifiable, Hashable, Sendable {
         isStale = p.isStale
         isFavorite = p.isFavorite
         groupOrder = p.group?.sortIndex ?? 0
-        groupName = p.group?.name ?? ""
+        groupName = p.group?.displayName ?? ""
         groupColor = p.group?.tint ?? .gray
         sortIndex = p.sortIndex
     }
@@ -161,7 +161,7 @@ struct ActiveServer: Sendable, Equatable {
         guard let config = p.config else { return nil }
         id = p.id
         name = p.name
-        groupName = p.group?.name ?? ""
+        groupName = p.group?.displayName ?? ""
         kind = p.kind
         self.config = config
     }

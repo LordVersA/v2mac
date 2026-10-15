@@ -24,9 +24,9 @@ public enum RoutingMode: String, Sendable, CaseIterable, Identifiable {
 
     public var title: String {
         switch self {
-        case .global: "Global"
-        case .bypassRegions: "Bypass Regions"
-        case .direct: "Direct"
+        case .global: String(localized: "Global")
+        case .bypassRegions: String(localized: "Bypass Regions")
+        case .direct: String(localized: "Direct")
         }
     }
 }

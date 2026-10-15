@@ -17,6 +17,7 @@ struct SettingsView: View {
             CoreSettings().tabItem { Label("Core", systemImage: "cpu") }.tag(SettingsTab.core)
             AboutSettings().tabItem { Label("About", systemImage: "info.circle") }.tag(SettingsTab.about)
         }
-        .frame(width: 560, height: 440)
+        // Russian tab names need more room than the others; at 560 points some go to an overflow menu.
+        .frame(width: Bundle.main.preferredLocalizations.first == "ru" ? 700 : 560, height: 440)
     }
 }

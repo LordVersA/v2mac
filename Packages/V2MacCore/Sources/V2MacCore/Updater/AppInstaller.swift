@@ -12,13 +12,13 @@ public enum AppInstallError: Error, Sendable, Equatable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .mountFailed: "The downloaded disk image could not be opened."
-        case .appMissing: "The disk image does not contain V2Mac."
-        case .copyFailed: "The new version could not be copied."
-        case .signatureInvalid: "The new version failed its signature check."
-        case .notSignedByProject: "The download is not signed by the V2Mac project."
-        case .wrongApp: "The download is not the expected version of V2Mac."
-        case .notWritable(let path): "V2Mac cannot replace itself in \(path). Move it to Applications, or install the update by hand."
+        case .mountFailed: String(localized: "The downloaded disk image could not be opened.")
+        case .appMissing: String(localized: "The disk image does not contain V2Mac.")
+        case .copyFailed: String(localized: "The new version could not be copied.")
+        case .signatureInvalid: String(localized: "The new version failed its signature check.")
+        case .notSignedByProject: String(localized: "The download is not signed by the V2Mac project.")
+        case .wrongApp: String(localized: "The download is not the expected version of V2Mac.")
+        case .notWritable(let path): String(localized: "V2Mac cannot replace itself in \(path). Move it to Applications, or install the update by hand.")
         }
     }
 }

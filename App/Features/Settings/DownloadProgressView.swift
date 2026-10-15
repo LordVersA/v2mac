@@ -3,7 +3,7 @@ import V2MacCore
 
 /// Percent, size and speed of a running download.
 struct DownloadProgressView: View {
-    let title: String
+    let title: LocalizedStringKey
     let progress: DownloadProgress?
     let rate: Double?
 
@@ -27,11 +27,11 @@ struct DownloadProgressView: View {
     }
 
     private var detail: String {
-        guard let progress else { return "Starting…" }
+        guard let progress else { return String(localized: "Starting…") }
         var parts: [String] = []
         if let fraction = progress.fraction { parts.append("\(Int(fraction * 100))%") }
         if let total = progress.total {
-            parts.append("\(Format.megabytes(progress.received)) of \(Format.megabytes(total))")
+            parts.append(String(localized: "\(Format.megabytes(progress.received)) of \(Format.megabytes(total))"))
         } else {
             parts.append(Format.megabytes(progress.received))
         }

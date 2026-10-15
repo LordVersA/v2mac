@@ -123,7 +123,7 @@ private struct SidebarRecents: View {
                                     if let group = profile.group {
                                         HStack(spacing: 4) {
                                             GroupDot(color: group.tint)
-                                            Text(group.name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                            Text(group.displayName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                                         }
                                     }
                                 }
@@ -158,7 +158,7 @@ private struct SidebarRow: View {
     var body: some View {
         HStack {
             Label {
-                Text(group.name)
+                Text(group.displayName)
             } icon: {
                 // The sync arrows appear, turning, only while this group is being fetched.
                 Image(systemName: isUpdating ? "arrow.triangle.2.circlepath" : (group.isManual ? "doc.on.clipboard" : "dot.radiowaves.up.forward"))

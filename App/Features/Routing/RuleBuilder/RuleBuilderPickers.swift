@@ -149,7 +149,7 @@ private struct CountryMap: View {
         .overlay(alignment: .bottom) {
             HStack(spacing: 8) {
                 if lookingUp { ProgressView().controlSize(.small) }
-                Text(notice ?? "Click a country to add or remove it")
+                if let notice { Text(notice) } else { Text("Click a country to add or remove it") }
             }
             .font(.callout)
             .padding(.horizontal, 12)
@@ -173,14 +173,14 @@ private struct CountryMap: View {
         let items = try? await request?.mapItems
         guard let code = items?.first?.addressRepresentations?.region?.identifier.lowercased(),
               let country = catalog.country(code) else {
-            notice = "No country there"
+            notice = String(localized: "No country there")
             try? await Task.sleep(for: .seconds(2))
             notice = nil
             return
         }
         coordinates[code] = coordinates[code] ?? coordinate
         if selected.contains(code) { selected.remove(code) } else { selected.insert(code) }
-        notice = "\(country.flag) \(country.name) \(selected.contains(code) ? "added" : "removed")"
+        notice = selected.contains(code) ? String(localized: "\(country.flag) \(country.name) added") : String(localized: "\(country.flag) \(country.name) removed")
         try? await Task.sleep(for: .seconds(2))
         notice = nil
     }
@@ -234,12 +234,12 @@ struct ServicePicker: View {
         Service(name: "Steam", symbol: "gamecontroller.fill", rules: ["geosite:steam"]),
         Service(name: "OpenAI", symbol: "sparkles", rules: ["geosite:openai"]),
         Service(name: "Anthropic", symbol: "sparkle", rules: ["geosite:anthropic"]),
-        Service(name: "AI services", symbol: "brain", rules: ["geosite:category-ai-!cn"]),
+        Service(name: String(localized: "AI services"), symbol: "brain", rules: ["geosite:category-ai-!cn"]),
         Service(name: "Cloudflare", symbol: "cloud.fill", rules: ["geosite:cloudflare", "geoip:cloudflare"]),
-        Service(name: "Ads and trackers", symbol: "eye.slash.fill", rules: ["geosite:category-ads-all"]),
-        Service(name: "Adult sites", symbol: "18.circle.fill", rules: ["geosite:category-porn"]),
-        Service(name: "Games", symbol: "dice.fill", rules: ["geosite:category-games"]),
-        Service(name: "Tor relays", symbol: "network", rules: ["geoip:tor"]),
+        Service(name: String(localized: "Ads and trackers"), symbol: "eye.slash.fill", rules: ["geosite:category-ads-all"]),
+        Service(name: String(localized: "Adult sites"), symbol: "18.circle.fill", rules: ["geosite:category-porn"]),
+        Service(name: String(localized: "Games"), symbol: "dice.fill", rules: ["geosite:category-games"]),
+        Service(name: String(localized: "Tor relays"), symbol: "network", rules: ["geoip:tor"]),
     ]
 
     private var services: [Service] {
@@ -323,7 +323,7 @@ private struct ServiceTile: View {
 
 /// A rounded search field like the system's, for panes that have no toolbar to put `.searchable` in.
 struct SearchField: View {
-    let prompt: String
+    let prompt: LocalizedStringKey
     @Binding var text: String
 
     var body: some View {

@@ -43,8 +43,9 @@ struct StreamResult: Sendable {
 }
 
 enum StreamBuilder {
-    static let insecureWarning =
-        "The link asks to skip the certificate check (allowInsecure). This server connects only while \"Allow insecure servers\" is on in Settings → Connection, unless its certificate is valid"
+    static var insecureWarning: String {
+        String(localized: "The link asks to skip the certificate check (allowInsecure). This server connects only while \"Allow insecure servers\" is on in Settings → Connection, unless its certificate is valid")
+    }
 
     static func build(_ p: StreamParams, defaultSecurity: String) throws -> StreamResult {
         var warnings: [String] = []
@@ -58,7 +59,7 @@ enum StreamBuilder {
             stream["security"] = "tls"
             stream["tlsSettings"] = tlsSettings(p, transport: transport)
         case "reality":
-            guard let pbk = p.pbk else { throw LinkSkip("REALITY link has no public key (pbk)") }
+            guard let pbk = p.pbk else { throw LinkSkip(String(localized: "REALITY link has no public key (pbk)")) }
             stream["security"] = "reality"
             stream["realitySettings"] = compact([
                 "serverName": p.sni.map { .string($0) },
@@ -107,7 +108,7 @@ enum StreamBuilder {
                 if let parsed = try? JSONValue.parse(Data(text.utf8)), case .object = parsed {
                     extra = parsed
                 } else {
-                    warnings.append("Ignored an invalid xhttp \"extra\" value")
+                    warnings.append(String(localized: "Ignored an invalid xhttp \"extra\" value"))
                 }
             }
             stream["xhttpSettings"] = compact([
@@ -137,8 +138,8 @@ enum StreamBuilder {
         case "grpc", "gun": return "grpc"
         case "httpupgrade": return "httpupgrade"
         case "xhttp", "splithttp": return "xhttp"
-        case "h2", "http", "quic": throw LinkSkip("transport removed from Xray")
-        default: throw LinkSkip("unsupported transport \"\(raw)\"")
+        case "h2", "http", "quic": throw LinkSkip(String(localized: "transport removed from Xray"))
+        default: throw LinkSkip(String(localized: "unsupported transport \"\(raw)\""))
         }
     }
 
@@ -148,7 +149,7 @@ enum StreamBuilder {
         case "none": return "none"
         case "tls", "xtls": return "tls"
         case "reality": return "reality"
-        default: throw LinkSkip("unsupported security \"\(raw)\"")
+        default: throw LinkSkip(String(localized: "unsupported security \"\(raw)\""))
         }
     }
 

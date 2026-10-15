@@ -45,10 +45,10 @@ public enum PortUtil {
         var ports: [Int] = []
         for _ in 0..<count {
             let fd = socket(AF_INET, SOCK_STREAM, 0)
-            guard fd >= 0 else { throw CoreError.startFailed("Could not create a socket.") }
+            guard fd >= 0 else { throw CoreError.startFailed(String(localized: "Could not create a socket.")) }
             fds.append(fd)
             guard bind(fd: fd, host: "127.0.0.1", port: 0) else {
-                throw CoreError.startFailed("Could not find a free port.")
+                throw CoreError.startFailed(String(localized: "Could not find a free port."))
             }
             var addr = sockaddr_in()
             var len = socklen_t(MemoryLayout<sockaddr_in>.size)
@@ -57,7 +57,7 @@ public enum PortUtil {
                     getsockname(fd, $0, &len) == 0
                 }
             }
-            guard ok else { throw CoreError.startFailed("Could not find a free port.") }
+            guard ok else { throw CoreError.startFailed(String(localized: "Could not find a free port.")) }
             ports.append(Int(UInt16(bigEndian: addr.sin_port)))
         }
         return ports
