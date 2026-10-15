@@ -1285,9 +1285,23 @@ Empty search: "No servers match".
 | ⌘, | Settings |
 
 **Shortcuts actions** (`App/Support/Intents.swift`): Connect, Disconnect, Turn
-Connection On or Off, Set TUN Mode, Set Routing Mode, and Get Connection Status
-(returns a line of text). They appear in Shortcuts and Spotlight; the Shortcuts
-app can bind any of them to a keyboard shortcut that works in every app.
+Connection On or Off, Set TUN Mode, Set Routing Mode, Set System Proxy, Set Kill
+Switch, and Get Connection Status (returns a line of text). They appear in Shortcuts,
+Spotlight and Siri; the Shortcuts app can bind any of them to a keyboard shortcut that
+works in every app.
+
+**Control Center.** The widget extension `V2MacControl` (`Extensions/Control`, sandboxed,
+as WidgetKit requires; signed with its entitlements by `make-dmg.sh`) offers one switch,
+"V2Mac", for Control Center and the menu bar, drawn with a custom symbol made from the
+filled menu bar glyph (`v2mac.glyph.symbolset`). It is on while V2Mac is connecting,
+switching or connected. `ControlBridge` (`App/Support`, part of both targets) carries the
+state: the app publishes on/off as the state of the Darwin notification
+`<bundle id>.control.state` and reloads the control on every change; the switch's
+`SetConnectionIntent` calls the app directly when the system runs it in the app, and
+otherwise posts `<bundle id>.control.request` with the time and the wish in its state. A
+request older than 30 seconds is ignored. When V2Mac is not running, turning the switch on
+opens `v2mac://connect`, which starts V2Mac and connects without opening a window (the one
+action such a link can ask for). An app that is not running reads as off.
 
 ### 12.5 Liquid Glass guidance
 

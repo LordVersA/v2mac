@@ -30,10 +30,13 @@ xcodebuild -project v2mac.xcodeproj -scheme v2mac -configuration Release \
 APP="$BUILD_DIR/Build/Products/Release/V2Mac.app"
 [[ -d "$APP" ]] || { echo "error: build produced no app" >&2; exit 1; }
 
-# The helper must be signed before the app that contains it.
+# The helper and the Control Center extension must be signed before the app that contains
+# them. WidgetKit loads the extension only with its sandbox entitlement.
 CODESIGN_ARGS=(--force --sign "$SIGN_IDENTITY")
 [[ "$SIGN_IDENTITY" != "-" ]] && CODESIGN_ARGS+=(--options runtime --timestamp)
 /usr/bin/codesign "${CODESIGN_ARGS[@]}" "$APP/Contents/Helpers/xray"
+/usr/bin/codesign "${CODESIGN_ARGS[@]}" --entitlements "$ROOT/Extensions/Control/V2MacControl.entitlements" \
+  "$APP/Contents/PlugIns/V2MacControl.appex"
 /usr/bin/codesign "${CODESIGN_ARGS[@]}" --entitlements "$ENTITLEMENTS" "$APP"
 /usr/bin/codesign --verify --deep --strict "$APP"
 

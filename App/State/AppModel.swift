@@ -5,6 +5,8 @@ import SwiftData
 import SwiftUI
 import UserNotifications
 import V2MacCore
+import WidgetKit
+import notify
 
 enum SidebarItem: Hashable {
     case all
@@ -104,6 +106,7 @@ final class AppModel {
             editorHook()
             windowRequestHook()
             backupHook()
+            wireControls()
             if UserDefaults.standard.bool(forKey: "debugFakeUpdates") { updates.fakeUpdates() }
             AppDelegate.model = self
             return
@@ -111,6 +114,7 @@ final class AppModel {
         #endif
         wireNotifications()
         restoreActiveServer()
+        wireControls()
         if Prefs.reconnectOnLaunch, Prefs.wasRunning, connection.activeServer != nil {
             connection.connectActive()
         }
@@ -205,6 +209,45 @@ final class AppModel {
         }
 
         notifications.start()
+    }
+
+    // MARK: Control Center
+
+    /// Spec 12.4: the switch in Control Center and the menu bar asks through `ControlBridge`,
+    /// and is told when the connection goes on or off.
+    private func wireControls() {
+        let connection = self.connection
+        ControlBridge.handler = { on in
+            switch (on, connection.phase) {
+            case (true, .off), (true, .failed): connection.connectActive()
+            case (false, .connecting), (false, .switching), (false, .connected): connection.disconnect()
+            default: break
+            }
+        }
+        var token: Int32 = 0
+        notify_register_dispatch(ControlBridge.requestName, &token, .main) { _ in
+            MainActor.assumeIsolated {
+                if let connect = ControlBridge.pendingRequest() { ControlBridge.handler?(connect) }
+            }
+        }
+        if let connect = ControlBridge.pendingRequest() { ControlBridge.handler?(connect) }
+        publishControlState()
+    }
+
+    private func publishControlState() {
+        withObservationTracking {
+            let on: Bool
+            switch connection.phase {
+            case .connecting, .switching, .connected: on = true
+            case .off, .failed: on = false
+            }
+            if on != ControlBridge.isConnected {
+                ControlBridge.publish(connected: on)
+                ControlCenter.shared.reloadControls(ofKind: ControlBridge.kind)
+            }
+        } onChange: { [weak self] in
+            Task { @MainActor in self?.publishControlState() }
+        }
     }
 
     // MARK: Active server
@@ -314,6 +357,11 @@ final class AppModel {
     /// from a provider's page, or a server's share link (`vless://…`). Both open the Add sheet
     /// filled in, so nothing is added without the user seeing it.
     func open(_ url: URL) {
+        // From the Control Center switch while V2Mac was not running (`ControlBridge`).
+        if url.scheme?.lowercased() == "v2mac", url.host() == "connect" {
+            if case .off = connection.phase { connection.connectActive() }
+            return
+        }
         windowRequest = .main
         if url.isFileURL { return importFile(url) }
         guard !showAddSheet else { return }

@@ -51,6 +51,34 @@ struct SetTunModeIntent: AppIntent {
     }
 }
 
+struct SetSystemProxyIntent: AppIntent {
+    static let title: LocalizedStringResource = "Set System Proxy"
+    static let description = IntentDescription("Points the system proxy at V2Mac while it is connected, or turns that off.")
+
+    @Parameter(title: "On") var on: Bool
+
+    static var parameterSummary: some ParameterSummary { Summary("Turn the system proxy \(\.$on)") }
+
+    @MainActor func perform() async throws -> some IntentResult {
+        AppDelegate.model?.connection.setSystemProxyEnabled(on)
+        return .result()
+    }
+}
+
+struct SetKillSwitchIntent: AppIntent {
+    static let title: LocalizedStringResource = "Set Kill Switch"
+    static let description = IntentDescription("Blocks all traffic outside the V2Mac connection while it is wanted, or turns that off.")
+
+    @Parameter(title: "On") var on: Bool
+
+    static var parameterSummary: some ParameterSummary { Summary("Turn the kill switch \(\.$on)") }
+
+    @MainActor func perform() async throws -> some IntentResult {
+        AppDelegate.model?.connection.setKillSwitchEnabled(on)
+        return .result()
+    }
+}
+
 enum RoutingModeOption: String, AppEnum {
     case global, bypassRegions, direct
 
