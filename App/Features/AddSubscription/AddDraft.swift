@@ -10,6 +10,9 @@ struct AddDraft: Equatable {
     var kind = Kind.custom
     var configText = ""
     var error: String?
+    /// A subscription URL to fill in; empty takes one from the clipboard.
+    var url = ""
+    var name = ""
 
     /// A single http(s) link without credentials. With credentials it is an HTTP proxy share link.
     static func isSubscriptionURL(_ text: String) -> Bool {

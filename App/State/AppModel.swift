@@ -274,13 +274,61 @@ final class AppModel {
         try? context.save()
     }
 
-    /// ⌘V in the main window: configs are added straight away, a subscription URL opens the Add sheet.
+    /// ⌘V in the main window: text, or a picture with QR codes in it (a screenshot).
     func pasteFromClipboard() {
-        guard !showAddSheet,
-              let text = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !text.isEmpty else { return }
+        let pasteboard = NSPasteboard.general
+        if let text = pasteboard.string(forType: .string) {
+            importText(text)
+        } else if let image = NSImage(pasteboard: pasteboard) {
+            importImage(image)
+        }
+    }
+
+    /// A file dropped on the window or opened with V2Mac: configs as text, or a picture of QR codes.
+    func importFile(_ url: URL) {
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        guard size < 5_000_000 else { return }
+        if let image = NSImage(contentsOf: url), image.isValid {
+            importImage(image)
+        } else if let text = try? String(contentsOf: url, encoding: .utf8) {
+            importText(text)
+        }
+    }
+
+    private func importImage(_ image: NSImage) {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
+        let found = QRCodeReader.messages(in: cgImage)
+        if found.isEmpty {
+            addDraft = AddDraft(kind: .custom, error: "No QR code was found in the picture.")
+            showAddSheet = true
+        } else {
+            importText(found.joined(separator: "\n"))
+        }
+    }
+
+    /// A link opened from another app: `v2mac://install-config?url=<subscription>&name=<name>`
+    /// from a provider's page, or a server's share link (`vless://…`). Both open the Add sheet
+    /// filled in, so nothing is added without the user seeing it.
+    func open(_ url: URL) {
+        windowRequest = .main
+        if url.isFileURL { return importFile(url) }
+        guard !showAddSheet else { return }
+        if url.scheme?.lowercased() == "v2mac" {
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            guard let link = items.first(where: { $0.name == "url" })?.value, AddDraft.isSubscriptionURL(link) else { return }
+            addDraft = AddDraft(kind: .subscription, url: link, name: items.first { $0.name == "name" }?.value ?? "")
+        } else {
+            addDraft = AddDraft(kind: .custom, configText: url.absoluteString)
+        }
+        showAddSheet = true
+    }
+
+    /// Configs are added straight away; a subscription URL opens the Add sheet with it filled in.
+    func importText(_ raw: String) {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !showAddSheet, !text.isEmpty else { return }
         if AddDraft.isSubscriptionURL(text) {
-            addDraft = AddDraft(kind: .subscription)
+            addDraft = AddDraft(kind: .subscription, url: text)
             showAddSheet = true
             return
         }
@@ -830,6 +878,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    /// Share links and `v2mac://` links clicked in other apps, and files opened with V2Mac.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls { Self.model?.open(url) }
+    }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let model = Self.model else { return .terminateNow }

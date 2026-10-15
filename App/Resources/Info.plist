@@ -14,5 +14,26 @@
 	<key>LSUIElement</key><true/>
 	<key>V2MacRepository</key><string>$(V2MAC_REPOSITORY)</string>
 	<key>NSHumanReadableCopyright</key><string>GPL-3.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key><string>V2Mac import link</string>
+			<key>CFBundleURLSchemes</key>
+			<array><string>v2mac</string></array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key><string>Server share link</string>
+			<key>CFBundleTypeRole</key><string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>vless</string>
+				<string>vmess</string>
+				<string>trojan</string>
+				<string>ss</string>
+				<string>hysteria2</string>
+				<string>hy2</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

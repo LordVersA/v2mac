@@ -50,7 +50,12 @@ struct MainView: View {
         }
         .frame(minWidth: 760, minHeight: 440)
         // Text fields handle their own paste; this is reached when a list has the focus.
-        .onPasteCommand(of: [.plainText]) { _ in model.pasteFromClipboard() }
+        .onPasteCommand(of: [.plainText, .image]) { _ in model.pasteFromClipboard() }
+        // Config files, pictures of QR codes, and links dragged from a browser.
+        .dropDestination(for: URL.self) { urls, _ in
+            for url in urls { url.isFileURL ? model.importFile(url) : model.importText(url.absoluteString) }
+            return !urls.isEmpty
+        }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 if model.updates.availableAppUpdate != nil {

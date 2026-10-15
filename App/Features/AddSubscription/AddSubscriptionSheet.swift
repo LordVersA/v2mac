@@ -128,10 +128,16 @@ struct AddSubscriptionSheet: View {
         let groups = (try? model.context.fetch(FetchDescriptor<ServerGroup>())) ?? []
         color = .automatic(groups.filter { !$0.isManual }.count)
         if kind == .subscription { urlFocused = true } else { configFocused = true }
-        if let clip = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
-           AddDraft.isSubscriptionURL(clip) {
+        name = draft.name
+        if !draft.url.isEmpty {
+            url = draft.url
+        } else if let clip = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  AddDraft.isSubscriptionURL(clip) {
             url = clip
         }
+        #if DEBUG
+        print("[v2mac-debug] add sheet: \(kind), url \(url), name \(name), configs \(configText.prefix(60)), error \(errorMessage ?? "-")")
+        #endif
     }
 
     private func clearError() {
