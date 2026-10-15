@@ -47,7 +47,14 @@ jobs:
         working-directory: Packages/V2MacCore
 
       - name: Build DMG
-        run: Scripts/make-dmg.sh
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          # Without the signature, every installed copy would refuse this release as an update.
+          if [[ -z "$UPDATE_SIGNING_KEY" && "$GITHUB_REF_TYPE" == "tag" ]]; then
+            echo "::error::The UPDATE_SIGNING_KEY secret is not set"; exit 1
+          fi
+          Scripts/make-dmg.sh
 
       - name: Release notes
         run: |
@@ -76,7 +83,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ steps.v.outputs.tag }}" dist/*.dmg dist/*.sha256 \
+          gh release create "${{ steps.v.outputs.tag }}" dist/*.dmg dist/*.sha256 dist/*.sig \
             --title "V2Mac ${{ steps.v.outputs.version }}" --notes-file notes.md
 
       # Points the Homebrew cask (LordVersA/homebrew-tap) at the new DMG. Needs a TAP_TOKEN

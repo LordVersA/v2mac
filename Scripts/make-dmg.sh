@@ -61,4 +61,8 @@ if [[ "$SIGN_IDENTITY" != "-" ]]; then
 fi
 
 ( cd "$OUT_DIR" && shasum -a 256 "$(basename "$DMG")" | tee "$(basename "$DMG").sha256" )
+# The in-app updater only installs a DMG signed with the project's key (spec 11.3).
+if [[ -n "${UPDATE_SIGNING_KEY:-}" ]]; then
+  "$ROOT/Scripts/sign-update.swift" "$DMG"
+fi
 echo "Built $DMG"

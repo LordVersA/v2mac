@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 public enum AppInstallError: Error, Sendable, Equatable, LocalizedError {
@@ -5,6 +6,7 @@ public enum AppInstallError: Error, Sendable, Equatable, LocalizedError {
     case appMissing
     case copyFailed
     case signatureInvalid
+    case notSignedByProject
     case wrongApp
     case notWritable(String)
 
@@ -14,6 +16,7 @@ public enum AppInstallError: Error, Sendable, Equatable, LocalizedError {
         case .appMissing: "The disk image does not contain V2Mac."
         case .copyFailed: "The new version could not be copied."
         case .signatureInvalid: "The new version failed its signature check."
+        case .notSignedByProject: "The download is not signed by the V2Mac project."
         case .wrongApp: "The download is not the expected version of V2Mac."
         case .notWritable(let path): "V2Mac cannot replace itself in \(path). Move it to Applications, or install the update by hand."
         }
@@ -23,6 +26,13 @@ public enum AppInstallError: Error, Sendable, Equatable, LocalizedError {
 /// Downloads a release of the app, checks it, and swaps it for the running copy (spec 11.3).
 public enum AppInstaller {
     public static let appName = "V2Mac.app"
+
+    /// Public half of the Ed25519 key the release workflow signs each DMG with
+    /// (`Scripts/sign-update.swift`, secret `UPDATE_SIGNING_KEY`). The DMG's own code signature
+    /// is ad-hoc and its `.sha256` comes from the same release, so this is what proves origin.
+    public static let updateKey = try! Curve25519.Signing.PublicKey(
+        rawRepresentation: Data(base64Encoded: "gD28LTL7mjOQOXZnPkm/FuIH8bRKZh8JuMlDXODXmpE=")!
+    )
 
     /// A checked copy of the new app, ready to be swapped in.
     public struct Staged: Sendable, Equatable {
@@ -52,21 +62,32 @@ public enum AppInstaller {
 
     // MARK: Prepare
 
-    /// Downloads the DMG, checks it against the published SHA-256, copies the app out of it and
-    /// verifies its signature, bundle identifier and version. The installed app is not touched.
+    /// Whether `signature` (the base64 `.sig` file) is `key`'s signature of `data`.
+    public static func isSigned(_ data: Data, signature: Data, by key: Curve25519.Signing.PublicKey = updateKey) -> Bool {
+        let text = String(decoding: signature, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let raw = Data(base64Encoded: text) else { return false }
+        return key.isValidSignature(raw, for: data)
+    }
+
+    /// Downloads the DMG, checks it against the published SHA-256 and the project's signature
+    /// (`<dmg>.sig`), copies the app out of it and verifies its code signature, bundle identifier
+    /// and version. The installed app is not touched.
     public static func prepare(
         dmg: URL,
         checksum: URL,
         expectedVersion: String,
         bundleIdentifier: String,
         downloader: FileDownloader,
+        signedBy key: Curve25519.Signing.PublicKey = updateKey,
         onProgress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> Staged {
         let expected = try parseChecksum(try await downloader.download(checksum))
+        let signature = try await downloader.download(URL(string: dmg.absoluteString + ".sig")!)
         let image = try await downloader.download(dmg, onProgress: onProgress)
         guard RegionPackInstaller.sha256(image) == expected else {
             throw DownloadError.checksumMismatch(file: dmg.lastPathComponent)
         }
+        guard isSigned(image, signature: signature, by: key) else { throw AppInstallError.notSignedByProject }
 
         let fm = FileManager.default
         let work = fm.temporaryDirectory.appendingPathComponent("v2mac-update-\(UUID().uuidString)", isDirectory: true)

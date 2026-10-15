@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Testing
 @testable import V2MacCore
@@ -104,12 +105,17 @@ import Testing
         return try Data(contentsOf: dmg)
     }
 
-    private func serve(image: Data, checksum: String? = nil) async throws -> (TestHTTPServer, dmg: URL, checksum: URL) {
+    /// The key the stand-in releases are signed with.
+    private static let releaseKey = Curve25519.Signing.PrivateKey()
+
+    private func serve(image: Data, checksum: String? = nil, signer: Curve25519.Signing.PrivateKey = releaseKey) async throws -> (TestHTTPServer, dmg: URL, checksum: URL) {
         let sum = checksum ?? RegionPackInstaller.sha256(image)
+        let signature = try signer.signature(for: image).base64EncodedString() + "\n"
         let server = try await TestHTTPServer.start { path in
             switch path {
             case "/V2Mac-9.9.9.dmg": .init(body: image)
             case "/V2Mac-9.9.9.dmg.sha256": .init(body: Data("\(sum)  V2Mac-9.9.9.dmg\n".utf8))
+            case "/V2Mac-9.9.9.dmg.sig": .init(body: Data(signature.utf8))
             default: .init(status: 404)
             }
         }
@@ -124,7 +130,7 @@ import Testing
         defer { server.stop() }
         let staged = try await AppInstaller.prepare(
             dmg: dmg, checksum: checksum, expectedVersion: "9.9.9", bundleIdentifier: "test.v2mac",
-            downloader: FileDownloader(routes: [.direct])
+            downloader: FileDownloader(routes: [.direct]), signedBy: Self.releaseKey.publicKey
         )
         #expect(staged.version == "9.9.9")
 
@@ -162,17 +168,24 @@ import Testing
         let (server, dmg, checksum) = try await serve(image: image)
         defer { server.stop() }
         let downloader = FileDownloader(routes: [.direct])
+        let key = Self.releaseKey.publicKey
         await #expect(throws: AppInstallError.wrongApp) {
-            _ = try await AppInstaller.prepare(dmg: dmg, checksum: checksum, expectedVersion: "9.9.9", bundleIdentifier: "other.app", downloader: downloader)
+            _ = try await AppInstaller.prepare(dmg: dmg, checksum: checksum, expectedVersion: "9.9.9", bundleIdentifier: "other.app", downloader: downloader, signedBy: key)
         }
         await #expect(throws: AppInstallError.wrongApp) {
-            _ = try await AppInstaller.prepare(dmg: dmg, checksum: checksum, expectedVersion: "9.9.8", bundleIdentifier: "test.v2mac", downloader: downloader)
+            _ = try await AppInstaller.prepare(dmg: dmg, checksum: checksum, expectedVersion: "9.9.8", bundleIdentifier: "test.v2mac", downloader: downloader, signedBy: key)
         }
         let (bad, badDMG, badSum) = try await serve(image: image, checksum: String(repeating: "0", count: 64))
         defer { bad.stop() }
         await #expect(throws: DownloadError.checksumMismatch(file: "V2Mac-9.9.9.dmg")) {
-            _ = try await AppInstaller.prepare(dmg: badDMG, checksum: badSum, expectedVersion: "9.9.9", bundleIdentifier: "test.v2mac", downloader: downloader)
+            _ = try await AppInstaller.prepare(dmg: badDMG, checksum: badSum, expectedVersion: "9.9.9", bundleIdentifier: "test.v2mac", downloader: downloader, signedBy: key)
         }
+        let (forged, forgedDMG, forgedSum) = try await serve(image: image, signer: Curve25519.Signing.PrivateKey())
+        defer { forged.stop() }
+        await #expect(throws: AppInstallError.notSignedByProject) {
+            _ = try await AppInstaller.prepare(dmg: forgedDMG, checksum: forgedSum, expectedVersion: "9.9.9", bundleIdentifier: "test.v2mac", downloader: downloader, signedBy: key)
+        }
+        #expect(!AppInstaller.isSigned(image, signature: Data("not base64".utf8), by: key))
     }
 
     // MARK: Install with a stand-in binary

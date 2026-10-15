@@ -896,8 +896,9 @@ behind a shared proxy address). If its version is higher, show it in the menu
 bar panel and in Settings with an **Update Now** button. The check can be
 turned off; nothing is downloaded until the button is pressed.
 
-**Update Now** downloads `V2Mac-<version>.dmg` and its `.sha256` from the
-release, checks the hash, copies the app out of the image to a temporary
+**Update Now** downloads `V2Mac-<version>.dmg`, its `.sha256` and its `.sig`
+from the release, checks the hash and the signature, copies the app out of the
+image to a temporary
 folder and verifies its code signature, bundle identifier and version. Only
 then does the app quit; a detached shell script waits for the process to exit,
 moves the old bundle aside, moves the new one into place (putting the old one
@@ -905,8 +906,12 @@ back if that fails) and opens it. The app reconnects on launch as usual. Any
 failure before the quit leaves the installed app untouched and offers the
 release page instead. The app must be in a folder the user can write to; a
 translocated or read-only copy is refused. Releases are ad-hoc signed, so the
-download is trusted through HTTPS to the repository and the published hash,
-not through a signing identity.
+code signature proves nothing about who made them, and the `.sha256` comes
+from the same release. Origin is proved by the `.sig`: an Ed25519 signature of
+the DMG by the project's key, made by `Scripts/sign-update.swift` in the
+release workflow (secret `UPDATE_SIGNING_KEY`, refused if missing). The public
+key is built into the app (`AppInstaller.updateKey`); a DMG without a valid
+signature is never installed.
 
 **Homebrew installs.** When the release build finds its cask installed
 (`<prefix>/Caskroom/v2mac` with `<prefix>/bin/brew`, prefix `/opt/homebrew` or
