@@ -33,7 +33,7 @@ on the Mac through the same connection.
 |---|---|
 | TUN / system-wide VPN | Excluded from v1; added later as TUN mode (section 9.5). |
 | Setting the macOS system proxy | The app only exposes local ports. |
-| QR import, file import, URL schemes | Input is a subscription URL or pasted configs (section 12.3, Add Subscription sheet). |
+| QR import, file import, URL schemes | Added later: links from other apps, dropped files and QR pictures (section 12.3, Importing). |
 | Editing a server | Not in v1; added later as the server editor (section 12.7). |
 | Custom routing rules, rule-set manager | Custom rules came later (section 8.6); no remote rule-set manager. |
 | Viewing outbound JSON / exporting generated config | Not selected. |
@@ -42,7 +42,7 @@ on the Mac through the same connection.
 | Intel Macs, macOS 15 and earlier | arm64, macOS 26+ only. |
 | Developer ID signing, notarization, Sparkle | Planned after v1. |
 | Mux, global sniffing options | Outbounds are used as provided. TLS fragment, noise packets and DNS came later (section 8.4). |
-| Auto-select fastest server, global hotkeys | Auto-selection is optional (9.7); global hotkeys remain future. |
+| Auto-select fastest server, global hotkeys | Auto-selection is optional (9.7); hotkeys through Shortcuts actions (12.4). |
 
 ---
 
@@ -1049,6 +1049,10 @@ Control Centre do; the connect control and the last row stand outside one:
 8. "Update available" row when relevant.
 9. Open v2mac · Settings… · Quit.
 
+With "Speed in the menu bar" (Connection, off by default) the connected icon,
+badge included, is followed by the upload rate over the download rate in a
+column of fixed width (`MenuBarSpeed`), redrawn with each metrics poll.
+
 ### 12.3 Main window
 
 ```
@@ -1165,6 +1169,16 @@ straight to that group and selects it. An http(s) URL without credentials opens
 the sheet as a subscription instead; text that is not a config opens the sheet
 on Custom Config with the error shown.
 
+**Importing.** The same goes for a picture on the clipboard (a screenshot): the
+text of every QR code in it is added as if it had been pasted (`QRCodeReader`);
+a picture without one opens the sheet with that error. Files dropped on the
+window or opened with V2Mac are read as config text, or as a QR picture, up to
+5 MB. Links dragged from a browser are treated as pasted text. The app is the
+handler of `vless`, `vmess`, `trojan`, `ss`, `hysteria2` and `hy2` links, and of
+`v2mac://install-config?url=<subscription URL>&name=<name>` (both percent-encoded)
+for providers' "add to app" buttons. A link from another app always opens the
+sheet filled in, never adds anything by itself.
+
 **Empty states.** No groups: centred prompt with an "Add Subscription" button.
 Empty search: "No servers match".
 
@@ -1180,6 +1194,11 @@ Empty search: "No servers match".
 | ⌘I | Toggle inspector |
 | ⇧⌘L | Toggle log panel |
 | ⌘, | Settings |
+
+**Shortcuts actions** (`App/Support/Intents.swift`): Connect, Disconnect, Turn
+Connection On or Off, Set TUN Mode, Set Routing Mode, and Get Connection Status
+(returns a line of text). They appear in Shortcuts and Spotlight; the Shortcuts
+app can bind any of them to a keyboard shortcut that works in every app.
 
 ### 12.5 Liquid Glass guidance
 
@@ -1319,6 +1338,7 @@ With the setting off nothing is counted or shown.
 | Notifications | One switch per kind | See section 12.6 |
 | Connection | Show where traffic comes out | On |
 | Connection | Country badge on the menu bar icon | On |
+| Connection | Speed in the menu bar (section 12.2) | Off |
 | | TLS fragment: split (TLS hello / first packets), piece size, pause | Off; `100-200` bytes, `10-20` ms |
 | | Noise packets: packet size, pause | Off; `10-20` bytes, `10-16` ms |
 | | Use custom DNS: servers, addresses (IPv4 and IPv6 / IPv4 only / IPv6 only) | Off; Cloudflare and Google DoH |

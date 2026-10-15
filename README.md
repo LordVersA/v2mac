@@ -19,7 +19,9 @@
 - **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel. This is not a system kill switch: while the tunnel is down, traffic goes out directly.
 - **Menu bar control:** connect, switch server, live speed, and a local address you can copy.
 - **Reliable:** restarts the core after a crash, sleep or network change, and reconnects on launch.
-- **Also:** LAN sharing with a password, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
+- **Quick import:** click a `vless://`, `vmess://`, `trojan://`, `ss://` or `hy2://` link anywhere, or a provider's "add to app" button (`v2mac://install-config?url=…`), paste a screenshot of a QR code, or drop config files and QR pictures on the window.
+- **Shortcuts:** connect, disconnect, switch TUN mode or the routing mode from Shortcuts and Spotlight, or with a keyboard shortcut you give them there.
+- **Also:** upload and download speed in the menu bar, LAN sharing with a password, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
 - **Private:** no analytics or telemetry.
 
 ## Screenshots
