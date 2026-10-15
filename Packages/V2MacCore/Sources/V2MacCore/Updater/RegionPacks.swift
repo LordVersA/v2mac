@@ -85,29 +85,15 @@ public struct FileDownloader: Sendable {
     }
 
     private func download(_ url: URL, route: FetchRoute, onProgress: (@Sendable (DownloadProgress) -> Void)?) async throws -> Data {
-        let session = SessionFactory.make(route: route, timeout: timeout)
-        defer { session.finishTasksAndInvalidate() }
         do {
-            let (bytes, response) = try await session.bytes(from: url)
-            guard let http = response as? HTTPURLResponse else { throw DownloadError.network("Invalid response.") }
+            let (data, http) = try await BoundedFetch.data(for: URLRequest(url: url), route: route, timeout: timeout,
+                                                           maxBytes: maxBytes, onProgress: onProgress)
             guard (200..<300).contains(http.statusCode) else { throw DownloadError.http(http.statusCode) }
-            if http.expectedContentLength > Int64(maxBytes) { throw DownloadError.tooLarge }
-            let total: Int64? = http.expectedContentLength > 0 ? http.expectedContentLength : nil
-            var data = Data()
-            var lastReport = ContinuousClock.now
-            onProgress?(DownloadProgress(received: 0, total: total))
-            for try await chunk in bytes {
-                data.append(chunk)
-                if data.count > maxBytes { throw DownloadError.tooLarge }
-                if let onProgress, ContinuousClock.now - lastReport >= .milliseconds(100) {
-                    lastReport = .now
-                    onProgress(DownloadProgress(received: Int64(data.count), total: total))
-                }
-            }
-            onProgress?(DownloadProgress(received: Int64(data.count), total: total))
             return data
         } catch let error as DownloadError {
             throw error
+        } catch is BoundedFetch.TooLarge {
+            throw DownloadError.tooLarge
         } catch let error as URLError {
             if error.code == .cancelled { throw CancellationError() }
             throw DownloadError.network(error.localizedDescription)

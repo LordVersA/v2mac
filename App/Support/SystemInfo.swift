@@ -27,18 +27,24 @@ enum SystemInfo {
 
     /// First line of `xray version`, e.g. "Xray 26.3.27 (...)".
     static func coreVersion(at executable: URL) async -> String? {
-        await Task.detached {
-            let process = Process()
-            process.executableURL = executable
-            process.arguments = ["version"]
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = FileHandle.nullDevice
-            guard (try? process.run()) != nil else { return nil }
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            return String(decoding: data, as: UTF8.self)
-                .split(separator: "\n").first.map(String.init)
-        }.value
+        let process = Process()
+        process.executableURL = executable
+        process.arguments = ["version"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        return await withCheckedContinuation { continuation in
+            process.terminationHandler = { _ in
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                continuation.resume(returning: String(decoding: data, as: UTF8.self)
+                    .split(separator: "\n").first.map(String.init))
+            }
+            do {
+                try process.run()
+            } catch {
+                process.terminationHandler = nil
+                continuation.resume(returning: nil)
+            }
+        }
     }
 }

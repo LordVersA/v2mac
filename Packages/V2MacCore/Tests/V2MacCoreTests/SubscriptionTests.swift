@@ -224,6 +224,13 @@ import Testing
         }
     }
 
+    @Test func redirectFromHTTPSToHTTPIsRefused() {
+        let https = URL(string: "https://a.example/sub"), http = URL(string: "http://b.example/sub")
+        #expect(!BoundedFetch.allowsRedirect(from: https, to: http))
+        #expect(BoundedFetch.allowsRedirect(from: https, to: URL(string: "https://b.example/sub")))
+        #expect(BoundedFetch.allowsRedirect(from: http, to: http))
+    }
+
     @Test func invalidURLIsRejected() async {
         await #expect(throws: SubscriptionError.invalidURL) {
             try await SubscriptionFetcher(userAgent: "t").fetch(url: URL(string: "ftp://x.com/a")!, route: .direct)

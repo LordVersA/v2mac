@@ -23,29 +23,18 @@ public struct SubscriptionFetcher: Sendable {
         self.maxBytes = maxBytes
     }
 
-    /// Downloads the raw body and response headers (any 2xx accepted, redirects followed).
+    /// Downloads the raw body and response headers (any 2xx accepted, redirects followed unless https → http).
     public func download(url: URL, route: FetchRoute) async throws -> (body: Data, headers: [String: String]) {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https", url.host != nil else {
             throw SubscriptionError.invalidURL
         }
-        let session = SessionFactory.make(route: route, timeout: timeout)
-        defer { session.finishTasksAndInvalidate() }
-
         var request = URLRequest(url: url)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = timeout
 
         do {
-            let (bytes, response) = try await session.bytes(for: request)
-            guard let http = response as? HTTPURLResponse else { throw SubscriptionError.network("Invalid response.") }
+            let (body, http) = try await BoundedFetch.data(for: request, route: route, timeout: timeout, maxBytes: maxBytes)
             guard (200..<300).contains(http.statusCode) else { throw SubscriptionError.http(http.statusCode) }
-            if http.expectedContentLength > Int64(maxBytes) { throw SubscriptionError.tooLarge }
-
-            var body = Data()
-            for try await byte in bytes {
-                body.append(byte)
-                if body.count > maxBytes { throw SubscriptionError.tooLarge }
-            }
             var headers: [String: String] = [:]
             for (k, v) in http.allHeaderFields {
                 if let k = k as? String, let v = v as? String { headers[k.lowercased()] = v }
@@ -53,6 +42,8 @@ public struct SubscriptionFetcher: Sendable {
             return (body, headers)
         } catch let error as SubscriptionError {
             throw error
+        } catch is BoundedFetch.TooLarge {
+            throw SubscriptionError.tooLarge
         } catch let error as URLError {
             throw SubscriptionError.network(error.localizedDescription)
         }
