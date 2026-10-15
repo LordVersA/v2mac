@@ -8,6 +8,10 @@ import Foundation
 /// forwarder config travel inside the root command itself, and the helper copies the core into a
 /// root-owned directory and checks its SHA-256 against the one in the command, so no file a
 /// process without root can change between the prompt and the copy is ever run as root.
+///
+/// While the forwarder runs, the helper also points the primary network service's DNS at
+/// `dnsServers` (spec 9.5): a resolver on the local network is reached without the TUN, so its
+/// lookups would never reach the core.
 public enum TunHelper {
     /// Present while the app wants the helper alive.
     public static let sessionFlag = "tun.session"
@@ -40,8 +44,10 @@ public enum TunHelper {
     chmod 755 "$ROOT_DIR/xray"
     chmod 644 "$ROOT_DIR/config.json"
 
+    \#(dnsFunctions)
     child=""
     stop_tun() {
+      dns_restore
       [ -n "$child" ] || return 0
       kill "$child" 2>/dev/null
       n=0
@@ -55,23 +61,73 @@ public enum TunHelper {
     trap '' HUP
 
     echo $$ > "$ROOT_DIR/pid"
+    tick=0
     while kill -0 "$APP_PID" 2>/dev/null && [ -e "$STATE_DIR/tun.session" ]; do
       if [ ! -e "$STATE_DIR/tun.on" ]; then
         stop_tun
       elif [ -z "$child" ]; then
         "$ROOT_DIR/xray" run -c "$ROOT_DIR/config.json" > "$ROOT_DIR/xray.log" 2>&1 &
         child=$!
+        tick=0
       elif ! kill -0 "$child" 2>/dev/null; then
         # It died on its own. Wait before the next try so a broken start does not spin.
         wait "$child" 2>/dev/null
         child=""
+        dns_restore
         sleep 2
+      else
+        # Soon after the start, then every few seconds: a network change or a settings
+        # change can replace the DNS servers, or the service they belong to.
+        [ $((tick % 10)) -eq 1 ] && dns_apply
+        tick=$((tick + 1))
       fi
       sleep 0.3
     done
     finish
     }
 
+    """#
+
+    /// Public resolvers: lookups sent to them enter the TUN, and if the helper is killed before it
+    /// can undo the change they still answer.
+    public static let dnsServers = "1.1.1.1 8.8.8.8"
+
+    /// The DNS part of the helper. The change is made in the dynamic store only (`Setup:` keys,
+    /// which win over what DHCP sets), never in the saved network settings, so a reboot or a
+    /// change in System Settings drops it, and putting it back means copying the saved
+    /// settings over it again. That also undoes a change a killed helper left behind.
+    static let dnsFunctions = #"""
+    DNS_SERVERS='\#(dnsServers)'
+    dns_svc=""
+    dns_list() { awk '/ServerAddresses/ {on=1; next} on && /}/ {exit} on {print $3}' | tr '\n' ' ' | sed 's/ $//'; }
+    dns_set() {
+      if [ -n "$2" ]; then
+        printf 'd.init\nget %s\nd.add ServerAddresses * %s\nset %s\n' "$1" "$2" "$1" | scutil > /dev/null
+      else
+        printf 'd.init\nget %s\nd.remove ServerAddresses\nset %s\n' "$1" "$1" | scutil > /dev/null
+      fi
+    }
+    dns_flush() { dscacheutil -flushcache 2>/dev/null; killall -HUP mDNSResponder 2>/dev/null; }
+    dns_apply() {
+      svc=$(printf 'show State:/Network/Global/IPv4\n' | scutil | sed -n 's/^ *PrimaryService : //p')
+      [ -n "$svc" ] || return 0
+      [ "$svc" = "$dns_svc" ] || dns_restore
+      current=$(printf 'show Setup:/Network/Service/%s/DNS\n' "$svc" | scutil | dns_list)
+      [ "$svc" = "$dns_svc" ] && [ "$current" = "$DNS_SERVERS" ] && return 0
+      dns_set "Setup:/Network/Service/$svc/DNS" "$DNS_SERVERS"
+      dns_svc=$svc
+      dns_flush
+    }
+    dns_restore() {
+      [ -n "$dns_svc" ] || return 0
+      saved=$(printf 'get /NetworkServices/%s/DNS\nd.show\n' "$dns_svc" | scutil --prefs)
+      case "$saved" in
+        *"No such key"*) printf 'remove Setup:/Network/Service/%s/DNS\n' "$dns_svc" | scutil > /dev/null ;;
+        *) dns_set "Setup:/Network/Service/$dns_svc/DNS" "$(printf '%s\n' "$saved" | dns_list)" ;;
+      esac
+      dns_svc=""
+      dns_flush
+    }
     """#
 
     /// The shell command that starts the helper in the background and returns at once.

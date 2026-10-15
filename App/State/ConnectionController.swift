@@ -537,9 +537,10 @@ final class ConnectionController {
         }
         guard commandGeneration == generation, userWantsRunning else { return }
 
-        // Same settings, only the server differs: swap the outbound and keep the core.
+        // Same settings, only the server differs: swap the outbound and keep the core. Not in TUN
+        // mode, whose config lists the server's name for its own lookups (`ConfigBuilder.tunDNS`).
         if mayLiveSwitch, Prefs.liveSwitch, coreState == .running, server.kind == .outbound,
-           let running, let api = running.options.apiPort,
+           let running, running.options.tun == nil, let api = running.options.apiPort,
            options(metrics: running.options.metricsPort, api: api) == running.options, plan == running.plan, custom == running.custom {
             isSwitching = true
             do {

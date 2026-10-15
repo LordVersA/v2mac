@@ -1,14 +1,21 @@
 import Foundation
+import Network
 
-/// What the core needs while TUN mode is on: a loopback port the TUN forwarder feeds, and the
-/// physical interface its own connections must leave through so they do not re-enter the TUN.
+/// What the core needs while TUN mode is on: a loopback port the TUN forwarder feeds, the
+/// physical interface its own connections must leave through so they do not re-enter the TUN,
+/// and the network's resolvers, which look up the server's own name on that interface.
 public struct TunLink: Sendable, Hashable {
     public var port: Int
     public var outboundInterface: String
+    public var resolvers: [String]
 
-    public init(port: Int, outboundInterface: String) {
+    /// Used when the network names no resolver the core can reach.
+    public static let fallbackResolvers = ["1.1.1.1", "8.8.8.8"]
+
+    public init(port: Int, outboundInterface: String, resolvers: [String] = []) {
         self.port = port
         self.outboundInterface = outboundInterface
+        self.resolvers = resolvers.isEmpty ? Self.fallbackResolvers : resolvers
     }
 }
 
@@ -91,17 +98,78 @@ extension ConfigBuilder {
                 // so the core routes by domain and a poisoned DNS answer does no harm.
                 "sniffing": ["enabled": true, "destOverride": ["http", "tls", "quic"]],
             ]],
-            "outbounds": [
-                [
-                    "tag": "core",
-                    "protocol": "socks",
-                    "settings": ["address": "127.0.0.1", "port": .number(Double(corePort))],
-                ],
-                ["tag": .string(directTag), "protocol": "freedom"],
-            ],
-            // DNS stays on the path it had before the TUN came up. Through the core it would
-            // deadlock: the core needs the resolver to find its own server.
-            "routing": ["rules": [["type": "field", "port": "53", "outboundTag": .string(directTag)]]],
+            // Everything goes to the core, DNS included (see `tunDNS`): nothing here leaves directly.
+            "outbounds": [[
+                "tag": "core",
+                "protocol": "socks",
+                "settings": ["address": "127.0.0.1", "port": .number(Double(corePort))],
+            ]],
         ]
+    }
+
+    public static let tunDNSTag = "v2mac-dns-out"
+    static let bootstrapTag = "v2mac-bootstrap"
+    static let bootstrapDNSTag = "v2mac-bootstrap-dns"
+
+    /// Spec 9.5, DNS. Every lookup that enters the TUN, whichever resolver it was sent to, is
+    /// answered by the core's own resolver, which asks through the proxy like any other traffic.
+    /// The core cannot use the system resolver for its server's own name: that lookup would come
+    /// back through the TUN and wait for the server it is trying to find. So outbounds that dial
+    /// a name resolve it with the core's resolver, which asks the network's resolvers for exactly
+    /// those names, on the physical interface. A `localhost` resolver would loop the same way and
+    /// is dropped.
+    static func tunDNS(_ config: JSONValue, tun: TunLink) -> JSONValue {
+        guard case .array(let outbounds)? = config["outbounds"] else { return config }
+        let names = Array(Set(outbounds.flatMap(dialedNames))).sorted()
+        // Freedom outbounds that others dial through resolve those servers' names for them.
+        let dialers = Set(outbounds.compactMap { $0["streamSettings"]?["sockopt"]?["dialerProxy"]?.stringValue })
+        var wired = outbounds.map { outbound -> JSONValue in
+            let isDialer = outbound["protocol"]?.stringValue == "freedom" && dialers.contains(outbound["tag"]?.stringValue ?? "")
+            return dialedNames(outbound).isEmpty && !isDialer ? outbound : resolvingWithCore(outbound)
+        }
+        wired.append(["tag": .string(tunDNSTag), "protocol": "dns"])
+
+        var dns = config["dns"] ?? ["queryStrategy": "UseIP", "enableParallelQuery": true]
+        var servers = (dns["servers"]?.arrayValue ?? []).filter { server in
+            (server.stringValue ?? server["address"]?.stringValue)?.lowercased() != "localhost"
+        }
+        if servers.isEmpty { servers = dohServers.map { .string($0) } }
+        var rules: [JSONValue] = [["type": "field", "inboundTag": .array([.string(tunInboundTag)]), "port": "53", "outboundTag": .string(tunDNSTag)]]
+        if !names.isEmpty {
+            let only: JSONValue = .array(names.map { .string("full:\($0)") })
+            servers = tun.resolvers.map { ["address": .string($0), "domains": only, "skipFallback": true, "tag": .string(bootstrapDNSTag)] } + servers
+            wired.append(binding(["tag": .string(bootstrapTag), "protocol": "freedom"], to: tun.outboundInterface))
+            rules.insert(["type": "field", "inboundTag": .array([.string(bootstrapDNSTag)]), "outboundTag": .string(bootstrapTag)], at: 0)
+        }
+        dns = dns.setting("servers", to: .array(servers))
+
+        let routing = config["routing"] ?? [:]
+        return config
+            .setting("outbounds", to: .array(wired))
+            .setting("dns", to: dns)
+            .setting("routing", to: routing.setting("rules", to: .array(rules + (routing["rules"]?.arrayValue ?? []))))
+    }
+
+    /// Server names an outbound dials, IP addresses and this Mac's own names left out.
+    static func dialedNames(_ outbound: JSONValue) -> [String] {
+        let settings = outbound["settings"]
+        var hosts = [settings?["address"]?.stringValue]
+        for list in ["vnext", "servers"] { hosts += (settings?[list]?.arrayValue ?? []).map { $0["address"]?.stringValue } }
+        // WireGuard: "host:port" or "[v6]:port".
+        hosts += (settings?["peers"]?.arrayValue ?? []).map { peer in
+            peer["endpoint"]?.stringValue.map { endpoint in
+                let host = endpoint.hasPrefix("[") ? String(endpoint.dropFirst().prefix { $0 != "]" }) : String(endpoint.prefix { $0 != ":" })
+                return host
+            }
+        }
+        return hosts.compactMap { $0 }.filter { !$0.isEmpty && !isLoopback($0) && IPv4Address($0) == nil && IPv6Address($0) == nil }
+    }
+
+    /// Makes an outbound resolve the names it dials with the core's resolver (IPv4 first).
+    static func resolvingWithCore(_ outbound: JSONValue) -> JSONValue {
+        let stream = outbound["streamSettings"] ?? [:]
+        let sockopt = stream["sockopt"] ?? [:]
+        if let existing = sockopt["domainStrategy"]?.stringValue, existing != "AsIs" { return outbound }
+        return outbound.setting("streamSettings", to: stream.setting("sockopt", to: sockopt.setting("domainStrategy", to: "UseIPv4v6")))
     }
 }

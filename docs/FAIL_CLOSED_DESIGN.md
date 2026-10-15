@@ -22,9 +22,9 @@ leave connection attempts blocked, with an explicit recovery action.
 
 ## Bootstrap and DNS
 
-The current forwarder sends all port-53 traffic direct. A protected mode must
-remove that broad exception. Application DNS should go through the protected
-resolver path. Resolve proxy hostnames before arming, or allow only a dedicated
+Application DNS already goes through the tunnel (spec 9.5): the forwarder hands
+port 53 to the core, and only the core's lookups of its own server names leave
+directly, for exactly those names. Resolve proxy hostnames before arming, or allow only a dedicated
 core bootstrap resolver with pinned destinations and a scoped authorization.
 Permit only the outer endpoints needed by the selected protocol (including
 documented UDP/port-hopping endpoints), and explicitly chosen LAN/DHCP/NDP

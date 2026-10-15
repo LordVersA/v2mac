@@ -17,6 +17,15 @@ public enum NetworkInterfaces {
         return nil
     }
 
+    /// The resolvers the system uses now, as addresses the core can dial on the physical
+    /// interface: this Mac's own and link-local (`%en0`) ones are left out.
+    public static func dnsServers() -> [String] {
+        let info = SCDynamicStoreCopyValue(nil, "State:/Network/Global/DNS" as CFString) as? [String: Any]
+        return ((info?["ServerAddresses"] as? [String]) ?? []).filter { address in
+            !address.contains("%") && !ConfigBuilder.isLoopback(address) && (IPv4Address(address) != nil || IPv6Address(address) != nil)
+        }
+    }
+
     public static func exists(_ name: String) -> Bool {
         if_nametoindex(name) != 0
     }

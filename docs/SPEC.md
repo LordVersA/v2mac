@@ -594,8 +594,8 @@ Activating another outbound profile while connected, with every other setting un
 `xray api rmo --server=127.0.0.1:<port> proxy` and then `xray api ado ... <file>` with the new
 outbound (tagged, dialled and bound as above). The core, its ports and the traffic counters stay;
 connections already open finish on the old server. If either command fails the core is restarted
-as before. Custom configs, and any change of port, mode, TUN, log or the settings above, always
-restart. The API port is loopback-only and unauthenticated, like the metrics port.
+as before. Custom configs, any switch while TUN mode is on (section 9.5, DNS), and any change of
+port, mode, TUN, log or the settings above, always restart. The API port is loopback-only and unauthenticated, like the metrics port.
 
 ### 8.5 Servers that ask for `allowInsecure`
 
@@ -771,12 +771,34 @@ connected", "System tunnel active", and an unavailable/starting tunnel. A
 network change always restarts the core in TUN mode, because the binding names
 one interface; the app's own `utun` is not counted as a network change.
 
-**DNS.** Not changed. The forwarder sends port 53 straight out, as before the
-TUN came up; through the core it would deadlock, because the core needs the
-resolver to find its own server. Poisoned answers are tolerated for HTTP, TLS
-and QUIC because the sniffed name replaces the resolved address. DNS queries
-themselves are not hidden from the local network. Routing DNS through the proxy
-is future work.
+**DNS.** Every lookup goes through the tunnel too. Three parts:
+
+- *Forwarder:* it has one outbound, the core. Port 53 is not an exception.
+- *Core* (`ConfigBuilder.tunDNS`): the first rules send `tun-in` traffic on port 53,
+  whatever resolver it was addressed to, to a `dns` outbound (`v2mac-dns-out`). A and AAAA
+  queries go to the core's resolver; other types get an empty answer. The resolver asks
+  the configured servers (custom DNS, the mode's DoH pair, a full config's own, or else
+  the DoH pair) through the routing, so through the proxy. `localhost` servers are
+  dropped: the system resolver is the TUN, so they would ask themselves.
+- *Server names:* the core cannot use the system resolver for its own server, because
+  that lookup would come back through the TUN and wait for the server. Outbounds that dial
+  a name, and freedom outbounds others dial through, get `sockopt.domainStrategy:
+  UseIPv4v6`. The resolver asks the network's resolvers (`State:/Network/Global/DNS`, read
+  at connect; 1.1.1.1 and 8.8.8.8 when there are none) for exactly those names
+  (`full:`, `skipFallback`), through a freedom outbound bound to the physical interface.
+  A server switch restarts the core in TUN mode, since that list is part of the config.
+- *System resolver:* a resolver on the local network (the usual router) is reached
+  without the TUN. While the forwarder runs, the root helper therefore sets the primary
+  service's `ServerAddresses` to `1.1.1.1 8.8.8.8` in `Setup:/Network/Service/<id>/DNS`,
+  in the dynamic store only. It checks again every 3 seconds (service or setting
+  changed). When the forwarder stops and when the session ends it copies the value of the
+  saved network settings (`scutil --prefs`) back, or removes the key when they have none.
+  The saved settings are never written, so a reboot or a change in System Settings drops
+  the change too. A helper killed before it can undo it leaves public resolvers that
+  still answer, and the next session's restore puts the saved value back.
+
+`Scripts/check-tun.sh` checks a running tunnel: routes, resolvers, and a capture on the
+physical interface while lookups and connections run.
 
 **Protection contract.** Neither TUN failure policy is a persistent kill switch.
 Removing a TUN interface removes its routes; direct traffic may resume during a
@@ -787,7 +809,9 @@ are specified in `docs/FAIL_CLOSED_DESIGN.md`; enforcement is not shipped.
 
 **Known limits.** "Without proxy" downloads (subscriptions, updates) still go
 through the tunnel while it is up. Latency tests are bound to the physical
-interface so they keep measuring the servers.
+interface so they keep measuring the servers. The local network stays local
+(more specific routes), and a program that binds its own sockets to the
+physical interface, as some system services do, is not captured.
 
 ### 9.6 Exit check
 
@@ -1421,7 +1445,9 @@ v2mac/
   executable path matches its own core.
 - TUN mode is the only part that runs as root, and only after the system's
   administrator prompt. What runs as root is a fixed forwarder config and a
-  copy of the core in a root-owned directory; see section 9.5.
+  copy of the core in a root-owned directory; see section 9.5. The helper also
+  changes the system's DNS servers to fixed public addresses while the tunnel
+  is up, in memory only.
 
 ---
 

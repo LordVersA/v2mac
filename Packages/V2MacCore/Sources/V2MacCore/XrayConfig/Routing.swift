@@ -100,14 +100,15 @@ extension ConfigBuilder {
         ]
         if let dns = options.dns.map(dnsSection) ?? sections.dns { config = config.setting("dns", to: dns) }
         if let port = options.apiPort { config = config.setting("api", to: apiSection(port: port)) }
+        if let tun = options.tun { config = tunDNS(config, tun: tun) }
         return blockingLoopback(of: config, when: options.inbound.allowLAN)
     }
 
     /// Spec 8.2: run a full Xray config as written, replacing only inbounds, log, metrics and stats,
     /// and dropping its `api` section, which could open a control port to the network.
-    /// In TUN mode its outbounds are also bound to the physical interface. Fragment and noise
-    /// settings are added to proxy outbounds that have no dialer of their own, and the DNS
-    /// setting applies only when the config brings no `dns` section.
+    /// In TUN mode its outbounds are also bound to the physical interface and its DNS is set up
+    /// as `tunDNS` describes. Fragment and noise settings are added to proxy outbounds that have
+    /// no dialer of their own, and the DNS setting applies only when the config brings no `dns` section.
     public static func buildCustom(config: JSONValue, options: RunOptions) throws -> JSONValue {
         guard case .object = config else { throw ConfigBuilderError.outboundNotAnObject }
 
@@ -161,6 +162,7 @@ extension ConfigBuilder {
             }
             out = out.setting("routing", to: routing.setting("rules", to: .array(rewritten)))
         }
+        if let tun = options.tun { out = tunDNS(out, tun: tun) }
         return blockingLoopback(of: out, when: options.inbound.allowLAN)
     }
 }

@@ -96,7 +96,7 @@ final class TunController {
             return nil
         }
         if let port, helperIsAlive(rootDirectory) {
-            return TunLink(port: port, outboundInterface: primary)
+            return TunLink(port: port, outboundInterface: primary, resolvers: NetworkInterfaces.dnsServers())
         }
 
         watcher?.cancel()
@@ -127,7 +127,7 @@ final class TunController {
             port = newPort
             interfaceName = name
             state = .off
-            return TunLink(port: newPort, outboundInterface: primary)
+            return TunLink(port: newPort, outboundInterface: primary, resolvers: NetworkInterfaces.dnsServers())
         } catch {
             removeFlags()
             guard preparationGeneration == generation, isEnabled else { return nil }

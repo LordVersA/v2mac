@@ -15,8 +15,8 @@
 - **Optional automatic selection:** off by default; chooses a working server using real HTTP response delay, monitors the running proxy, and falls back to peers in group order. Manual choices stay selected while they respond.
 - **Routing:** Global, Direct, or Bypass regions (Iran, China, Russia) to send local traffic direct.
 - **Custom routing rules:** your own Proxy, Direct and Block lists on top of any mode. Paste domains, IP ranges, geosite/geoip tags, Clash rules, hosts files or Adblock lists, or build them in the **Rule Builder** by picking countries on a map and services from a list. [More below](#custom-routing-rules).
-- **TUN mode:** one switch routes all traffic on the Mac through the proxy, including apps with no proxy setting. No paid developer account or system extension needed.
-- **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel. This is not a system kill switch; port-53 DNS goes directly to the network.
+- **TUN mode:** one switch routes all traffic on the Mac through the proxy, including apps with no proxy setting and every DNS lookup. No paid developer account or system extension needed. `Scripts/check-tun.sh` checks that nothing leaks.
+- **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel. This is not a system kill switch: while the tunnel is down, traffic goes out directly.
 - **Menu bar control:** connect, switch server, live speed, and a local address you can copy.
 - **Reliable:** restarts the core after a crash, sleep or network change, and reconnects on launch.
 - **Also:** LAN sharing with a password, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
