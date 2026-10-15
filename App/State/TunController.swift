@@ -105,7 +105,7 @@ final class TunController {
         do {
             let newPort = Self.pickPort()
             let name = NetworkInterfaces.freeUtunName()
-            let command = try writeSessionFiles(port: newPort, interface: name)
+            let command = try await sessionCommand(port: newPort, interface: name)
             state = .authorizing
             logs.append("[v2mac] TUN mode: asking for administrator access")
             let authorization = await authorize(command)
@@ -227,19 +227,16 @@ final class TunController {
         return preferred ?? (try? PortUtil.freePort()) ?? 10890
     }
 
-    private func writeSessionFiles(port: Int, interface: String) throws -> String {
-        let fm = FileManager.default
-        try fm.createDirectory(at: stateDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let script = stateDirectory.appendingPathComponent("tun-helper.sh")
-        let config = stateDirectory.appendingPathComponent("tun-config.json")
-        try TunHelper.script.write(to: script, atomically: true, encoding: .utf8)
-        try ConfigBuilder.tunForwarder(interfaceName: interface, corePort: port, logLevel: .warning)
-            .data(pretty: true).write(to: config, options: .atomic)
+    private func sessionCommand(port: Int, interface: String) async throws -> String {
+        let core = AppPaths.coreExecutable
+        let coreSHA256 = try await TunHelper.sha256(of: core)
+        let config = try ConfigBuilder.tunForwarder(interfaceName: interface, corePort: port, logLevel: .warning).data()
+        try FileManager.default.createDirectory(at: stateDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         removeFlags()
-        fm.createFile(atPath: sessionFlag.path, contents: nil)
+        FileManager.default.createFile(atPath: sessionFlag.path, contents: nil)
         return TunHelper.launchCommand(
-            script: script, appPID: ProcessInfo.processInfo.processIdentifier, stateDirectory: stateDirectory,
-            core: AppPaths.coreExecutable, config: config, rootDirectory: rootDirectory
+            appPID: ProcessInfo.processInfo.processIdentifier, stateDirectory: stateDirectory,
+            core: core, coreSHA256: coreSHA256, config: String(decoding: config, as: UTF8.self), rootDirectory: rootDirectory
         )
     }
 

@@ -4,9 +4,10 @@ import Foundation
 /// The privileged side of TUN mode: a shell script that runs as root for one app session and
 /// keeps the TUN forwarder up while the app asks for it.
 ///
-/// The app talks to it only through two flag files in its own run directory. The helper copies
-/// the core and its config into a root-owned directory first, so nothing it runs later can be
-/// changed by a process without root.
+/// The app talks to it only through two flag files in its own run directory. The script and the
+/// forwarder config travel inside the root command itself, and the helper copies the core into a
+/// root-owned directory and checks its SHA-256 against the one in the command, so no file a
+/// process without root can change between the prompt and the copy is ever run as root.
 public enum TunHelper {
     /// Present while the app wants the helper alive.
     public static let sessionFlag = "tun.session"
@@ -17,20 +18,22 @@ public enum TunHelper {
         URL(fileURLWithPath: "/var/run/v2mac-tun-\(uid)", isDirectory: true)
     }
 
-    /// Arguments: app pid, state directory, core binary, forwarder config, root directory.
-    /// The body is one `{ }` group, so the shell has read all of it before running any of it.
+    /// Arguments: app pid, state directory, core binary, its SHA-256, forwarder config (the JSON
+    /// itself), root directory. The body is one `{ }` group, so the shell has read all of it
+    /// before running any of it.
     public static let script = #"""
-    #!/bin/sh
     # V2Mac TUN helper. Runs as root for one app session.
     {
-    APP_PID="$1"; STATE_DIR="$2"; XRAY_SRC="$3"; CONFIG_SRC="$4"; ROOT_DIR="$5"
+    APP_PID="$1"; STATE_DIR="$2"; XRAY_SRC="$3"; XRAY_SHA="$4"; CONFIG="$5"; ROOT_DIR="$6"
     [ -n "$ROOT_DIR" ] || exit 64
     PATH=/usr/bin:/bin:/usr/sbin:/sbin
     umask 022
 
     rm -rf "$ROOT_DIR"
     mkdir -m 755 "$ROOT_DIR" || exit 1
-    if ! cp "$XRAY_SRC" "$ROOT_DIR/xray" || ! cp "$CONFIG_SRC" "$ROOT_DIR/config.json"; then
+    if ! cp "$XRAY_SRC" "$ROOT_DIR/xray" \
+      || [ "$(shasum -a 256 "$ROOT_DIR/xray" | cut -d ' ' -f 1)" != "$XRAY_SHA" ] \
+      || ! printf '%s\n' "$CONFIG" > "$ROOT_DIR/config.json"; then
       rm -rf "$ROOT_DIR"
       exit 1
     fi
@@ -72,11 +75,17 @@ public enum TunHelper {
     """#
 
     /// The shell command that starts the helper in the background and returns at once.
+    /// `coreSHA256` must be taken before the prompt; `config` is the forwarder config's JSON.
     public static func launchCommand(
-        script: URL, appPID: Int32, stateDirectory: URL, core: URL, config: URL, rootDirectory: URL
+        appPID: Int32, stateDirectory: URL, core: URL, coreSHA256: String, config: String, rootDirectory: URL
     ) -> String {
-        let arguments = [script.path, "\(appPID)", stateDirectory.path, core.path, config.path, rootDirectory.path]
-        return "/bin/sh " + arguments.map(shellQuoted).joined(separator: " ") + " > /dev/null 2>&1 &"
+        let arguments = [script, "v2mac-tun-helper", "\(appPID)", stateDirectory.path, core.path, coreSHA256, config, rootDirectory.path]
+        return "/bin/sh -c " + arguments.map(shellQuoted).joined(separator: " ") + " > /dev/null 2>&1 &"
+    }
+
+    /// SHA-256 of a file, hex, as `shasum -a 256` prints it.
+    public static func sha256(of file: URL) async throws -> String {
+        try await Task.detached { RegionPackInstaller.sha256(try Data(contentsOf: file)) }.value
     }
 
     /// AppleScript that runs `command` as root after the system's administrator prompt.

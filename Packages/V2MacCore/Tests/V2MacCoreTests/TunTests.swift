@@ -104,13 +104,14 @@ import Testing
 }
 
 @Suite struct TunHelperTests {
-    @Test func launchCommandQuotesEveryArgument() {
+    @Test func launchCommandCarriesScriptAndConfigInline() throws {
         let command = TunHelper.launchCommand(
-            script: URL(fileURLWithPath: "/a b/helper.sh"), appPID: 42,
-            stateDirectory: URL(fileURLWithPath: "/it's/run"), core: URL(fileURLWithPath: "/x/xray"),
-            config: URL(fileURLWithPath: "/x/c.json"), rootDirectory: URL(fileURLWithPath: "/var/run/v2mac-tun-501")
+            appPID: 42, stateDirectory: URL(fileURLWithPath: "/it's/run"), core: URL(fileURLWithPath: "/x/xray"),
+            coreSHA256: "abc", config: #"{"a":1}"#, rootDirectory: URL(fileURLWithPath: "/var/run/v2mac-tun-501")
         )
-        #expect(command == #"/bin/sh '/a b/helper.sh' '42' '/it'\''s/run' '/x/xray' '/x/c.json' '/var/run/v2mac-tun-501' > /dev/null 2>&1 &"#)
+        #expect(command.hasPrefix("/bin/sh -c '"))
+        #expect(command.hasSuffix(#" 'v2mac-tun-helper' '42' '/it'\''s/run' '/x/xray' 'abc' '{"a":1}' '/var/run/v2mac-tun-501' > /dev/null 2>&1 &"#))
+        #expect(!command.contains(".sh"), "no script file a user process could change")
     }
 
     @Test func appleScriptEscapesQuotesAndBackslashes() {
@@ -162,7 +163,8 @@ import Testing
     }
 
     /// `core` is the body of the stand-in core script; `$MARKER` names a file it may use.
-    func start(core: String) throws -> Session {
+    /// `hash` replaces the core's real SHA-256.
+    func start(core: String, hash: String? = nil) async throws -> Session {
         let fm = FileManager.default
         let dir = try TestSupport.makeTempDirectory()
         let state = dir.appendingPathComponent("state")
@@ -170,13 +172,9 @@ import Testing
         let root = dir.appendingPathComponent("root")
         let marker = dir.appendingPathComponent("running")
 
-        let script = dir.appendingPathComponent("helper.sh")
-        try TunHelper.script.write(to: script, atomically: true, encoding: .utf8)
         let fake = dir.appendingPathComponent("fake-core")
         try "#!/bin/sh\nMARKER='\(marker.path)'\n\(core)\n".write(to: fake, atomically: true, encoding: .utf8)
         try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fake.path)
-        let config = dir.appendingPathComponent("config.json")
-        try "{}".write(to: config, atomically: true, encoding: .utf8)
         fm.createFile(atPath: state.appendingPathComponent(TunHelper.sessionFlag).path, contents: nil)
 
         let app = Process()
@@ -186,7 +184,9 @@ import Testing
 
         let helper = Process()
         helper.executableURL = URL(fileURLWithPath: "/bin/sh")
-        helper.arguments = [script.path, "\(app.processIdentifier)", state.path, fake.path, config.path, root.path]
+        let sha = try await TunHelper.sha256(of: fake)
+        helper.arguments = ["-c", TunHelper.script, "v2mac-tun-helper", "\(app.processIdentifier)", state.path, fake.path,
+                            hash ?? sha, #"{"log":{}}"#, root.path]
         try helper.run()
         return Session(dir: dir, state: state, root: root, marker: marker, helper: helper, app: app)
     }
@@ -203,13 +203,13 @@ import Testing
     }
 
     @Test func followsTheFlagAndEndsWithTheSession() async throws {
-        let s = try start(core: liveCore)
+        let s = try await start(core: liveCore)
         defer { s.cleanUp() }
         let fm = FileManager.default
 
         #expect(await wait { TunHelper.isAlive(rootDirectory: s.root) })
         #expect(fm.isExecutableFile(atPath: s.root.appendingPathComponent("xray").path))
-        #expect(fm.fileExists(atPath: s.root.appendingPathComponent("config.json").path))
+        #expect(try String(contentsOf: s.root.appendingPathComponent("config.json"), encoding: .utf8) == "{\"log\":{}}\n")
         try? await Task.sleep(for: .milliseconds(700))
         #expect(!s.childRunning, "the core must not start before the flag is set")
 
@@ -227,8 +227,47 @@ import Testing
         #expect(!fm.fileExists(atPath: s.root.path))
     }
 
+    /// The whole command, script included, survives AppleScript quoting (run without the prompt).
+    @Test func launchesThroughOsascript() async throws {
+        let fm = FileManager.default
+        let dir = try TestSupport.makeTempDirectory()
+        defer { try? fm.removeItem(at: dir) }
+        let state = dir.appendingPathComponent("state")
+        try fm.createDirectory(at: state, withIntermediateDirectories: true)
+        let root = dir.appendingPathComponent("root")
+        let fake = dir.appendingPathComponent("fake-core")
+        try "#!/bin/sh\nwhile :; do sleep 0.1; done\n".write(to: fake, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fake.path)
+        fm.createFile(atPath: state.appendingPathComponent(TunHelper.sessionFlag).path, contents: nil)
+
+        let command = TunHelper.launchCommand(
+            appPID: getpid(), stateDirectory: state, core: fake, coreSHA256: try await TunHelper.sha256(of: fake),
+            config: #"{"it's": "quoted \\ text"}"#, rootDirectory: root
+        )
+        let source = TunHelper.appleScript(command: command, prompt: "unused")
+            .replacingOccurrences(of: " with administrator privileges", with: "")
+        let osascript = Process()
+        osascript.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        osascript.arguments = ["-e", source]
+        try osascript.run()
+        osascript.waitUntilExit()
+        #expect(osascript.terminationStatus == 0)
+        #expect(await wait { TunHelper.isAlive(rootDirectory: root) })
+        #expect(try String(contentsOf: root.appendingPathComponent("config.json"), encoding: .utf8) == #"{"it's": "quoted \\ text"}"# + "\n")
+        try fm.removeItem(at: state.appendingPathComponent(TunHelper.sessionFlag))
+        #expect(await wait { !fm.fileExists(atPath: root.path) })
+    }
+
+    @Test func refusesACoreThatChangedAfterItWasHashed() async throws {
+        let s = try await start(core: liveCore, hash: String(repeating: "0", count: 64))
+        defer { s.cleanUp() }
+        #expect(await wait { !s.helper.isRunning })
+        #expect(s.helper.terminationStatus == 1)
+        #expect(!FileManager.default.fileExists(atPath: s.root.path))
+    }
+
     @Test func stopsTheCoreWhenTheAppDies() async throws {
-        let s = try start(core: liveCore)
+        let s = try await start(core: liveCore)
         defer { s.cleanUp() }
         FileManager.default.createFile(atPath: s.flag.path, contents: nil)
         #expect(await wait { s.childRunning })
@@ -240,7 +279,7 @@ import Testing
     }
 
     @Test func aCoreThatDiesIsStartedAgainAndItsOutputIsKept() async throws {
-        let s = try start(core: "echo run >> \"$MARKER.count\"\necho 'Failed to start: app/proxyman/inbound: failed to start proxy > operation not permitted'\nexit 23")
+        let s = try await start(core: "echo run >> \"$MARKER.count\"\necho 'Failed to start: app/proxyman/inbound: failed to start proxy > operation not permitted'\nexit 23")
         defer { s.cleanUp() }
         FileManager.default.createFile(atPath: s.flag.path, contents: nil)
         let count = URL(fileURLWithPath: s.marker.path + ".count")

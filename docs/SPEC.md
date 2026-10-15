@@ -703,8 +703,11 @@ first connect with TUN mode on, the app runs a shell script as root through
 `osascript` ("with administrator privileges"): one password prompt per app
 session. The helper:
 
-- copies the core binary and the forwarder config to `/var/run/v2mac-tun-<uid>/`
-  (root-owned) and only ever runs those copies;
+- is passed inline (`sh -c`), together with the forwarder config's JSON, so no
+  script or config file that a process without root could change is run;
+- copies the core binary to `/var/run/v2mac-tun-<uid>/` (root-owned), checks
+  its SHA-256 against the one the app took before the prompt, writes the
+  config next to it, and only ever runs those copies;
 - takes its orders from two flag files in `run/`: `tun.session` (stay alive) and
   `tun.on` (forwarder up). They carry no data, so a process without root can
   only switch the TUN on or off, not change what runs as root;
@@ -1244,7 +1247,6 @@ or DNS while connected restarts the core.
 └─ run/
    ├─ config.json                0600, exists only while running
    ├─ xray.pid
-   ├─ tun-helper.sh, tun-config.json   written when a TUN session starts
    └─ tun.session, tun.on        flag files for the TUN helper (section 9.5)
 
 /var/run/v2mac-tun-<uid>/        root-owned, exists only while the TUN helper runs
