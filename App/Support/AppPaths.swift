@@ -106,6 +106,7 @@ enum Prefs {
             "dnsQueryStrategy": DNSQueryStrategy.useIP.rawValue,
             "logLevel": XrayLogLevel.warning.rawValue,
             "logConnections": false,
+            "countTraffic": true,
         ])
         defaults.register(defaults: Dictionary(uniqueKeysWithValues: NotificationKind.allCases.map { ($0.key, $0.defaultOn) }))
         if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
@@ -120,6 +121,14 @@ enum Prefs {
     static var lastCoreUpdateCheck: Date? {
         get { defaults.object(forKey: "lastCoreUpdateCheck") as? Date }
         set { defaults.set(newValue, forKey: "lastCoreUpdateCheck") }
+    }
+
+    /// Spec 12.8: count traffic for the session and the total.
+    static var countTraffic: Bool { defaults.bool(forKey: "countTraffic") }
+
+    static var trafficUsage: TrafficUsage {
+        get { defaults.data(forKey: "trafficUsage").flatMap { try? JSONDecoder().decode(TrafficUsage.self, from: $0) } ?? TrafficUsage() }
+        set { defaults.set(try? JSONEncoder().encode(newValue), forKey: "trafficUsage") }
     }
 
     static var lastAppUpdateCheck: Date? {

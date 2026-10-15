@@ -2,7 +2,7 @@ import AppKit
 import Observation
 import UserNotifications
 
-/// One switch in Settings → Notifications (spec 12.8). The raw value is part of the settings key.
+/// One switch in Settings → Notifications (spec 12.6). The raw value is part of the settings key.
 enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
     case connection, reconnected, tun
     case expiry, traffic, updateFailed, serversChanged

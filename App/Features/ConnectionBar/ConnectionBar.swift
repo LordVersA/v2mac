@@ -5,6 +5,7 @@ struct ConnectionBar: View {
     @Environment(\.openWindow) private var openWindow
     @Namespace private var glassNamespace
     @State private var copied = false
+    @AppStorage("countTraffic") private var countTraffic = true
 
     private var connection: ConnectionController { model.connection }
 
@@ -108,7 +109,7 @@ struct ConnectionBar: View {
             titleBlock.fixedSize()
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { titleWidth = $0 }
             // Their width does not depend on the rates (see `RateLabels`), so zero will do.
-            RateLabels(down: 0, up: 0, layout: .inline).font(.caption.monospacedDigit()).fixedSize()
+            RateLabels(down: 0, up: 0, layout: .inline, connection: countTraffic ? connection : nil).font(.caption.monospacedDigit()).fixedSize()
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { inlineRatesWidth = $0 }
             RateLabels(down: 0, up: 0, layout: .stacked).font(.caption.monospacedDigit()).fixedSize()
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { stackedRatesWidth = $0 }
@@ -137,7 +138,8 @@ struct ConnectionBar: View {
             titleBlock
             Spacer(minLength: Self.minimumGap)
             if let rates, connection.phase == .connected {
-                RateReadout(connection: connection, layout: rates, sparklineWidth: sparklineWidth(rates), spacing: Self.spacing)
+                RateReadout(connection: connection, layout: rates, sparklineWidth: sparklineWidth(rates), spacing: Self.spacing,
+                            showsUsage: countTraffic)
             }
             TunToggle(connection: connection)
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { tunWidth = $0 }
@@ -294,12 +296,13 @@ private struct RateReadout: View {
     let layout: ConnectionBar.RateLayout
     let sparklineWidth: CGFloat
     let spacing: CGFloat
+    let showsUsage: Bool
 
     var body: some View {
         HStack(spacing: spacing) {
             TrafficSparkline(samples: connection.rateHistory)
                 .frame(width: sparklineWidth, height: 26)
-            RateLabels(down: connection.downRate, up: connection.upRate, layout: layout)
+            RateLabels(down: connection.downRate, up: connection.upRate, layout: layout, connection: showsUsage ? connection : nil)
                 .font(.caption.monospacedDigit())
                 .contentTransition(.numericText())
                 .animation(.smooth, value: connection.downRate)
@@ -314,12 +317,22 @@ private struct RateLabels: View {
     let down: Double
     let up: Double
     let layout: ConnectionBar.RateLayout
+    /// Set when this session's usage is shown (inline only; the stacked layout has no room).
+    var connection: ConnectionController?
 
     var body: some View {
         let down = label(down, systemImage: "arrow.down")
         let up = label(up, systemImage: "arrow.up")
         switch layout {
-        case .inline: HStack(spacing: 10) { down; up }
+        case .inline:
+            HStack(spacing: 10) {
+                down; up
+                if let connection {
+                    // Reserves a wide amount, like the rates, so nothing moves as it grows.
+                    Label("1,023.9 MB", systemImage: "chart.bar").hidden()
+                        .overlay(alignment: .leading) { SessionUsageButton(connection: connection) }
+                }
+            }
         case .stacked: VStack(alignment: .leading, spacing: 1) { down; up }
         }
     }

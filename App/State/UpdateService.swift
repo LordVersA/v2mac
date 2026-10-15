@@ -27,7 +27,7 @@ final class UpdateService {
         case unavailable(String)
     }
 
-    /// A background check found a newer release (spec 12.8).
+    /// A background check found a newer release (spec 12.6).
     enum Found: Equatable {
         case app(String)
         case core(String)

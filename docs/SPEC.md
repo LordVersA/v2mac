@@ -1202,6 +1202,19 @@ A sheet that adds a server by hand or changes one, field by field.
 - **JSON.** A full Xray config, and an outbound of a protocol the form does not know, are
   edited as text and read back through `SubscriptionParser`.
 
+### 12.8 Traffic usage
+
+While "Count traffic usage" (General) is on, each metrics poll adds the bytes the
+core counted since the last one (a new core starts from zero) to this session
+and to a total. A session starts when the user connects from off; reconnects,
+restarts and server switches continue it. Both are kept in UserDefaults
+(`trafficUsage`), so the total survives quitting until **Reset Total**.
+
+This session's amount sits next to the rates in the menu bar panel and in the
+connection bar (inline layout only). Clicking it opens a popover with the
+session's and the total's download and upload, since when, and Reset Total.
+With the setting off nothing is counted or shown.
+
 ---
 
 ## 13. Settings
@@ -1211,6 +1224,7 @@ A sheet that adds a server by hand or changes one, field by field.
 | General | Launch at login (`SMAppService.mainApp`) | Off |
 | | Reconnect on launch | On |
 | | Restart core after sleep or network change | On |
+| | Count traffic usage (section 12.8) | On |
 | | Check for app updates | On |
 | Proxy | Port | 10808 |
 | | Allow connections from LAN (shows the Mac's LAN address) | Off |

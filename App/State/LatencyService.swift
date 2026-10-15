@@ -32,7 +32,7 @@ final class LatencyService {
     @ObservationIgnored private var speedPending: [UUID: Int] = [:]
     /// Set while TUN mode is up: tests must leave through this interface, not the tunnel.
     var physicalInterface: @MainActor () -> String? = { nil }
-    /// A run ended by itself: how many servers, and the fastest one that answered (spec 12.8).
+    /// A run ended by itself: how many servers, and the fastest one that answered (spec 12.6).
     @ObservationIgnored var onFinished: @MainActor (_ tested: Int, _ best: (id: UUID, ms: Int)?) -> Void = { _, _ in }
     @ObservationIgnored private var best: (id: UUID, ms: Int)?
 

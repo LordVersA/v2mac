@@ -37,3 +37,28 @@ import Testing
         #expect(b.rate(since: a) == .zero)
     }
 }
+
+@Suite struct TrafficUsageTests {
+    @Test func countsAcrossCoreRestartsAndSessions() {
+        var usage = TrafficUsage()
+        let start = Date(timeIntervalSince1970: 0)
+        usage.startSession(at: start)
+        let first = TrafficSnapshot(uplink: 100, downlink: 1000)
+        var d = first.bytes(since: nil)
+        usage.add(up: d.up, down: d.down, now: start)
+        d = TrafficSnapshot(uplink: 150, downlink: 1600).bytes(since: first)
+        usage.add(up: d.up, down: d.down)
+        // A restarted core counts from zero again.
+        d = TrafficSnapshot(uplink: 10, downlink: 20).bytes(since: TrafficSnapshot(uplink: 150, downlink: 1600))
+        usage.add(up: d.up, down: d.down)
+        #expect(usage.sessionUp == 160 && usage.sessionDown == 1620)
+        #expect(usage.totalSince == start)
+
+        usage.startSession()
+        usage.add(up: 1, down: 2)
+        #expect(usage.session == 3)
+        #expect(usage.total == 1783)
+        usage.resetTotal()
+        #expect(usage.total == 0 && usage.session == 3)
+    }
+}

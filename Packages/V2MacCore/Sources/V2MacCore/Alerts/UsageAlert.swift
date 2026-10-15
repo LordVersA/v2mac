@@ -1,6 +1,6 @@
 import Foundation
 
-/// Spec 12.8: when a subscription's expiry date or traffic quota is worth a notification, and
+/// Spec 12.6: when a subscription's expiry date or traffic quota is worth a notification, and
 /// the bookkeeping that keeps each warning to one notification.
 public enum UsageAlert {
     public enum Expiry: Int, Sendable, Comparable {

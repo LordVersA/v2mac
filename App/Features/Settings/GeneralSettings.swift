@@ -5,6 +5,7 @@ struct GeneralSettings: View {
     @AppStorage("reconnectOnLaunch") private var reconnectOnLaunch = true
     @AppStorage("restartOnWakeOrNetwork") private var restartOnWake = true
     @AppStorage("checkAppUpdates") private var checkUpdates = true
+    @AppStorage("countTraffic") private var countTraffic = true
     @State private var loginEnabled = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
 
@@ -24,6 +25,10 @@ struct GeneralSettings: View {
             }
             Toggle("Reconnect on launch", isOn: $reconnectOnLaunch)
             Toggle("Restart core after sleep or network change", isOn: $restartOnWake)
+            Toggle(isOn: $countTraffic) {
+                Text("Count traffic usage")
+                Text("Shows this session's traffic in the menu bar panel and the connection bar, and keeps a total.")
+            }
             Toggle("Check for app updates", isOn: $checkUpdates)
             AppUpdateRow()
             DiagnosticsSection()

@@ -1,7 +1,7 @@
 import SwiftUI
 import UserNotifications
 
-/// Which events post a notification (spec 12.8).
+/// Which events post a notification (spec 12.6).
 struct NotificationSettings: View {
     @Environment(AppModel.self) private var model
 

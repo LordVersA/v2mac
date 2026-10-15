@@ -16,7 +16,7 @@ final class TunController {
     }
 
     private(set) var state: State = .off
-    /// TUN mode could not start or went down by itself (spec 12.8).
+    /// TUN mode could not start or went down by itself (spec 12.6).
     @ObservationIgnored var onFailure: @MainActor (String) -> Void = { _ in }
     private(set) var isEnabled = Prefs.tunEnabled
     /// The session's `utunN`; the lifecycle monitor ignores it as a network change.

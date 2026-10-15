@@ -39,7 +39,7 @@ final class SubscriptionService {
 
     private(set) var updatingGroupIDs: Set<UUID> = []
 
-    /// Events worth a notification (spec 12.8); `AppModel` turns them into one.
+    /// Events worth a notification (spec 12.6); `AppModel` turns them into one.
     enum Notice {
         case updateFailed(group: String, message: String)
         case serversChanged(group: String, added: Int, removed: Int, activeRemoved: Bool)

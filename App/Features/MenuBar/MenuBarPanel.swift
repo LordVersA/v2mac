@@ -527,6 +527,7 @@ private struct PanelTestButton: View {
 /// re-evaluate the whole panel.
 private struct PanelRates: View {
     let connection: ConnectionController
+    @AppStorage("countTraffic") private var countTraffic = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -535,6 +536,10 @@ private struct PanelRates: View {
             HStack(spacing: 14) {
                 Label(Format.rate(connection.downRate), systemImage: "arrow.down")
                 Label(Format.rate(connection.upRate), systemImage: "arrow.up")
+                if countTraffic {
+                    Spacer()
+                    SessionUsageButton(connection: connection)
+                }
             }
             .font(.caption.monospacedDigit())
             .contentTransition(.numericText())

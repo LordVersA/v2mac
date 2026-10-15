@@ -26,7 +26,7 @@ final class ConnectionController {
     private(set) var exit: ExitState = .unknown
     @ObservationIgnored private var exitTask: Task<Void, Never>?
 
-    /// Events worth a notification (spec 12.8); `AppModel` turns them into one.
+    /// Events worth a notification (spec 12.6); `AppModel` turns them into one.
     enum Notice: Equatable {
         case failed(server: String, message: String)
         /// The core stopped and every restart attempt failed.
@@ -58,6 +58,10 @@ final class ConnectionController {
     private(set) var recentServerIDs: [UUID] = Prefs.recentServerIDs
     private(set) var downRate: Double = 0
     private(set) var upRate: Double = 0
+    /// Session and total traffic (spec 12.8); counted only while `Prefs.countTraffic` is on.
+    private(set) var usage = Prefs.trafficUsage
+    /// The running core's last counters, so each poll adds only what is new.
+    private var lastCounters: TrafficSnapshot?
     /// The last minute of rates, one sample per second, oldest first.
     private(set) var rateHistory: [RateSample] = []
 
@@ -368,6 +372,8 @@ final class ConnectionController {
         commandGeneration += 1
         let generation = commandGeneration
         cancelAutomation()
+        // A connect from off starts a new session; reconnects and switches continue it.
+        if !userWantsRunning { usage.startSession() }
         userWantsRunning = true
         pendingConnectionGeneration = generation
         enqueue {
@@ -635,6 +641,7 @@ final class ConnectionController {
             if case .failed = state, !isRecovering { tun.down() }
             statsTask?.cancel()
             statsTask = nil
+            lastCounters = nil
             downRate = 0
             upRate = 0
             rateHistory = []
@@ -649,6 +656,7 @@ final class ConnectionController {
             var previous: TrafficSnapshot?
             while !Task.isCancelled {
                 if let snapshot = try? await client.snapshot() {
+                    self?.count(snapshot)
                     if let previous {
                         let rate = snapshot.rate(since: previous)
                         self?.downRate = rate.downBytesPerSecond
@@ -673,8 +681,23 @@ final class ConnectionController {
         sampleCounter = 60
         downRate = rateHistory[59].down
         upRate = rateHistory[59].up
+        usage.startSession(at: Date().addingTimeInterval(-4000))
+        usage.add(up: 88_000_000, down: 1_340_000_000)
     }
     #endif
+
+    private func count(_ snapshot: TrafficSnapshot) {
+        let new = snapshot.bytes(since: lastCounters)
+        lastCounters = snapshot
+        guard Prefs.countTraffic, new.up > 0 || new.down > 0 else { return }
+        usage.add(up: new.up, down: new.down)
+        Prefs.trafficUsage = usage
+    }
+
+    func resetTotalUsage() {
+        usage.resetTotal()
+        Prefs.trafficUsage = usage
+    }
 
     private func record(down: Double, up: Double) {
         sampleCounter += 1

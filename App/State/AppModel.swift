@@ -121,7 +121,7 @@ final class AppModel {
 
     // MARK: Notifications
 
-    /// Spec 12.8: every service reports events through a closure; the wording is decided here.
+    /// Spec 12.6: every service reports events through a closure; the wording is decided here.
     private func wireNotifications() {
         let notifications = self.notifications
         let connection = self.connection
