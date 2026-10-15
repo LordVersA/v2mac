@@ -159,9 +159,7 @@ private struct InspectorLive: View {
                 Label(Format.rate(connection.upRate), systemImage: "arrow.up")
             }
             .font(.caption.monospacedDigit())
-            .contentTransition(.numericText())
-            .animation(.smooth, value: connection.downRate)
-            .animation(.smooth, value: connection.upRate)
+            // No rolling digits: they change every second, and the transition blurs text on the CPU.
             .foregroundStyle(.secondary)
         }
     }

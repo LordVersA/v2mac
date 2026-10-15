@@ -304,9 +304,7 @@ private struct RateReadout: View {
                 .frame(width: sparklineWidth, height: 26)
             RateLabels(down: connection.downRate, up: connection.upRate, layout: layout, connection: showsUsage ? connection : nil)
                 .font(.caption.monospacedDigit())
-                .contentTransition(.numericText())
-                .animation(.smooth, value: connection.downRate)
-                .animation(.smooth, value: connection.upRate)
+                // No rolling digits: they change every second, and the transition blurs text on the CPU.
                 .foregroundStyle(.secondary)
                 .fixedSize()
         }
