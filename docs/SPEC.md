@@ -913,17 +913,21 @@ release workflow (secret `UPDATE_SIGNING_KEY`, refused if missing). The public
 key is built into the app (`AppInstaller.updateKey`); a DMG without a valid
 signature is never installed.
 
-**Homebrew installs.** When the release build finds its cask installed
+**Homebrew installs.** When the release build runs from
+`/Applications/V2Mac.app` and finds its cask installed
 (`<prefix>/Caskroom/v2mac` with `<prefix>/bin/brew`, prefix `/opt/homebrew` or
 `/usr/local`), Update Now goes through `brew` instead, so Homebrew keeps track
 of the version: while the app still runs, `brew update`, then `brew info` must
-show the release's version in `lordversa/tap/v2mac` (else "Homebrew does not
-offer it yet"), then `brew fetch` puts the DMG in Homebrew's cache. Each route
-is tried in turn, the local proxy through `all_proxy`/`https_proxy`. The app then
+show the release's version or a newer one in `lordversa/tap/v2mac` (else
+"Homebrew does not offer it yet"), then `brew fetch` puts the DMG in Homebrew's
+cache. Each route is tried in turn (`brew update` only until it has succeeded
+once), the local proxy through `all_proxy`/`https_proxy`; the direct route clears
+those variables. Each `brew` call is stopped after 10 minutes. The app then
 quits, and a detached script waits for it to exit (`brew` will not quit an app
 it runs inside), runs `brew upgrade --cask` from the cache, writes the exit
 status to `run/brew-upgrade.status` and opens the app again. A failed upgrade
-leaves the old version, which reports it on launch. Debug builds never use this
+leaves the old version, which reports it on launch in Settings and as a
+notification, with the last line of `brew`'s output. Debug builds never use this
 path.
 
 ---
@@ -1138,7 +1142,7 @@ launch. Each kind has a switch in Settings → Notifications:
 | Traffic running out | 80%, 95% and 100% of the quota | On |
 | Automatic update failed | A scheduled update fails (first failure in a row only) | Off |
 | Servers added or removed | A scheduled update changed the server list | Off |
-| V2Mac update available | The background check finds a release, once per release | On |
+| V2Mac update available | The background check finds a release, once per release; also a Homebrew upgrade that failed after the app quit for it | On |
 | Xray core update available | Same, for the core | Off |
 | Delay test finished | A test ends while the app is in the background | Off |
 

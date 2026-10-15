@@ -189,6 +189,10 @@ final class AppModel {
             }
         }
 
+        updates.onHomebrewFailure = { message in
+            notifications.post(.appUpdate, title: "V2Mac was not updated", body: message, id: "appUpdate", open: .settings(.general))
+        }
+
         latency.onFinished = { [weak self] tested, best in
             guard !NSApp.isActive else { return }
             let fastest = best.flatMap { best in self?.profile(id: best.id).map { "Fastest: \($0.name), \(best.ms) ms." } }

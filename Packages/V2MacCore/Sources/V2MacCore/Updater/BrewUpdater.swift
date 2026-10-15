@@ -45,31 +45,41 @@ public struct BrewUpdater: Sendable, Equatable {
         return nil
     }
 
-    /// Variables that make curl and git, and so `brew`, connect through `route`.
+    /// Variables that make curl and git, and so `brew`, connect through `route`. The direct
+    /// route clears any proxy the app inherited, so it really is direct.
     public static func proxyEnvironment(for route: FetchRoute) -> [String: String] {
-        guard case .proxy(let host, let port, let username, let password) = route else { return [:] }
+        let names = ["all_proxy", "http_proxy", "https_proxy", "ALL_PROXY", "HTTP_PROXY", "HTTPS_PROXY"]
+        guard case .proxy(let host, let port, let username, let password) = route else {
+            return Dictionary(uniqueKeysWithValues: names.map { ($0, "") })
+        }
+        // ASCII only: `.alphanumerics` would let other scripts' letters through unencoded.
+        let unreserved = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
         func encoded(_ part: String) -> String {
-            part.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? part
+            part.addingPercentEncoding(withAllowedCharacters: unreserved) ?? part
         }
         var credentials = ""
         if let username {
             credentials = encoded(username) + (password.map { ":" + encoded($0) } ?? "") + "@"
         }
         let url = "socks5h://\(credentials)\(host):\(port)"
-        return ["all_proxy": url, "http_proxy": url, "https_proxy": url]
+        return Dictionary(uniqueKeysWithValues: names.map { ($0, url) })
     }
 
     /// Settings for every `brew` call: no hints, and no update of its own after `prepare` did one.
     static let quiet = ["HOMEBREW_NO_ENV_HINTS": "1", "HOMEBREW_NO_AUTO_UPDATE": "1"]
+
+    /// The longest a single `brew` call may take, so a stalled route cannot lock Update Now.
+    static let callTimeout: Duration = .seconds(600)
 
     /// Refreshes Homebrew and downloads `version` into its cache, trying each route in turn.
     /// Run it while the app is still open, so the local proxy can carry the downloads.
     /// Nothing is installed.
     public func prepare(version: String, routes: [FetchRoute]) async throws {
         var lastError: Error = BrewUpdateError.failed(command: "update", output: "")
+        var updated = false
         for route in routes.isEmpty ? [.direct] : routes {
             do {
-                try await prepare(version: version, environment: Self.proxyEnvironment(for: route))
+                try await prepare(version: version, environment: Self.proxyEnvironment(for: route), updated: &updated)
                 return
             } catch BrewUpdateError.notInTap(let version) {
                 throw BrewUpdateError.notInTap(version)
@@ -80,14 +90,17 @@ public struct BrewUpdater: Sendable, Equatable {
         throw lastError
     }
 
-    private func prepare(version: String, environment: [String: String]) async throws {
+    /// `updated` is set once `brew update` succeeds, so a later route does not repeat it.
+    private func prepare(version: String, environment: [String: String], updated: inout Bool) async throws {
         let environment = environment.merging(Self.quiet) { _, quiet in quiet }
         // A broken unrelated tap makes `update` fail; what matters is whether the cask has the version.
-        let update = try await brew(["update", "--quiet"], environment)
+        let update = updated ? nil : try await brew(["update", "--quiet"], environment)
+        if update?.status == 0 { updated = true }
         let info = try await brew(["info", "--cask", "--json=v2", Self.cask], environment)
         guard info.status == 0 else { throw Self.failure("info", info.output) }
-        guard Self.caskVersion(Data(info.output.utf8)) == VersionCompare.normalized(version) else {
-            if update.status != 0 { throw Self.failure("update", update.output) }
+        // A newer release in the tap is fine: `brew upgrade` installs that one.
+        guard let offered = Self.caskVersion(Data(info.output.utf8)), !VersionCompare.isNewer(version, than: offered) else {
+            if let update, update.status != 0 { throw Self.failure("update", update.output) }
             throw BrewUpdateError.notInTap(VersionCompare.normalized(version))
         }
         let fetch = try await brew(["fetch", "--cask", Self.cask], environment)
@@ -95,7 +108,7 @@ public struct BrewUpdater: Sendable, Equatable {
     }
 
     private func brew(_ arguments: [String], _ environment: [String: String]) async throws -> (status: Int32, output: String) {
-        try await CoreUpdater.run(executable.path, arguments, environment: environment)
+        try await CoreUpdater.run(executable.path, arguments, environment: environment, timeout: Self.callTimeout)
     }
 
     private static func failure(_ command: String, _ output: String) -> BrewUpdateError {
@@ -132,7 +145,7 @@ public struct BrewUpdater: Sendable, Equatable {
       sleep 0.2
     done
 
-    HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 "$BREW" upgrade --cask "$CASK" >"$STATUS.log" 2>&1
+    "$BREW" upgrade --cask "$CASK" >"$STATUS.log" 2>&1
     echo "$?" >"$STATUS"
     rm -f "$0"
     "$OPEN" "$APP"
@@ -152,16 +165,22 @@ public struct BrewUpdater: Sendable, Equatable {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = [script.path, "\(processID)", executable.path, Self.cask, app.path, statusFile.path, openCommand]
+        process.environment = ProcessInfo.processInfo.environment.merging(Self.quiet) { _, quiet in quiet }
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         try process.run()
     }
 
-    /// The result the upgrade script left behind, removed once read: nil when there is none.
-    public static func takeResult(_ statusFile: URL) -> Bool? {
+    /// The result the upgrade script left behind, with the last line of `brew`'s output; both
+    /// files are removed once read. Nil when there is none.
+    public static func takeResult(_ statusFile: URL) -> (succeeded: Bool, lastLine: String)? {
+        let log = URL(fileURLWithPath: statusFile.path + ".log")
+        defer { try? FileManager.default.removeItem(at: log) }
         guard let text = try? String(contentsOf: statusFile, encoding: .utf8) else { return nil }
         try? FileManager.default.removeItem(at: statusFile)
-        return text.trimmingCharacters(in: .whitespacesAndNewlines) == "0"
+        let output = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
+        let last = output.split(whereSeparator: \.isNewline).last.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
+        return (text.trimmingCharacters(in: .whitespacesAndNewlines) == "0", last)
     }
 }

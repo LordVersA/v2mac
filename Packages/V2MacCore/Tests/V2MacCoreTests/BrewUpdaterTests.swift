@@ -30,10 +30,13 @@ import Testing
     }
 
     @Test func pointsBrewAtTheLocalProxy() {
-        #expect(BrewUpdater.proxyEnvironment(for: .direct).isEmpty)
+        let direct = BrewUpdater.proxyEnvironment(for: .direct)
+        #expect(direct["ALL_PROXY"] == "" && direct["https_proxy"] == "")
         let env = BrewUpdater.proxyEnvironment(for: .proxy(host: "127.0.0.1", port: 10808, username: "u", password: "p@ss"))
         #expect(env["all_proxy"] == "socks5h://u:p%40ss@127.0.0.1:10808")
-        #expect(env["https_proxy"] == env["all_proxy"])
+        #expect(env["HTTPS_PROXY"] == env["all_proxy"])
+        let persian = BrewUpdater.proxyEnvironment(for: .proxy(host: "127.0.0.1", port: 1, username: "علی", password: nil))
+        #expect(persian["all_proxy"] == "socks5h://%D8%B9%D9%84%DB%8C@127.0.0.1:1")
     }
 
     @Test func findsOnlyAnInstalledCask() throws {
@@ -72,6 +75,14 @@ import Testing
         }
     }
 
+    @Test func acceptsANewerReleaseInTheTap() async throws {
+        let dir = try TestSupport.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let (brew, calls) = try fakeBrew(in: dir, version: "0.6.1")
+        try await brew.prepare(version: "v0.6.0", routes: [.direct])
+        #expect(try String(contentsOf: calls, encoding: .utf8).contains("fetch"))
+    }
+
     @Test func refusesWhenTheTapIsBehind() async throws {
         let dir = try TestSupport.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -107,7 +118,8 @@ import Testing
         while ContinuousClock.now < deadline, !fm.fileExists(atPath: opened.path) { try await Task.sleep(for: .milliseconds(50)) }
         #expect(try String(contentsOf: opened, encoding: .utf8).trimmingCharacters(in: .newlines) == app.path)
         #expect(try String(contentsOf: calls, encoding: .utf8) == "upgrade --cask lordversa/tap/v2mac | proxy= | auto=1\n")
-        #expect(BrewUpdater.takeResult(status) == true)
+        #expect(BrewUpdater.takeResult(status)?.succeeded == true)
         #expect(BrewUpdater.takeResult(status) == nil)
+        #expect(!fm.fileExists(atPath: status.path + ".log"))
     }
 }

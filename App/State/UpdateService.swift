@@ -33,6 +33,8 @@ final class UpdateService {
         case core(String)
     }
     @ObservationIgnored var onFound: @MainActor (Found) -> Void = { _ in }
+    /// A `brew upgrade` failed after the app quit for it; the old version reopened.
+    @ObservationIgnored var onHomebrewFailure: @MainActor (String) -> Void = { _ in }
 
     private(set) var coreStatus: CoreStatus = .idle
     private(set) var coreVersion: String?
@@ -84,12 +86,16 @@ final class UpdateService {
     }
 
     /// The Homebrew installation that installed this copy, which then updates it instead.
-    /// Never for a Debug build: its upgrade would replace the installed release.
+    /// Only for the copy in /Applications, where the cask puts it: another copy would stay old
+    /// while `brew` upgrades that one. Never for a Debug build: its upgrade would replace the
+    /// installed release.
     static var homebrew: BrewUpdater? {
         #if DEBUG
         nil
         #else
-        Bundle.main.bundleIdentifier == "io.github.lordversa.v2mac" && Bundle.main.bundleURL.lastPathComponent == AppInstaller.appName
+        // ponytail: a cask installed with a custom --appdir falls back to the in-place swap.
+        Bundle.main.bundleIdentifier == "io.github.lordversa.v2mac"
+            && Bundle.main.bundleURL.standardizedFileURL.path == "/Applications/\(AppInstaller.appName)"
             ? BrewUpdater.locate() : nil
         #endif
     }
@@ -259,8 +265,11 @@ final class UpdateService {
 
     /// Reports a `brew upgrade` that failed after the app quit for it; the old version then reopened.
     private func reportHomebrewResult() {
-        guard BrewUpdater.takeResult(Self.brewStatusFile) == false else { return }
-        appStatus = .unavailable("Homebrew could not install the update. Run “brew upgrade --cask v2mac” in Terminal to see why.")
+        guard let result = BrewUpdater.takeResult(Self.brewStatusFile), !result.succeeded else { return }
+        let reason = result.lastLine.isEmpty ? "" : " (\(result.lastLine))"
+        let message = "Homebrew could not install the update\(reason). Run “brew upgrade --cask v2mac” in Terminal to see why."
+        appStatus = .unavailable(message)
+        onHomebrewFailure(message)
     }
 
     private func updateProgress(_ progress: DownloadProgress) {
@@ -277,9 +286,10 @@ final class UpdateService {
 
     /// Checks shortly after launch, then re-evaluates hourly (the 24 h throttle applies).
     func startScheduler() {
-        reportHomebrewResult()
         schedulerTask?.cancel()
         schedulerTask = Task { [weak self] in
+            // In the task, so it runs after AppModel has wired the notifications.
+            self?.reportHomebrewResult()
             try? await Task.sleep(for: .seconds(10))
             while !Task.isCancelled {
                 await self?.checkApp()
