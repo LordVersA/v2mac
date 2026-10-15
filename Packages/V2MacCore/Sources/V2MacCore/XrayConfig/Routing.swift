@@ -36,38 +36,46 @@ extension ConfigBuilder {
     /// (Cloudflare's stalls on some networks) would otherwise add ~4 s to every new domain.
     static let dohServers = ["https://1.1.1.1/dns-query", "https://8.8.8.8/dns-query"]
 
-    static func routingSections(for plan: RoutingPlan) -> (routing: JSONValue, dns: JSONValue?) {
+    static func routingSections(for plan: RoutingPlan, custom: CustomRules = CustomRules()) -> (routing: JSONValue, dns: JSONValue?) {
         let privateRule: JSONValue = ["type": "field", "ip": ["geoip:private"], "outboundTag": .string(directTag)]
+        func rules(_ domains: [String], _ ips: [String], to tag: String) -> [JSONValue] {
+            var out: [JSONValue] = []
+            if !domains.isEmpty { out.append(["type": "field", "domain": .array(domains.map { .string($0) }), "outboundTag": .string(tag)]) }
+            if !ips.isEmpty { out.append(["type": "field", "ip": .array(ips.map { .string($0) }), "outboundTag": .string(tag)]) }
+            return out
+        }
+        // Direct mode keeps only the user's block rules: nothing there should reach the proxy.
+        let lists = custom.lists.filter { plan != .direct || $0.tag == blockTag }
+        let parsed = lists.map { (RuleMatchers(parsing: $0.text), $0.tag) }
+        let customRules = parsed.flatMap { rules($0.0.domains, $0.0.ips, to: $0.1) }
+        let hasCustomIPs = parsed.contains { !$0.0.ips.isEmpty }
+
+        var tail: [JSONValue] = [privateRule]
+        var hasIPRules = hasCustomIPs
         switch plan {
         case .direct:
-            return (["domainStrategy": "AsIs", "rules": [["type": "field", "network": "tcp,udp", "outboundTag": .string(directTag)]]], nil)
+            let strategy: JSONValue = hasCustomIPs ? "IPIfNonMatch" : "AsIs"
+            return (["domainStrategy": strategy, "rules": .array(customRules + [["type": "field", "network": "tcp,udp", "outboundTag": .string(directTag)]])], nil)
         case .bypass(let routes) where !routes.isEmpty:
-            var rules: [JSONValue] = [privateRule]
-            for route in routes {
-                if !route.domainRules.isEmpty {
-                    rules.append(["type": "field", "domain": .array(route.domainRules.map { .string($0) }), "outboundTag": .string(directTag)])
-                }
-                if !route.ipRules.isEmpty {
-                    rules.append(["type": "field", "ip": .array(route.ipRules.map { .string($0) }), "outboundTag": .string(directTag)])
-                }
-            }
-            // Without this, non-matching domains would be resolved by the local resolver,
-            // leaking queries and risking a false `geoip:private` match on poisoned networks.
-            let dns: JSONValue = [
-                "servers": .array(dohServers.map { .string($0) }),
-                "queryStrategy": "UseIP",
-                "enableParallelQuery": true,
-            ]
-            return (["domainStrategy": "IPIfNonMatch", "rules": .array(rules)], dns)
-        case .bypass, .global:
-            return (["domainStrategy": "AsIs", "rules": [privateRule]], nil)
+            for route in routes { tail += rules(route.domainRules, route.ipRules, to: directTag) }
+            hasIPRules = true
+        case .bypass, .global: break
         }
+        guard hasIPRules else { return (["domainStrategy": "AsIs", "rules": .array(customRules + tail)], nil) }
+        // Without this, non-matching domains would be resolved by the local resolver,
+        // leaking queries and risking a false `geoip:private` match on poisoned networks.
+        let dns: JSONValue = [
+            "servers": .array(dohServers.map { .string($0) }),
+            "queryStrategy": "UseIP",
+            "enableParallelQuery": true,
+        ]
+        return (["domainStrategy": "IPIfNonMatch", "rules": .array(customRules + tail)], dns)
     }
 
     /// Full config for an `outbound` profile in any routing mode.
-    public static func build(outbound: JSONValue, options: RunOptions, routing plan: RoutingPlan) throws -> JSONValue {
+    public static func build(outbound: JSONValue, options: RunOptions, routing plan: RoutingPlan, custom: CustomRules = CustomRules()) throws -> JSONValue {
         guard case .object = outbound else { throw ConfigBuilderError.outboundNotAnObject }
-        let sections = routingSections(for: plan)
+        let sections = routingSections(for: plan, custom: custom)
         var direct: JSONValue = ["tag": .string(directTag), "protocol": "freedom"]
         // Direct traffic is resolved by the chosen servers too, not by the system resolver.
         if let dns = options.dns { direct = direct.setting("settings", to: ["domainStrategy": .string(dns.queryStrategy.rawValue)]) }

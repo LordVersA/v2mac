@@ -35,7 +35,7 @@ on the Mac through the same connection.
 | Setting the macOS system proxy | The app only exposes local ports. |
 | QR import, file import, URL schemes | Input is a subscription URL or pasted configs (section 12.3, Add Subscription sheet). |
 | Editing a server | Not in v1; added later as the server editor (section 12.7). |
-| Custom routing rules, rule-set manager | Presets only. |
+| Custom routing rules, rule-set manager | Custom rules came later (section 8.6); no remote rule-set manager. |
 | Viewing outbound JSON / exporting generated config | Not selected. |
 | Per-server usage history, speed text in the menu bar | Not selected. |
 | Localisation | English only, plain string literals. |
@@ -620,6 +620,30 @@ Checked 2026-10-10 in the Debug app against a local self-signed Trojan and
 Hysteria 2 server: both connect with the setting on, Trojan fails with it off.
 
 ---
+
+### 8.6 Custom rules
+
+Three text lists in Settings → Routing: Proxy, Direct and Block, one entry per
+line (commas and spaces also separate entries; `#`, `//` and `!` start a
+comment). `RuleMatchers` turns each list into Xray `domain` and `ip` entries:
+
+- Xray notation as written: `domain:`, `full:`, `keyword:`, `regexp:`,
+  `geosite:`, `geoip:`, `ext:<file>:<tag>` (a file whose name contains "ip" is
+  an IP list).
+- IP addresses and CIDR ranges, v4 and v6.
+- Plain domains and `*.`, `+.`, `.` wildcards → `domain:<name>` (the domain
+  and its subdomains).
+- Clash rules `DOMAIN`, `DOMAIN-SUFFIX`, `DOMAIN-KEYWORD`, `DOMAIN-REGEX`,
+  `IP-CIDR`, `IP-CIDR6`, `GEOIP`, `GEOSITE`, also as `- ` payload lines; the
+  policy column is ignored, the list decides.
+- hosts lines (`0.0.0.0 a.example b.example` → `full:`) and Adblock `||name^`.
+
+Anything else is skipped and named under the editor. The rules come before the
+mode's own rules, Block first, then Proxy, then Direct. In Global mode, IP
+entries switch `domainStrategy` to `IPIfNonMatch` with the DoH `dns` section of
+Bypass mode. Direct mode uses only the Block list. Full configs (8.2) keep their
+own routing. Apply restarts a running core; a live switch keeps the core only
+when the rules are unchanged.
 
 ## 9. Core process management
 
@@ -1236,6 +1260,7 @@ With the setting off nothing is counted or shown.
 | | Username / Password (warning shown when LAN is on and these are empty) | Empty |
 | Routing | Mode: Global / Bypass regions / Direct | Global |
 | | Bypass regions list: enable, status, Update Now, auto-update interval | None enabled |
+| | Custom rules: Proxy / Direct / Block lists, applied with a button (section 8.6) | Empty |
 | Subscriptions | Auto-update subscriptions | On |
 | | Auto-update route: Without proxy / Via proxy | Without proxy |
 | | Default interval when the provider sends none | 12 h |

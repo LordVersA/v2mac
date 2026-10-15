@@ -75,6 +75,9 @@ enum Prefs {
     static func registerDefaults() {
         defaults.register(defaults: [
             "proxyPort": defaultPort,
+            "customRulesProxy": "",
+            "customRulesDirect": "",
+            "customRulesBlock": "",
             "reconnectOnLaunch": true,
             "restartOnWakeOrNetwork": true,
             "checkAppUpdates": true,
@@ -267,6 +270,13 @@ enum Prefs {
     static var routingMode: RoutingMode {
         get { RoutingMode(rawValue: defaults.string(forKey: "routingMode") ?? "") ?? .global }
         set { defaults.set(newValue.rawValue, forKey: "routingMode") }
+    }
+
+    /// Spec 8.6. Keys match `RoutingSettings`.
+    static var customRules: CustomRules {
+        CustomRules(proxy: defaults.string(forKey: "customRulesProxy") ?? "",
+                    direct: defaults.string(forKey: "customRulesDirect") ?? "",
+                    block: defaults.string(forKey: "customRulesBlock") ?? "")
     }
 
     static var enabledRegionPacks: Set<String> {

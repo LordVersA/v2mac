@@ -88,7 +88,7 @@ final class ConnectionController {
     private let healthInterval: Duration
     private var metricsPort: Int?
     /// What the running core was started with, kept only for servers that can be switched live.
-    private var running: (options: RunOptions, plan: RoutingPlan)?
+    private var running: (options: RunOptions, plan: RoutingPlan, custom: CustomRules)?
     private var statsTask: Task<Void, Never>?
     private var queue: Task<Void, Never>?
     private var userWantsRunning = false
@@ -519,6 +519,7 @@ final class ConnectionController {
         if tunLink == nil { tun.down() }
         let inbound = Prefs.inbound
         let plan = routingPlan
+        let custom = Prefs.customRules
         func options(metrics: Int, api: Int?) -> RunOptions {
             RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: Prefs.logConnections, metricsPort: metrics,
                        tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api)
@@ -539,7 +540,7 @@ final class ConnectionController {
         // Same settings, only the server differs: swap the outbound and keep the core.
         if mayLiveSwitch, Prefs.liveSwitch, coreState == .running, server.kind == .outbound,
            let running, let api = running.options.apiPort,
-           options(metrics: running.options.metricsPort, api: api) == running.options, plan == running.plan {
+           options(metrics: running.options.metricsPort, api: api) == running.options, plan == running.plan, custom == running.custom {
             isSwitching = true
             do {
                 let outbound = ConfigBuilder.proxyOutbound(outboundConfig, options: running.options)
@@ -576,7 +577,7 @@ final class ConnectionController {
             switch server.kind {
             case .outbound:
                 let options = options(metrics: metrics, api: Prefs.liveSwitch ? try PortUtil.freePort() : nil)
-                config = try ConfigBuilder.build(outbound: outboundConfig, options: options, routing: plan)
+                config = try ConfigBuilder.build(outbound: outboundConfig, options: options, routing: plan, custom: custom)
                 started = options
             case .custom:
                 config = try ConfigBuilder.buildCustom(config: server.config, options: options(metrics: metrics, api: nil))
@@ -584,7 +585,7 @@ final class ConnectionController {
             logs.append("[v2mac] Connecting to \(server.name)")
             try await runner.start(config: config, readyPort: port)
             guard commandGeneration == generation, userWantsRunning else { await runner.stop(); return }
-            running = started.map { ($0, plan) }
+            running = started.map { ($0, plan, custom) }
             Prefs.wasRunning = true
             if tunLink != nil { tun.up() }
             startHealthChecks()
