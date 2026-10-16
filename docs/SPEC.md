@@ -685,22 +685,24 @@ foot of the main window's sidebar (its name slides out on hover) or from
 Settings → Routing. The toolbar switches between Simple and Advanced and holds
 the rule profile menu.
 
-- Simple: what connected while the window is open on the left, and Proxy and
-  Direct columns (the Proxy header shows the exit's flag and country). The core
-  writes an access log all the time; its lines reach the Logs window only with
-  "Log connections" on. `ConnectionWatcher` (recording only while Simple mode is
-  shown) parses them (`SeenConnection`) and finds each connection's app by its
+- Simple: one list of the apps and sites the rules name and those that connected
+  while the window is open and no rule covers yet (marked New, listed first), with
+  a filter (All, New, Proxy, Direct), a search field and the exit's flag and
+  country. Each row has a Proxy | Direct switch; choosing the lit side again hands
+  the row back to the routing mode. Selected rows move together from the bar at
+  the bottom. IP addresses and ranges are left to Advanced (the bar counts them).
+  The core writes an access log all the time; its lines reach the Logs window only
+  with "Log connections" on. `ConnectionWatcher` (recording only while Simple mode
+  is shown) parses them (`SeenConnection`) and finds each connection's app by its
   source port among this user's sockets to the proxy port (`SocketOwners`, libproc);
-  TUN connections have no app. Apps and sites are grouped by name
-  (`EntryGroups`: a domain's registered name, a bundle id's vendor, a longer name
-  folded under a shorter one it contains); a group's row adds `*name*`, its
-  members can be opened and moved one by one. Rows already covered by a rule
-  carry that rule's action. The columns list every entry of enabled Proxy and
-  Direct rules with only apps or only hosts, grouped the same way. Dragging (the
-  whole selection, when the dragged row is selected) or the buttons move entries
-  (`SimpleRules.move`): out of every such rule and into one of four fixed rules
-  at the top of the list (sites, then apps, for Proxy and Direct). Dropping on the
-  left removes them. A run of moves restarts a running core once, 1.5 s after the last.
+  TUN connections have no app. Rows are grouped by name (`EntryGroups`: a domain's
+  registered name, a bundle id's vendor, a longer name folded under a shorter one
+  it contains) and open to show their members. A new group's switch adds
+  `*name*`; a ruled group's switch moves its members. A change (`SimpleRules.move`)
+  takes the entries out of every enabled Proxy or Direct rule with only apps or only
+  hosts and puts them into one of four fixed rules at the top of the list (sites,
+  then apps, for Proxy and Direct). A run of changes restarts a running core once,
+  1.5 s after the last.
 - Advanced: the ordered list, as in Settings.
 - Profiles (`RuleProfile`, `ruleProfiles` and `activeRuleProfile`): named rule
   lists. The active one's rules are `customRuleList`; choosing another saves the

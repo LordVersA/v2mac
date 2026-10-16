@@ -150,10 +150,9 @@ final class ConnectionController {
         }
         Task { [weak self] in
             for await line in lines {
-                if let seen = SeenConnection(line: line) {
-                    self?.watcher.record(seen)
-                    if !Prefs.logConnections { continue }
-                }
+                if let seen = SeenConnection(line: line) { self?.watcher.record(seen) }
+                // Every access line, read or not, stays out of the log unless the user asked for them.
+                if !Prefs.logConnections, line.contains(" from "), line.contains(" accepted ") || line.contains(" rejected ") { continue }
                 self?.logs.append(line)
                 #if DEBUG
                 if line.contains(">>") || line.contains("->") || line.hasPrefix("[v2mac]") { print("[v2mac-debug] \(line)") }

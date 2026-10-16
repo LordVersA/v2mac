@@ -3465,28 +3465,6 @@
         }
       }
     },
-    "Connections": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "اتصال‌ها"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Соединения"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "连接数"
-          }
-        }
-      }
-    },
     "Connects to the server selected in V2Mac.": {
       "localizations": {
         "fa": {
@@ -17983,28 +17961,6 @@
         }
       }
     },
-    "Clear the list": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "پاک کردن فهرست"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Очистить список"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清除列表"
-          }
-        }
-      }
-    },
     "Sites": {
       "localizations": {
         "fa": {
@@ -18023,28 +17979,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "网站"
-          }
-        }
-      }
-    },
-    "Waiting for connections": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "در انتظار اتصال‌ها"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ожидание подключений"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在等待连接"
           }
         }
       }
@@ -18133,270 +18067,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "应用或网站不在列表中？打开它并等待几秒钟即可显示。"
-          }
-        }
-      }
-    },
-    "To Proxy": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "به پروکسی"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "В прокси"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "到代理"
-          }
-        }
-      }
-    },
-    "To Direct": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "به مستقیم"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Напрямую"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "到直连"
-          }
-        }
-      }
-    },
-    "To %@": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "به %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "В «%@»"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "到%@"
-          }
-        }
-      }
-    },
-    "All to %@": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "همه به %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Все в «%@»"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全部到%@"
-          }
-        }
-      }
-    },
-    "Move to %@": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "انتقال به %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Переместить в «%@»"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移到%@"
-          }
-        }
-      }
-    },
-    "Drop apps or sites here": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "برنامه‌ها یا سایت‌ها را اینجا رها کنید"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Перетащите сюда приложения или сайты"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将应用或网站拖到这里"
-          }
-        }
-      }
-    },
-    "Move the selected entries": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "انتقال موارد انتخاب‌شده"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Переместить выбранные записи"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移动所选条目"
-          }
-        }
-      }
-    },
-    "Remove the selected entries from the rules": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "حذف موارد انتخاب‌شده از قوانین"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Удалить выбранные записи из правил"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从规则中移除所选条目"
-          }
-        }
-      }
-    },
-    "Goes to %@ by a rule": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "طبق یک قانون به %@ می‌رود"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Идёт в «%@» по правилу"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按规则走%@"
-          }
-        }
-      }
-    },
-    "Send to Proxy": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ارسال به پروکسی"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отправить в прокси"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发送到代理"
-          }
-        }
-      }
-    },
-    "Send Direct": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ارسال مستقیم"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отправить напрямую"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "直连发送"
-          }
-        }
-      }
-    },
-    "group": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "گروه"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "группа"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "组"
           }
         }
       }
@@ -18536,6 +18206,182 @@
         }
       },
       "extractionState": "manual"
+    },
+    "New": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جدید"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новые"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新"
+          }
+        }
+      }
+    },
+    "Show": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نمایش"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示"
+          }
+        }
+      }
+    },
+    "Nothing yet": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنوز چیزی نیست"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пока ничего нет"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无内容"
+          }
+        }
+      }
+    },
+    "No matches": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موردی پیدا نشد"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет совпадений"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无匹配项"
+          }
+        }
+      }
+    },
+    "%lld address rules are in Advanced.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld قانون آدرس در بخش پیشرفته است."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Правил для адресов в «Расширенном»: %lld."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 条地址规则在“高级”中。"
+          }
+        }
+      }
+    },
+    "%lld selected": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld انتخاب‌شده"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбрано: %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已选 %lld 项"
+          }
+        }
+      }
+    },
+    "Proxy exits in %@": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خروجی پروکسی در %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выход прокси: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理出口：%@"
+          }
+        }
+      }
+    },
+    "Use the Routing Mode": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استفاده از حالت مسیریابی"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Использовать режим маршрутизации"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用路由模式"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
