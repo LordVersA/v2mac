@@ -7,6 +7,9 @@ struct ServerListView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var sortOrder = [KeyPathComparator(\ServerRow.sortIndex)]
+    @AppStorage("mainTab") private var tab = MainTab.servers
+
+    enum MainTab: String { case servers, map }
 
     private var selectedGroupID: UUID? {
         if case .group(let id) = model.sidebarSelection { return id }
@@ -58,6 +61,9 @@ struct ServerListView: View {
         let showsEmptyState = rows.isEmpty && (!model.searchText.isEmpty || model.sidebarSelection != .all)
         HStack(spacing: 0) {
             VStack(spacing: 0) {
+                if tab == .map {
+                    ConnectionMapView()
+                } else {
                 if let group = selectedGroup, showsHeader {
                     GroupHeader(group: group)
                         .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
@@ -100,6 +106,7 @@ struct ServerListView: View {
                     .animation(.smooth(duration: 0.25), value: showsEmptyState)
                 }
                 .overlay(alignment: .bottom) { MissingFavoritesToast(profiles: profiles) }
+                }
             }
             // Only when the header comes or goes, so switching between subscriptions stays instant.
             .animation(.snappy(duration: 0.25), value: showsHeader)
@@ -117,7 +124,7 @@ struct ServerListView: View {
             }
         }
         .searchable(text: $model.searchText, prompt: "Search")
-        .toolbar { toolbar(model: appModel, latency: latency, isTesting: isTesting, isUpdating: isUpdating) }
+        .toolbar { toolbar(model: appModel, latency: latency, isTesting: isTesting, isUpdating: isUpdating, tab: $tab) }
         .navigationTitle(showsFavorites ? String(localized: "Favorites") : (selectedGroup?.displayName ?? String(localized: "All Servers")))
         #if DEBUG
         .navigationSubtitle("Dev build")
@@ -126,7 +133,15 @@ struct ServerListView: View {
     }
 
     @ToolbarContentBuilder
-    private func toolbar(model: AppModel, latency: LatencyService, isTesting: Bool, isUpdating: Bool) -> some ToolbarContent {
+    private func toolbar(model: AppModel, latency: LatencyService, isTesting: Bool, isUpdating: Bool, tab: Binding<MainTab>) -> some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            Picker("View", selection: tab) {
+                Label("Servers", systemImage: "list.bullet").tag(MainTab.servers)
+                Label("Map", systemImage: "globe.europe.africa.fill").tag(MainTab.map)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
         ToolbarItem {
             Button { model.showAddSheet = true } label: {
                 Label("Add", systemImage: "plus")
