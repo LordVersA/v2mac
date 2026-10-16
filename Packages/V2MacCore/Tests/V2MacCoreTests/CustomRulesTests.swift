@@ -150,3 +150,50 @@ import Testing
         #expect(CountryRuleOptions(ipRanges: false, topLevelDomain: false).rules(for: "cn", siteTags: ["cn", "category-cn"]) == ["geosite:category-cn", "geosite:cn"])
     }
 }
+
+@Suite struct SimpleRulesTests {
+    @Test func readsAccessLog() throws {
+        let a = try #require(SeenConnection(line: "2026/10/17 00:34:27.238170 from tcp:127.0.0.1:51973 accepted tcp:Example.com:443 [mixed-in >> direct]"))
+        #expect(a.sourcePort == 51973 && a.host == "example.com" && a.inbound == "mixed-in" && a.outbound == "direct")
+        let b = try #require(SeenConnection(line: "2026/10/17 00:34:30.875797 from 127.0.0.1:51978 accepted http://blockme.example.org/x [mixed-in -> block]"))
+        #expect(b.host == "blockme.example.org" && b.sourcePort == 51978 && b.outbound == "block")
+        #expect(SeenConnection(line: "x from 1.2.3.4:5 accepted udp:[2001:db8::1]:53 [tun-in -> proxy]")?.host == "2001:db8::1")
+        #expect(SeenConnection(line: "2026/10/17 [Warning] core: Xray started") == nil)
+        #expect(SocketOwners.appBundle(of: "/Applications/A.app/Contents/Frameworks/H.app/Contents/MacOS/H") == "/Applications/A.app")
+        #expect(SocketOwners.appBundle(of: "/usr/bin/curl") == nil)
+    }
+
+    @Test func groupsByName() {
+        #expect(EntryGroups.brand(ofHost: "www.google.co.uk") == "google")
+        #expect(EntryGroups.brand(ofHost: "mail.google.com") == "google")
+        #expect(EntryGroups.brand(ofHost: "1.2.3.4") == nil)
+        #expect(EntryGroups.brand(ofBundleID: "com.google.Chrome") == "google")
+        #expect(EntryGroups.keys(for: ["google", "googleapis", "gstatic", "x"]) == ["google": "google", "googleapis": "google", "gstatic": "gstatic", "x": "x"])
+    }
+
+    @Test func movesEntriesBetweenColumns() {
+        var rules = [CustomRule(name: "Mine", action: .direct, hosts: "a.com\nb.com"),
+                     CustomRule(name: "Both", action: .proxy, apps: "x", hosts: "c.com"),
+                     CustomRule(name: "Ads", action: .block, hosts: "a.com")]
+        #expect(SimpleRules.entries(rules, action: .direct) == [RuleEntry(.host, "a.com"), RuleEntry(.host, "b.com")])
+        #expect(SimpleRules.entries(rules, action: .proxy).isEmpty)
+        rules = SimpleRules.move([RuleEntry(.host, "A.com"), RuleEntry(.app, "/Applications/S.app")], to: .proxy, in: rules)
+        #expect(rules.map(\.name) == ["Sites through the proxy", "Apps through the proxy", "Mine", "Both", "Ads"])
+        #expect(rules[2].hosts == "b.com" && rules[4].hosts == "a.com")
+        #expect(SimpleRules.entries(rules, action: .proxy).map(\.text) == ["A.com", "/Applications/S.app"])
+        rules = SimpleRules.move([RuleEntry(.host, "b.com")], to: .proxy, in: rules)
+        #expect(rules[0].hosts == "A.com\nb.com" && !rules.contains { $0.name == "Mine" })
+        rules = SimpleRules.move([RuleEntry(.host, "a.com"), RuleEntry(.host, "b.com")], to: nil, in: rules)
+        #expect(rules.map(\.name) == ["Apps through the proxy", "Both", "Ads"])
+        #expect(RuleEntry(id: RuleEntry(.app, "x:y").id) == RuleEntry(.app, "x:y"))
+        let r = [CustomRule(name: "K", action: .direct, hosts: "*google*\nexample.org"), CustomRule(name: "A", action: .proxy, apps: "*chat*\ncurl")]
+        #expect(SimpleRules.action(forHost: "www.google.de", in: r) == .direct)
+        #expect(SimpleRules.action(forHost: "a.example.org", in: r) == .direct)
+        #expect(SimpleRules.action(forHost: "example.com", in: r) == nil)
+        #expect(SimpleRules.action(forApp: "/Applications/Chat.app", bundleID: "x.y.chat", in: r) == .proxy)
+        #expect(SimpleRules.action(forApp: "/usr/bin/curl", bundleID: "", in: r) == .proxy)
+        #expect(SimpleRules.action(forApp: "/Applications/Mail.app", bundleID: "com.apple.mail", in: r) == nil)
+        let p = [RuleProfile(name: "Work", rules: rules)]
+        #expect(RuleProfile.decode(RuleProfile.encode(p)) == p)
+    }
+}

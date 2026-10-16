@@ -106,6 +106,8 @@ enum Prefs {
         [
             "proxyPort": defaultPort,
             "customRuleList": "[]",
+            "ruleProfiles": "[]",
+            "activeRuleProfile": "",
             "blockQUIC": false,
             "reconnectOnLaunch": true,
             "warpExit": false,
@@ -362,6 +364,35 @@ enum Prefs {
     static var customRuleList: [CustomRule] {
         get { CustomRule.decode(defaults.string(forKey: "customRuleList") ?? "[]") }
         set { defaults.set(CustomRule.encode(newValue), forKey: "customRuleList") }
+    }
+
+    /// Spec 8.6: named rule sets. The active one's rules live in `customRuleList`; its copy here is
+    /// brought up to date when another is chosen. With none saved, the current list is "Default".
+    static var ruleProfiles: [RuleProfile] {
+        get {
+            let saved = RuleProfile.decode(defaults.string(forKey: "ruleProfiles") ?? "[]")
+            guard saved.isEmpty else { return saved }
+            // Saved at once, so the profile keeps one id.
+            let first = [RuleProfile(name: String(localized: "Default"), rules: customRuleList)]
+            defaults.set(RuleProfile.encode(first), forKey: "ruleProfiles")
+            return first
+        }
+        set { defaults.set(RuleProfile.encode(newValue), forKey: "ruleProfiles") }
+    }
+
+    static var activeRuleProfile: UUID? {
+        get { UUID(uuidString: defaults.string(forKey: "activeRuleProfile") ?? "") ?? ruleProfiles.first?.id }
+        set { defaults.set(newValue?.uuidString ?? "", forKey: "activeRuleProfile") }
+    }
+
+    /// Saves the current rules into the active profile and loads `id`'s.
+    static func switchRuleProfile(to id: UUID) {
+        var profiles = ruleProfiles
+        if let active = profiles.firstIndex(where: { $0.id == activeRuleProfile }) { profiles[active].rules = customRuleList }
+        guard let target = profiles.first(where: { $0.id == id }) else { return }
+        ruleProfiles = profiles
+        activeRuleProfile = id
+        customRuleList = target.rules
     }
 
     /// The Block, Proxy and Direct lists of earlier versions; still read from old backups.

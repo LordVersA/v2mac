@@ -628,6 +628,12 @@ final class AppModel {
         NSApp.activate()
     }
 
+    func openRuleEditor(_ openWindow: OpenWindowAction) {
+        NSApp.setActivationPolicy(.regular)
+        openWindow(id: RuleEditorView.windowID)
+        NSApp.activate()
+    }
+
     func openLogs(_ openWindow: OpenWindowAction) {
         NSApp.setActivationPolicy(.regular)
         openWindow(id: "logs")
@@ -827,7 +833,7 @@ final class AppModel {
         guard let target = UserDefaults.standard.string(forKey: "debugWindowRequest") else { return }
         Task {
             try? await Task.sleep(for: .seconds(2))
-            windowRequest = WindowRequest(code: ["main", RuleBuilderView.windowID].contains(target) ? target : "settings:\(target)")
+            windowRequest = WindowRequest(code: ["main", RuleBuilderView.windowID, RuleEditorView.windowID].contains(target) ? target : "settings:\(target)")
             try? await Task.sleep(for: .seconds(1))
             print("[v2mac-debug] window request handled: \(windowRequest == nil), settings tab \(settingsTab.rawValue)")
         }

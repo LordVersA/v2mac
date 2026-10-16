@@ -4,6 +4,7 @@ import V2MacCore
 
 struct RoutingSettings: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         @Bindable var connection = model.connection
@@ -24,6 +25,7 @@ struct RoutingSettings: View {
                     SettingsPackRow(pack: pack)
                 }
             }
+            Button("Open Rule Editor…", systemImage: "arrow.triangle.branch") { model.openRuleEditor(openWindow) }
             CustomRulesSection()
         }
         .formStyle(.grouped)
@@ -32,7 +34,7 @@ struct RoutingSettings: View {
 
 /// Spec 8.6: the user's own rules, one ordered list checked top to bottom. Edits are kept as a
 /// draft and applied with one button, so typing does not restart the core on every key.
-private struct CustomRulesSection: View {
+struct CustomRulesSection: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
     @AppStorage("customRuleList") private var stored = "[]"

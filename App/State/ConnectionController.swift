@@ -83,6 +83,8 @@ final class ConnectionController {
     private static let restartDelays: [Duration] = [.seconds(1), .seconds(3), .seconds(10)]
 
     let logs: LogStore
+    /// Fed from the access log, which is always on; its lines reach `logs` only with "Log connections".
+    let watcher = ConnectionWatcher()
     let tun: TunController
     let killSwitch: KillSwitchController
     let systemProxy: SystemProxyController
@@ -148,6 +150,10 @@ final class ConnectionController {
         }
         Task { [weak self] in
             for await line in lines {
+                if let seen = SeenConnection(line: line) {
+                    self?.watcher.record(seen)
+                    if !Prefs.logConnections { continue }
+                }
                 self?.logs.append(line)
                 #if DEBUG
                 if line.contains(">>") || line.contains("->") || line.hasPrefix("[v2mac]") { print("[v2mac-debug] \(line)") }
@@ -588,7 +594,7 @@ final class ConnectionController {
         var custom = Prefs.customRules
         if custom.needsApps { custom.installedApps = await InstalledApps.all() }
         func options(metrics: Int, api: Int?) -> RunOptions {
-            RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: Prefs.logConnections, metricsPort: metrics,
+            RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: true, metricsPort: metrics,
                        tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api, warpExit: Prefs.warpExit)
         }
 

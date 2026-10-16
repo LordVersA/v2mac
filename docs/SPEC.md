@@ -680,6 +680,33 @@ Bypass mode. Direct mode uses only Block rules. Full configs (8.2) keep their
 own routing. Apply restarts a running core; a live switch keeps the core only
 when the rules are unchanged.
 
+**Rule Editor.** A window (`rule-editor`), opened from the glass button at the
+foot of the main window's sidebar (its name slides out on hover) or from
+Settings → Routing. The toolbar switches between Simple and Advanced and holds
+the rule profile menu.
+
+- Simple: what connected while the window is open on the left, and Proxy and
+  Direct columns (the Proxy header shows the exit's flag and country). The core
+  writes an access log all the time; its lines reach the Logs window only with
+  "Log connections" on. `ConnectionWatcher` (recording only while Simple mode is
+  shown) parses them (`SeenConnection`) and finds each connection's app by its
+  source port among this user's sockets to the proxy port (`SocketOwners`, libproc);
+  TUN connections have no app. Apps and sites are grouped by name
+  (`EntryGroups`: a domain's registered name, a bundle id's vendor, a longer name
+  folded under a shorter one it contains); a group's row adds `*name*`, its
+  members can be opened and moved one by one. Rows already covered by a rule
+  carry that rule's action. The columns list every entry of enabled Proxy and
+  Direct rules with only apps or only hosts, grouped the same way. Dragging (the
+  whole selection, when the dragged row is selected) or the buttons move entries
+  (`SimpleRules.move`): out of every such rule and into one of four fixed rules
+  at the top of the list (sites, then apps, for Proxy and Direct). Dropping on the
+  left removes them. A run of moves restarts a running core once, 1.5 s after the last.
+- Advanced: the ordered list, as in Settings.
+- Profiles (`RuleProfile`, `ruleProfiles` and `activeRuleProfile`): named rule
+  lists. The active one's rules are `customRuleList`; choosing another saves the
+  current list into the active profile, loads the chosen one and restarts a
+  running core. New, Duplicate, Rename and Delete (not the last one).
+
 **Rule Builder.** A window (`rule-builder`, opened from the Custom rules
 section) writes a rule in three steps: the action (Proxy, Direct, Block, or a
 common setup that fills in the rest); what to match; a review. What to match
