@@ -59,7 +59,7 @@ public struct InstalledApp: Sendable, Hashable {
         self.bundleID = bundleID
     }
 
-    var name: String { (path as NSString).lastPathComponent.lowercased() }
+    public var name: String { (path as NSString).lastPathComponent.lowercased() }
 }
 
 /// The user's rules plus what the config needs to turn them into Xray rules.

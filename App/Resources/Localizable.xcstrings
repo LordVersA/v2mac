@@ -18049,28 +18049,6 @@
         }
       }
     },
-    "App or site not listed? Open it and wait a few seconds for it to appear.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "برنامه یا سایت در فهرست نیست؟ بازش کنید و چند ثانیه صبر کنید تا نمایش داده شود."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приложения или сайта нет в списке? Откройте его и подождите несколько секунд."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "应用或网站不在列表中？打开它并等待几秒钟即可显示。"
-          }
-        }
-      }
-    },
     "Rule Editor": {
       "localizations": {
         "fa": {
@@ -18295,28 +18273,6 @@
         }
       }
     },
-    "%lld address rules are in Advanced.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld قانون آدرس در بخش پیشرفته است."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Правил для адресов в «Расширенном»: %lld."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 条地址规则在“高级”中。"
-          }
-        }
-      }
-    },
     "%lld selected": {
       "localizations": {
         "fa": {
@@ -18401,6 +18357,226 @@
           "stringUnit": {
             "state": "translated",
             "value": "连接数"
+          }
+        }
+      }
+    },
+    "Apps and sites": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "برنامه‌ها و سایت‌ها"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приложения и сайты"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用和网站"
+          }
+        }
+      }
+    },
+    "Not listed? Open the app or site and wait a few seconds.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در فهرست نیست؟ برنامه یا سایت را باز کنید و چند ثانیه صبر کنید."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет в списке? Откройте приложение или сайт и подождите несколько секунд."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在列表中？打开该应用或网站并等待几秒钟。"
+          }
+        }
+      }
+    },
+    "%lld address rules in Advanced": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld قانون آدرس در بخش پیشرفته"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Правил для адресов в «Расширенном»: %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“高级”中有 %lld 条地址规则"
+          }
+        }
+      }
+    },
+    "Deselect": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لغو انتخاب"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Снять выбор"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消选择"
+          }
+        }
+      }
+    },
+    "%lld rules": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld قانون"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Правил: %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 条规则"
+          }
+        }
+      }
+    },
+    "%lld apps": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld برنامه"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приложений: %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个应用"
+          }
+        }
+      }
+    },
+    "%lld sites": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld سایت"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сайтов: %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个网站"
+          }
+        }
+      }
+    },
+    "Connected %lld times": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld بار وصل شده"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключений: %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已连接 %lld 次"
+          }
+        }
+      }
+    },
+    "and its subdomains": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "و زیردامنه‌هایش"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "и поддомены"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "及其子域名"
+          }
+        }
+      }
+    },
+    "Go to Advanced": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رفتن به پیشرفته"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перейти в «Расширенный»"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前往“高级”"
           }
         }
       }

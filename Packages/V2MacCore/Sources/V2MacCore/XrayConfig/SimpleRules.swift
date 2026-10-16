@@ -52,6 +52,16 @@ public enum SimpleRules {
         return out.filter { seen.insert($0).inserted }
     }
 
+    /// The name of the first rule each entry of `entries(_:action:)` comes from, by entry id.
+    public static func ruleNames(_ rules: [CustomRule], action: CustomRule.Action) -> [String: String] {
+        var out: [String: String] = [:]
+        for rule in rules where rule.enabled && rule.action == action && isSimple(rule) {
+            for app in split(rule.apps) where out[RuleEntry(.app, app).id] == nil { out[RuleEntry(.app, app).id] = rule.name }
+            for host in split(rule.hosts) where out[RuleEntry(.host, host).id] == nil { out[RuleEntry(.host, host).id] = rule.name }
+        }
+        return out
+    }
+
     /// Takes `moved` out of every simple Proxy and Direct rule and, unless `action` is nil, adds
     /// them to the simple editor's rule for that action. Rules left empty by the move are removed.
     public static func move(_ moved: [RuleEntry], to action: CustomRule.Action?, in rules: [CustomRule]) -> [CustomRule] {

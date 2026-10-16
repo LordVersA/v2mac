@@ -703,6 +703,12 @@ the rule profile menu.
   hosts and puts them into one of four fixed rules at the top of the list (sites,
   then apps, for Proxy and Direct). A run of changes restarts a running core once,
   1.5 s after the last.
+  The list has New, Apps and Sites sections and a search field in the toolbar.
+  Each ruled row carries a badge with its rule's name; a click opens Advanced.
+  Icons come from this Mac only (`EntryIcons`): an app entry's own icon (by path,
+  `Name.app`, bundle id or `*word*`), a gear for daemons and tools, the Apple logo
+  for Apple's domains, a site's icon from an installed app of the same name or
+  vendor, and a globe otherwise. Nothing is fetched, so the list never leaves the Mac.
 - Advanced: the ordered list, as in Settings.
 - Profiles (`RuleProfile`, `ruleProfiles` and `activeRuleProfile`): named rule
   lists. The active one's rules are `customRuleList`; choosing another saves the

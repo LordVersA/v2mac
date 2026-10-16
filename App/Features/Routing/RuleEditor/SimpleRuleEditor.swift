@@ -1,17 +1,16 @@
 import SwiftUI
 import V2MacCore
 
-/// Spec 8.6, simple mode: one list of the apps and sites the rules name and the ones that connected
-/// while it is open, grouped by name, each with a Proxy | Direct switch. A change saves the list
-/// and, after a short pause, restarts a running core.
+/// Spec 8.6, simple mode: the apps and sites the rules name and the ones that connected while it is
+/// open, grouped by name, each with a Proxy | Direct switch. A change saves the list and, after a
+/// short pause, restarts a running core.
 struct SimpleRuleEditor: View {
     enum Filter: String, CaseIterable, Identifiable {
-        case all, new, proxy, direct
+        case all, proxy, direct
         var id: Self { self }
         var title: LocalizedStringKey {
             switch self {
             case .all: "All"
-            case .new: "New"
             case .proxy: "Proxy"
             case .direct: "Direct"
             }
@@ -20,94 +19,124 @@ struct SimpleRuleEditor: View {
 
     @Environment(AppModel.self) private var model
     @AppStorage("customRuleList") private var stored = "[]"
+    @AppStorage("ruleEditorMode") private var mode = RuleEditorView.Mode.simple
     @State private var selection: Set<String> = []
     @State private var filter = Filter.all
     @State private var search = ""
+    @State private var icons = EntryIcons()
     @State private var applyTask: Task<Void, Never>?
 
     var body: some View {
         let rules = CustomRule.decode(stored)
-        let all = items(rules)
-        let shown = all.filter(matches)
-        let hidden = (SimpleRules.entries(rules, action: .proxy) + SimpleRules.entries(rules, action: .direct)).filter(SeenGroup.isTechnical).count
+        let groups = SeenGroup.all(rules: rules, watcher: model.connection.watcher)
+        let shown = groups.filter(matches)
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Picker("Show", selection: $filter) {
-                    ForEach(Filter.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-                TextField("Search", text: $search)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 240)
-                Spacer()
-                exitLabel
-            }
-            .padding(12)
+            header
             List(selection: $selection) {
-                ForEach(shown) { group in GroupRow(group: group, set: set) }
+                section("New", systemImage: "sparkles", shown.filter(\.isNew))
+                section("Apps", systemImage: "square.grid.2x2", shown.filter { !$0.isNew && $0.entry.kind == .app })
+                section("Sites", systemImage: "globe", shown.filter { !$0.isNew && $0.entry.kind == .host })
             }
+            .listStyle(.inset)
+            .alternatingRowBackgrounds()
             .overlay {
                 if shown.isEmpty {
                     ContentUnavailableView {
-                        Label(all.isEmpty ? "Nothing yet" : "No matches", systemImage: all.isEmpty ? "hourglass" : "magnifyingglass")
+                        Label(groups.isEmpty ? "Nothing yet" : "No matches", systemImage: groups.isEmpty ? "hourglass" : "magnifyingglass")
                     } description: {
                         Text(model.connection.isRunning ? "Apps and sites appear here as they connect." : "Connect to see which apps and sites connect.")
                     }
                 }
             }
-            HStack(spacing: 8) {
-                Label("App or site not listed? Open it and wait a few seconds for it to appear.", systemImage: "lightbulb")
-                    .foregroundStyle(.secondary)
-                if hidden > 0 {
-                    Text("\(hidden) address rules are in Advanced.").foregroundStyle(.tertiary)
-                }
-                Spacer()
-                if !selection.isEmpty {
-                    Text("\(selection.count) selected").foregroundStyle(.secondary)
-                    Button("Proxy") { set(Array(selection), .proxy) }
-                    Button("Direct") { set(Array(selection), .direct) }
-                }
-            }
-            .font(.callout)
-            .padding(12)
+            footer(hidden: SeenGroup.hiddenCount(rules))
         }
+        .searchable(text: $search, placement: .toolbar, prompt: "Apps and sites")
+        .environment(icons)
+        .task { await icons.load() }
         .onAppear { model.connection.watcher.isWatching = true }
         .onDisappear { model.connection.watcher.isWatching = false }
     }
 
-    @ViewBuilder private var exitLabel: some View {
-        if case .known(let exit) = model.connection.exit {
-            let country = exit.countryCode.flatMap { Locale.current.localizedString(forRegionCode: $0) } ?? ""
-            Text("Proxy exits in \([exit.flag, country].compactMap { $0 }.joined(separator: " "))").foregroundStyle(.secondary)
-        } else {
-            Text(model.connection.isRunning ? "Checking…" : "Not connected").foregroundStyle(.secondary)
+    private var header: some View {
+        HStack(spacing: 12) {
+            Picker("Show", selection: $filter) {
+                ForEach(Filter.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            Spacer()
+            exitLabel
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private var exitLabel: some View {
+        HStack(spacing: 6) {
+            if case .known(let exit) = model.connection.exit {
+                Text(exit.flag ?? "🌐")
+                Text("Proxy exits in \(exit.countryCode.flatMap { Locale.current.localizedString(forRegionCode: $0) } ?? "")")
+            } else {
+                Image(systemName: "bolt.horizontal.circle")
+                Text(model.connection.isRunning ? "Checking…" : "Not connected")
+            }
+        }
+        .font(.callout)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(.quaternary.opacity(0.5), in: .capsule)
+    }
+
+    @ViewBuilder
+    private func section(_ title: LocalizedStringKey, systemImage: String, _ groups: [SeenGroup]) -> some View {
+        if !groups.isEmpty {
+            Section {
+                ForEach(groups) { group in
+                    GroupRow(group: group, set: set) { mode = .advanced }
+                }
+            } header: {
+                Label(title, systemImage: systemImage)
+            }
         }
     }
 
-    /// The rules' apps and sites, then what connected that no rule covers yet, newest first.
-    private func items(_ rules: [CustomRule]) -> [SeenGroup] {
-        let ruled = [CustomRule.Action.proxy, .direct].flatMap { action in
-            SeenGroup.column(SimpleRules.entries(rules, action: action).filter { !SeenGroup.isTechnical($0) }, action: action)
+    private func footer(hidden: Int) -> some View {
+        HStack(spacing: 10) {
+            if selection.isEmpty {
+                Image(systemName: "lightbulb").foregroundStyle(.yellow)
+                Text("Not listed? Open the app or site and wait a few seconds.")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if hidden > 0 {
+                    Button("\(hidden) address rules in Advanced") { mode = .advanced }
+                        .buttonStyle(.link)
+                }
+            } else {
+                Text("\(selection.count) selected").fontWeight(.medium)
+                Spacer()
+                Button("Deselect") { selection.removeAll() }
+                Button("Proxy") { set(Array(selection), .proxy) }.tint(.blue)
+                Button("Direct") { set(Array(selection), .direct) }.tint(.green)
+            }
         }
-        let watcher = model.connection.watcher
-        let new = (SeenGroup.apps(watcher.apps.values, rules: rules) + SeenGroup.sites(watcher.hosts.values, rules: rules))
-            .compactMap { $0.unruled }
-        func key(_ group: SeenGroup) -> String { group.title.trimmingCharacters(in: CharacterSet(charactersIn: "*.+")) }
-        return new + ruled.sorted { key($0).localizedStandardCompare(key($1)) == .orderedAscending }
+        .font(.callout)
+        .buttonStyle(.bordered)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.bar)
     }
 
     private func matches(_ group: SeenGroup) -> Bool {
-        let state = group.state
         let passes = switch filter {
         case .all: true
-        case .new: group.isNew
-        case .proxy: state == .proxy
-        case .direct: state == .direct
+        case .proxy: group.state == .proxy
+        case .direct: group.state == .direct
         }
-        return passes && (search.isEmpty || group.members.contains { $0.entry.text.localizedCaseInsensitiveContains(search) }
-            || group.entry.text.localizedCaseInsensitiveContains(search))
+        guard passes else { return false }
+        return search.isEmpty || group.title.localizedCaseInsensitiveContains(search)
+            || group.members.contains { $0.entry.text.localizedCaseInsensitiveContains(search) }
     }
 
     /// Sends `ids` to `action`; nil hands them back to the routing mode. Group rows carry their members' ids.
@@ -129,6 +158,94 @@ struct SimpleRuleEditor: View {
     }
 }
 
+/// One group, or one app or site, with its switch; a group opens to show its members.
+private struct GroupRow: View {
+    let group: SeenGroup
+    let set: ([String], CustomRule.Action?) -> Void
+    let showAdvanced: () -> Void
+
+    var body: some View {
+        if group.members.count == 1, let member = group.members.first {
+            EntryLine(entry: member.entry, title: group.title, subtitle: group.subtitle, ruleName: member.ruleName,
+                      state: member.column, tag: group.ids[0], set: set, showAdvanced: showAdvanced)
+        } else {
+            DisclosureGroup {
+                ForEach(group.members) { member in
+                    EntryLine(entry: member.entry, title: SeenGroup.displayName(member.entry), subtitle: nil,
+                              ruleName: member.ruleName, state: member.column, tag: member.id, set: set, showAdvanced: showAdvanced)
+                }
+            } label: {
+                EntryLine(entry: group.members[0].entry, title: group.title, subtitle: group.subtitle, ruleName: group.ruleName,
+                          state: group.state, tag: group.ids.joined(separator: "\n"), set: set, showAdvanced: showAdvanced)
+            }
+        }
+    }
+}
+
+private struct EntryLine: View {
+    let entry: RuleEntry
+    let title: String
+    let subtitle: String?
+    let ruleName: String?
+    let state: CustomRule.Action?
+    let tag: String
+    let set: ([String], CustomRule.Action?) -> Void
+    let showAdvanced: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            EntryIcon(entry: entry)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).lineLimit(1).truncationMode(.middle)
+                if let subtitle {
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                }
+            }
+            Spacer(minLength: 8)
+            if let ruleName { RuleBadge(name: ruleName, action: state, open: showAdvanced) }
+            RouteSwitch(state: state) { set([tag], $0) }
+        }
+        .padding(.vertical, 3)
+        .tag(tag)
+        .contextMenu {
+            Button("Proxy") { set([tag], .proxy) }
+            Button("Direct") { set([tag], .direct) }
+            if state != nil {
+                Divider()
+                Button("Use the Routing Mode") { set([tag], nil) }
+            }
+        }
+    }
+}
+
+/// The rule a row comes from; a click opens Advanced, where the rule is edited.
+private struct RuleBadge: View {
+    let name: String
+    let action: CustomRule.Action?
+    let open: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        let tint = action.map { RuleList($0).tint } ?? .secondary
+        Button(action: open) {
+            HStack(spacing: 4) {
+                Text(name).lineLimit(1)
+                if isHovering { Image(systemName: "arrow.up.forward").transition(.opacity) }
+            }
+            .font(.caption)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(tint.opacity(isHovering ? 0.24 : 0.12), in: .capsule)
+            .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: 220, alignment: .trailing)
+        .help("Go to Advanced")
+        .onHover { hovering in withAnimation(.snappy) { isHovering = hovering } }
+    }
+}
+
 /// Proxy | Direct, the chosen side filled with its colour; choosing it again hands the row back to the mode.
 private struct RouteSwitch: View {
     let state: CustomRule.Action?
@@ -141,9 +258,9 @@ private struct RouteSwitch: View {
                 let isOn = state == action
                 Button { choose(isOn ? nil : action) } label: {
                     Text(list.title)
-                        .font(.callout.weight(isOn ? .semibold : .regular))
+                        .font(.caption.weight(isOn ? .semibold : .regular))
                         .foregroundStyle(isOn ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
-                        .padding(.horizontal, 10)
+                        .frame(minWidth: 46)
                         .padding(.vertical, 3)
                         .background(isOn ? list.tint : .clear, in: .capsule)
                         .contentShape(.capsule)
@@ -158,49 +275,34 @@ private struct RouteSwitch: View {
     }
 }
 
-/// One group, or one app or site, with its switch; a group opens to show its members.
-private struct GroupRow: View {
-    let group: SeenGroup
-    let set: ([String], CustomRule.Action?) -> Void
+private struct EntryIcon: View {
+    @Environment(EntryIcons.self) private var icons
+    let entry: RuleEntry
 
     var body: some View {
-        if group.members.count == 1, let member = group.members.first {
-            row(member.entry, ids: [group.ids[0]], state: member.column, count: member.count, isNew: group.isNew)
-        } else {
-            DisclosureGroup {
-                ForEach(group.members) { member in
-                    row(member.entry, ids: [member.id], state: member.column, count: member.count, isNew: group.isNew)
-                }
-            } label: {
-                row(group.entry, ids: group.ids, state: group.state, count: group.members.count, isNew: group.isNew, title: group.title)
+        Group {
+            switch icons.icon(for: entry) {
+            case .image(let image): Image(nsImage: image).resizable().scaledToFit()
+            case .symbol(let name, let color):
+                Image(systemName: name)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(color)
+                    .frame(width: 22, height: 22)
+                    .background(color.opacity(0.15), in: .rect(cornerRadius: 6))
             }
         }
-    }
-
-    private func row(_ entry: RuleEntry, ids: [String], state: CustomRule.Action?, count: Int, isNew: Bool, title: String? = nil) -> some View {
-        let tag = ids.joined(separator: "\n")
-        return HStack(spacing: 10) {
-            EntryRow(entry: entry, title: title, count: count > 1 ? count : nil)
-            if isNew {
-                Text("New").font(.caption2.weight(.semibold)).foregroundStyle(.orange)
-                    .padding(.horizontal, 6).padding(.vertical, 1)
-                    .background(.orange.opacity(0.15), in: .capsule)
-            }
-            RouteSwitch(state: state) { set([tag], $0) }
-        }
-        .tag(tag)
-        .contextMenu {
-            if state != nil { Button("Use the Routing Mode") { set([tag], nil) } }
-        }
+        .frame(width: 24, height: 24)
+        .accessibilityHidden(true)
     }
 }
 
-/// A group of seen apps or sites sharing a name; one with a single member is shown as that member.
+/// A group of apps or sites sharing a name; one with a single member is shown as that member.
 struct SeenGroup: Identifiable {
     struct Member: Identifiable {
         let entry: RuleEntry
         let count: Int
         let column: CustomRule.Action?
+        var ruleName: String?
         var id: String { entry.id }
     }
 
@@ -210,7 +312,7 @@ struct SeenGroup: Identifiable {
     var isNew = false
     var id: String { (isNew ? "new:" : "") + entry.id + (members.first.map { "|" + ($0.column?.rawValue ?? "") } ?? "") }
     var count: Int { members.reduce(0) { $0 + $1.count } }
-    var title: String { entry.text.trimmingCharacters(in: CharacterSet(charactersIn: "*")) }
+    var title: String { members.count == 1 ? Self.displayName(members[0].entry) : entry.text.trimmingCharacters(in: CharacterSet(charactersIn: "*")) }
     /// What the row's switch moves.
     var ids: [String] { isNew ? [entry.id] : members.map(\.id) }
     /// The members' common action, nil when they differ or none has one.
@@ -219,17 +321,59 @@ struct SeenGroup: Identifiable {
         return states.count == 1 ? states.first ?? nil : nil
     }
 
+    var ruleName: String? {
+        let names = Set(members.compactMap(\.ruleName))
+        if names.count > 1 { return String(localized: "\(names.count) rules") }
+        return names.first
+    }
+
+    var subtitle: String? {
+        let n = members.count
+        if n > 1 { return entry.kind == .app ? String(localized: "\(n) apps") : String(localized: "\(n) sites") }
+        let text = members[0].entry.text
+        if isNew, count > 0 { return String(localized: "Connected \(count) times") }
+        if entry.kind == .host, ["*.", "+.", ".", "domain:"].contains(where: text.hasPrefix) { return String(localized: "and its subdomains") }
+        if entry.kind == .app, text.hasPrefix("/") { return (text as NSString).deletingLastPathComponent }
+        return nil
+    }
+
+    /// An entry without its pattern marks: `*Books.app*` → Books, `*.mac.com` → mac.com.
+    static func displayName(_ entry: RuleEntry) -> String {
+        var text = entry.text
+        for prefix in ["domain:", "full:", "keyword:", "*.", "+."] where text.hasPrefix(prefix) { text.removeFirst(prefix.count) }
+        text = text.trimmingCharacters(in: CharacterSet(charactersIn: "*"))
+        if entry.kind == .app {
+            if text.hasPrefix("/") { text = (text as NSString).lastPathComponent }
+            if text.lowercased().hasSuffix(".app") { text.removeLast(4) }
+        }
+        return text.isEmpty ? entry.text : text
+    }
+
+    /// IP addresses and ranges: kept out of the simple list, edited in Advanced.
+    static func isTechnical(_ entry: RuleEntry) -> Bool {
+        entry.kind == .host && (entry.text.first?.isNumber == true || entry.text.contains(":"))
+    }
+
+    static func hiddenCount(_ rules: [CustomRule]) -> Int {
+        (SimpleRules.entries(rules, action: .proxy) + SimpleRules.entries(rules, action: .direct)).filter(isTechnical).count
+    }
+
+    /// What connected that no rule covers yet, busiest first, then the rules' apps and sites by name.
+    @MainActor static func all(rules: [CustomRule], watcher: ConnectionWatcher) -> [SeenGroup] {
+        let ruled = [CustomRule.Action.proxy, .direct].flatMap { action in
+            column(SimpleRules.entries(rules, action: action).filter { !isTechnical($0) }, action: action,
+                   names: SimpleRules.ruleNames(rules, action: action))
+        }
+        let new = (apps(watcher.apps.values, rules: rules) + sites(watcher.hosts.values, rules: rules)).compactMap(\.unruled)
+        return new + ruled.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    }
+
     /// The members no rule covers, as a new group; nil when every member is covered.
     var unruled: SeenGroup? {
         let left = members.filter { $0.column == nil }
         guard !left.isEmpty else { return nil }
         let entry = left.count == 1 && members.count > 1 ? left[0].entry : entry
         return SeenGroup(entry: entry, members: left, isNew: true)
-    }
-
-    /// IP addresses and ranges: kept out of the simple list, edited in Advanced.
-    static func isTechnical(_ entry: RuleEntry) -> Bool {
-        entry.kind == .host && (entry.text.first?.isNumber == true || entry.text.contains(":"))
     }
 
     static func apps(_ seen: some Collection<ConnectionWatcher.Seen>, rules: [CustomRule]) -> [SeenGroup] {
@@ -250,22 +394,21 @@ struct SeenGroup: Identifiable {
         return grouped(members, kind: .host)
     }
 
-    /// A column's entries grouped the same way; a group's row stands for its members.
-    static func column(_ entries: [RuleEntry], action: CustomRule.Action) -> [SeenGroup] {
-        let members = entries.map { (Member(entry: $0, count: 0, column: action), brand(of: $0)) }
+    /// One action's rule entries grouped the same way; a group's row stands for its members.
+    static func column(_ entries: [RuleEntry], action: CustomRule.Action, names: [String: String]) -> [SeenGroup] {
+        let members = entries.map { (Member(entry: $0, count: 0, column: action, ruleName: names[$0.id]), brand(of: $0)) }
         let keys = EntryGroups.keys(for: Set(members.compactMap(\.1)))
         let byKey = Dictionary(grouping: members) { $0.1.flatMap { keys[$0] } ?? $0.0.entry.text }
         return byKey.map { key, list in
             let entries = list.map(\.0)
             return SeenGroup(entry: entries.count == 1 ? entries[0].entry : RuleEntry(entries[0].entry.kind, key), members: entries)
         }
-        .sorted { $0.entry.text.localizedStandardCompare($1.entry.text) == .orderedAscending }
     }
 
     /// The name an entry is grouped by: a pattern's word, a domain's name, an app's vendor or name.
-    private static func brand(of entry: RuleEntry) -> String? {
+    static func brand(of entry: RuleEntry) -> String? {
         var text = entry.text.lowercased()
-        if text.hasPrefix("*"), text.hasSuffix("*"), text.count > 2 { return String(text.dropFirst().dropLast()) }
+        if text.count > 2, text.hasPrefix("*"), text.hasSuffix("*") { text = String(text.dropFirst().dropLast()) }
         for prefix in ["*.", "+.", ".", "domain:", "full:", "keyword:"] where text.hasPrefix(prefix) { text.removeFirst(prefix.count) }
         // Addresses and ranges stay on their own rows.
         guard entry.kind == .app else { return text.first?.isNumber == true || text.contains(":") ? nil : EntryGroups.brand(ofHost: text) }
@@ -282,48 +425,5 @@ struct SeenGroup: Identifiable {
             return SeenGroup(entry: sorted.count == 1 ? sorted[0].entry : RuleEntry(kind, "*\(key)*"), members: sorted)
         }
         .sorted { $0.count > $1.count }
-    }
-}
-
-/// An app with its icon and name, or a site; a `*word*` group shows as a pattern.
-struct EntryRow: View {
-    let entry: RuleEntry
-    var title: String? = nil
-    let count: Int?
-
-    var body: some View {
-        HStack(spacing: 8) {
-            icon.frame(width: 18, height: 18)
-            Text(title ?? name).lineLimit(1).truncationMode(.middle)
-            Spacer(minLength: 4)
-            if let count { Text(count, format: .number).font(.caption).foregroundStyle(.secondary).monospacedDigit() }
-        }
-        .help(entry.text)
-    }
-
-    private var name: String {
-        guard entry.kind == .app, entry.text.hasPrefix("/") else { return entry.text }
-        let name = (entry.text as NSString).lastPathComponent
-        return name.hasSuffix(".app") ? String(name.dropLast(4)) : name
-    }
-
-    /// The app an entry names, when it is installed: by path, `Name.app` or bundle id.
-    private var appPath: String? {
-        guard entry.kind == .app else { return nil }
-        let text = entry.text
-        if text.hasPrefix("/") { return text }
-        if text.hasSuffix(".app") {
-            return ["/Applications", "/System/Applications", "/Applications/Utilities"].map { $0 + "/" + text }
-                .first { FileManager.default.fileExists(atPath: $0) }
-        }
-        return text.contains(".") ? NSWorkspace.shared.urlForApplication(withBundleIdentifier: text)?.path : nil
-    }
-
-    @ViewBuilder private var icon: some View {
-        if let path = appPath {
-            Image(nsImage: NSWorkspace.shared.icon(forFile: path)).resizable()
-        } else {
-            Image(systemName: entry.kind == .app ? "app.dashed" : "globe").foregroundStyle(.secondary)
-        }
     }
 }
