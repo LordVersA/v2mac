@@ -795,6 +795,14 @@ Every failed state offers "Show Logs", which opens the log panel.
 
 ### 9.5 TUN mode
 
+**Asking for access.** TUN mode and the system proxy always start off at launch
+(`Prefs.registerDefaults` clears `tunEnabled` and `systemProxy`), so opening the
+app never asks for a password; the kill switch keeps its setting. Before macOS's
+own administrator prompt (not with a saved administrator account, which needs
+none), `AdminConsent` explains what the helper changes, that nothing is saved or
+sent, and links to the source on GitHub. Not Now cancels as if the prompt was
+cancelled; "Don't show this again" (`adminConsentShown`) skips it afterwards.
+
 Off by default. A switch in the connection bar and in the menu bar panel turns
 it on; the choice is remembered (`tunEnabled`). Changing it while connected
 restarts the core.

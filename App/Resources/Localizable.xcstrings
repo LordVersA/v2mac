@@ -18975,6 +18975,116 @@
           }
         }
       }
+    },
+    "Allow administrator access?": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اجازه‌ی دسترسی مدیر سیستم داده شود؟"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разрешить доступ администратора?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许管理员权限？"
+          }
+        }
+      }
+    },
+    "TUN mode, the system proxy and the kill switch change settings for the whole Mac, so V2Mac starts a small helper with administrator rights. It only changes this Mac's proxy, routes and firewall while you use them, and puts them back when you turn them off or quit.\n\nV2Mac saves none of your data and sends nothing anywhere. It is open source, so you can check exactly what it does. macOS asks for your password next.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حالت TUN، پروکسی سیستم و کلید قطع اتصال تنظیمات کل مک را تغییر می‌دهند، برای همین V2Mac یک ابزار کوچک را با دسترسی مدیر سیستم اجرا می‌کند. این ابزار فقط پروکسی، مسیرها و فایروال همین مک را تا وقتی از آن‌ها استفاده می‌کنید تغییر می‌دهد و وقتی خاموششان کنید یا از برنامه خارج شوید آن‌ها را برمی‌گرداند.\n\nV2Mac هیچ داده‌ای از شما ذخیره نمی‌کند و چیزی به جایی نمی‌فرستد. کدش متن‌باز است، پس می‌توانید دقیقاً ببینید چه کار می‌کند. در قدم بعد macOS رمز عبورتان را می‌پرسد."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Режим TUN, системный прокси и аварийный выключатель меняют настройки всего Mac, поэтому V2Mac запускает небольшой помощник с правами администратора. Он меняет прокси, маршруты и брандмауэр этого Mac только пока вы ими пользуетесь и возвращает всё обратно, когда вы их выключаете или выходите из приложения.\n\nV2Mac не сохраняет ваши данные и ничего никуда не отправляет. Код открыт, так что вы можете проверить, что именно он делает. Затем macOS запросит пароль."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TUN 模式、系统代理和断网保护会更改整台 Mac 的设置，因此 V2Mac 会以管理员权限启动一个小型辅助程序。它只在你使用这些功能时更改本机的代理、路由和防火墙，并在你关闭它们或退出时恢复原样。\n\nV2Mac 不保存你的任何数据，也不向任何地方发送内容。它是开源的，你可以查看它具体做了什么。接下来 macOS 会询问你的密码。"
+          }
+        }
+      }
+    },
+    "Not Now": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الان نه"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не сейчас"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以后再说"
+          }
+        }
+      }
+    },
+    "View the source on GitHub": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشاهده‌ی کد در GitHub"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Посмотреть код на GitHub"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 GitHub 上查看源代码"
+          }
+        }
+      }
+    },
+    "Don't show this again": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دیگر نشان نده"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Больше не показывать"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不再显示"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

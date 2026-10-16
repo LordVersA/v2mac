@@ -81,6 +81,10 @@ enum Prefs {
     static func registerDefaults() {
         defaults.register(defaults: defaultValues)
         migrateCustomRules()
+        // TUN mode and the system proxy need administrator access; they start off, so launching
+        // never asks for a password. The user turns them on when wanted.
+        defaults.set(false, forKey: "tunEnabled")
+        defaults.set(false, forKey: "systemProxy")
         defaults.register(defaults: Dictionary(uniqueKeysWithValues: NotificationKind.allCases.map { ($0.key, $0.defaultOn) }))
         if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
         // The proxy password used to be kept in the preferences file; it moves to the keychain once.

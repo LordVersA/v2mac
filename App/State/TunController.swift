@@ -284,6 +284,8 @@ final class TunController {
             guard case .failed(let message) = result, message.contains("-60007") else { return result }
             Prefs.setAdminAccount(nil)
         }
+        // Only before macOS's own prompt: with a saved account there is none.
+        guard AdminConsent.confirm() else { return .cancelled }
         return await osascript(TunHelper.appleScript(command: command, prompt: prompt))
     }
 
