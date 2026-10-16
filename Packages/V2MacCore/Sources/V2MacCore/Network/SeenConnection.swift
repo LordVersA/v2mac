@@ -58,7 +58,7 @@ public struct NetFlow: Sendable, Equatable {
     public var key: String { "\(localAddress):\(localPort)>\(remoteAddress):\(remotePort)" }
     public var isLoopback: Bool { Self.isLoopback(localAddress) && Self.isLoopback(remoteAddress) }
 
-    static func isLoopback(_ address: String) -> Bool { address.hasPrefix("127.") || address == "::1" }
+    public static func isLoopback(_ address: String) -> Bool { address.hasPrefix("127.") || address == "::1" }
 
     /// Every TCP connection on this Mac, or none if `nettop` fails.
     public static func read() async -> [NetFlow] {

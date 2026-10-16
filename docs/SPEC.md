@@ -1558,10 +1558,14 @@ newer V2Mac".
 Two tabs, switched by a glass segmented control in the toolbar (`connectionsTab`):
 Connections (below) and Map, the globe that used to be a tab of the main window.
 On the map, the Requests card lists the latest real connections with their app and
-action colour, a Top apps card the apps that moved the most data, and a site under
-a country's domain ending (`.de`, `.co.uk`, but not endings sites use anywhere, such
-as `.io`) arcs from the server to that country. Other sites get no arc: placing them
-would need an address lookup outside the Mac.
+action colour, and a Top apps card the apps that moved the most data. Every open
+connection that has moved data is placed by country, one arc per country labelled
+with its flag, name and number of connections, which stays while they are open:
+by its real address with the core's own `geoip.dat` (`GeoIPIndex`) when that is
+known (TUN mode, or a target that is an address), else by the site's country
+ending (`.de`, `.co.uk`; not endings used anywhere, such as `.io`). Countries are
+placed from the system's `zone.tab` (`CountryPlaces`). Nothing is asked outside
+the Mac, so a proxy-mode `.com` site has no arc.
 
 A `connections` window, opened from the second glass button at the foot of the
 sidebar (beside the Rule Editor's), lists every connection through the core,

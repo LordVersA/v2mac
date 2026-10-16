@@ -17,8 +17,9 @@ struct ConnectionMapView: View {
     @State private var scrollMonitor: Any?
     @State private var user: MapPlace?
     @State private var server: MapPlace?
-    @State private var requests: [MapRequest] = []
-    @State private var lastEvent = 0
+    /// When each country's arc first appeared, so it travels out once and then stays.
+    @State private var arcStarts: [String: Date] = [:]
+    @State private var geo = GeoIPIndex()
 
     private var isLive: Bool {
         #if DEBUG
@@ -56,6 +57,7 @@ struct ConnectionMapView: View {
         let serverTag = server.map {
             MapTag(title: [flag, $0.city ?? $0.country].compactMap { $0 }.joined(separator: " "), subtitle: $0.city == nil ? nil : $0.country)
         }
+        let requests = arcs(live: live)
         let hosts = Set(requests.map(\.host)).sorted()
         GeometryReader { geo in
             // Under the toolbar and the bar alike, with the globe in the middle of the room they leave.
@@ -134,23 +136,34 @@ struct ConnectionMapView: View {
                 camera.longitude = (u.longitude + s.longitude) / 2
             }
         }
-        .task(id: live && appearsActive) { requests.removeAll() }
-        // Each new connection to a site under a country's domain arcs to that country. Other sites
-        // have no place: their addresses would need a location lookup outside the Mac.
-        .onChange(of: model.connection.watcher.events.last?.id) {
-            guard live, appearsActive else { return }
-            let fresh = model.connection.watcher.events.filter { $0.id > lastEvent && $0.kind == .opened }
-            lastEvent = model.connection.watcher.events.last?.id ?? lastEvent
-            for event in fresh.suffix(4) {
-                // Placed from the system's own table: nothing about the traffic leaves the Mac.
-                guard let code = Self.countryCode(of: event.connection.host), let place = Self.countries[code] else { continue }
-                requests.append(MapRequest(host: event.connection.host, flag: Self.flag(code),
-                                           coordinate: .init(latitude: place.latitude, longitude: place.longitude), start: .now))
-                if requests.count > 10 { requests.removeFirst() }
-            }
+        .task {
+            guard geo.isEmpty else { return }
+            let file = AppPaths.assetsDirectory.appendingPathComponent("geoip.dat")
+            geo = await Task.detached { GeoIPIndex(contentsOf: file) }.value
         }
     }
 
+    /// One arc per country for every open connection that has moved data: placed by its address
+    /// (the core's own geoip.dat) when known, else by the site's country ending. Nothing is asked
+    /// outside the Mac.
+    private func arcs(live: Bool) -> [MapRequest] {
+        guard live else { return [] }
+        let active = model.connection.watcher.connections.filter { $0.isOpen && $0.sent + $0.received > 0 }
+        let byCountry = Dictionary(grouping: active) { c in
+            c.remoteAddress.flatMap(geo.country(of:)) ?? Self.countryCode(of: c.host)
+        }
+        return byCountry.compactMap { code, list -> MapRequest? in
+            guard let code, let place = Self.countries[code] else { return nil }
+            let name = Locale.current.localizedString(forRegionCode: code) ?? code
+            let start = arcStarts[code] ?? .now
+            if arcStarts[code] == nil { Task { @MainActor in arcStarts[code] = start } }
+            return MapRequest(id: code, host: "\(Self.flag(code)) \(name) · \(list.count)", flag: Self.flag(code),
+                              coordinate: .init(latitude: place.latitude, longitude: place.longitude), start: start)
+        }
+        .sorted { $0.id < $1.id }
+    }
+
+    /// A point in each country, from the system's time zone table.
     private static let countries = CountryPlaces.read((try? String(contentsOf: CountryPlaces.systemFile, encoding: .utf8)) ?? "")
 
     /// Two-letter endings used by sites anywhere, not by their country.
@@ -224,7 +237,8 @@ struct MapPlace {
 }
 
 struct MapRequest: Identifiable {
-    let id = UUID()
+    /// The country code: one arc per country.
+    let id: String
     let host: String
     let flag: String
     let coordinate: CLLocationCoordinate2D
@@ -552,10 +566,8 @@ private struct MapScene {
             return
         }
         let age = date.timeIntervalSince(request.start)
-        guard age < Self.travel + Self.linger else { return }
-        // The arc itself fades in, then out once the request has landed.
-        let fade = min(age / 0.3, 1) * (age < Self.travel ? 1 : 1 - (age - Self.travel) / Self.linger)
-        ctx.stroke(path, with: .color(Self.request.opacity(0.25 * fade)), lineWidth: 1.2)
+        // The arc fades in, then stays while the country has open connections.
+        ctx.stroke(path, with: .color(Self.request.opacity(0.35 * min(age / 0.3, 1))), lineWidth: 1.4)
         if age < Self.travel {
             let t = age / Self.travel
             let p = t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2   // ease in and out
@@ -572,18 +584,17 @@ private struct MapScene {
             Self.dot(at: head, radius: 3, color: .white, glow: Self.request, in: &ctx)
         } else {
             let b = target
-            let f = (age - Self.travel) / Self.linger
-            for k in 0..<2 {
+            // The landing ripples once, then the dot and its label stay.
+            let f = min((age - Self.travel) / Self.linger, 1)
+            for k in 0..<2 where f < 1 {
                 let ring = min(max(f * 1.3 - Double(k) * 0.3, 0), 1)
                 let r = 3 + ring * 22
                 ctx.stroke(Path(ellipseIn: CGRect(x: b.x - r, y: b.y - r, width: r * 2, height: r * 2)),
                            with: .color(Self.request.opacity((1 - ring) * 0.9)), lineWidth: 1.5)
             }
-            Self.dot(at: b, radius: 3, color: Self.request.opacity(1 - f), glow: Self.request, in: &ctx)
+            Self.dot(at: b, radius: 3, color: Self.request, glow: Self.request, in: &ctx)
             if let tag = ctx.resolveSymbol(id: MapSymbol.host(request.host)) {
-                var label = ctx
-                label.opacity = min(1, (1 - f) * 2)
-                label.draw(tag, at: CGPoint(x: b.x, y: b.y - 14 - f * 6), anchor: .bottom)
+                ctx.draw(tag, at: CGPoint(x: b.x, y: b.y - 14), anchor: .bottom)
             }
         }
     }

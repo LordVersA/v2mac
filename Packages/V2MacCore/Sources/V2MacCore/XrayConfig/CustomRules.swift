@@ -224,7 +224,7 @@ public struct RuleMatchers: Sendable, Equatable {
     }
 
     /// An IPv4 or IPv6 address, with or without a `/prefix`.
-    static func isIP(_ token: String) -> Bool {
+    public static func isIP(_ token: String) -> Bool {
         let parts = token.split(separator: "/", omittingEmptySubsequences: false)
         guard parts.count <= 2 else { return false }
         let address = String(parts[0])

@@ -31,6 +31,9 @@ final class ConnectionWatcher {
         var received: Int64 = 0
         /// The `nettop` connection this row follows, once found.
         var flowKey: String?
+        /// Where the traffic really goes, when known: the app's own connection in TUN mode, or a
+        /// target that is an address. Proxy mode only knows the name.
+        var remoteAddress: String?
         /// No `nettop` connection ever matched (closed before the first look, or not found in TUN mode).
         var untracked = false
 
@@ -95,8 +98,9 @@ final class ConnectionWatcher {
         // TUN mode hands to the core's resolver.
         guard isWatching, ConfigBuilder.trafficInboundTags.contains(seen.inbound), seen.outbound != ConfigBuilder.tunDNSTag else { return }
         nextID += 1
-        let connection = Connection(id: nextID, sourcePort: seen.sourcePort, host: seen.host, port: seen.port,
+        var connection = Connection(id: nextID, sourcePort: seen.sourcePort, host: seen.host, port: seen.port,
                                     inbound: seen.inbound, outbound: seen.outbound, start: .now)
+        if RuleMatchers.isIP(seen.host) { connection.remoteAddress = seen.host }
         connections.append(connection)
         if connections.count > limit { connections.removeFirst(connections.count - limit) }
         log(.opened, connection)
@@ -146,6 +150,7 @@ final class ConnectionWatcher {
                 list[index].received = flow.received
                 guard row.flowKey == nil else { continue }
                 list[index].flowKey = flow.key
+                if !NetFlow.isLoopback(flow.remoteAddress) { list[index].remoteAddress = flow.remoteAddress }
                 claimed.insert(flow.key)
                 list[index].process = flow.process
                 list[index].app = app(of: flow.pid)
