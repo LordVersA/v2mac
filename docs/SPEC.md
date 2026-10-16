@@ -688,7 +688,7 @@ the rule profile menu.
 - Simple: one list of the apps and sites the rules name and those that connected
   while the window is open and no rule covers yet (marked New, listed first), with
   a filter (All, New, Proxy, Direct), a search field and the exit's flag and
-  country. Each row has a Proxy | Direct switch; choosing the lit side again hands
+  country. Each row has a Proxy | Direct | Block switch; choosing the lit side again hands
   the row back to the routing mode. Selected rows move together from the bar at
   the bottom. IP addresses and ranges are left to Advanced (the bar counts them).
   The core writes an access log all the time; its lines reach the Logs window only
@@ -699,9 +699,9 @@ the rule profile menu.
   registered name, a bundle id's vendor, a longer name folded under a shorter one
   it contains) and open to show their members. A new group's switch adds
   `*name*`; a ruled group's switch moves its members. A change (`SimpleRules.move`)
-  takes the entries out of every enabled Proxy or Direct rule with only apps or only
-  hosts and puts them into one of four fixed rules at the top of the list (sites,
-  then apps, for Proxy and Direct). A run of changes restarts a running core once,
+  takes the entries out of every rule with only apps or only
+  hosts and puts them into one of six fixed rules at the top of the list (sites,
+  then apps, for Proxy, Direct and Block). A run of changes restarts a running core once,
   1.5 s after the last.
   The list has New, Apps and Sites sections and a search field in the toolbar.
   Each ruled row carries a badge with its rule's name; a click opens Advanced.

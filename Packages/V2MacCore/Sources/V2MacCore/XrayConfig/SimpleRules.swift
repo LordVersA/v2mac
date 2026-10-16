@@ -22,12 +22,15 @@ public struct RuleEntry: Sendable, Hashable, Identifiable {
     }
 }
 
-/// The simple editor's view of the ordered list (spec 8.6): every entry of the enabled Proxy and
-/// Direct rules that match apps only or hosts only, and moves that keep the list consistent.
+/// The simple editor's view of the ordered list (spec 8.6): every entry of the enabled rules that match apps only or hosts only, and moves that keep the list consistent.
 public enum SimpleRules {
-    /// The four rules the simple editor writes to, at the top of the list so they win.
+    /// The six rules the simple editor writes to, at the top of the list so they win.
     public static func ruleID(_ kind: RuleEntry.Kind, _ action: CustomRule.Action) -> UUID {
-        let n = (kind == .host ? 1 : 3) + (action == .proxy ? 0 : 1)
+        let n = switch action {
+        case .proxy: kind == .host ? 1 : 3
+        case .direct: kind == .host ? 2 : 4
+        case .block: kind == .host ? 5 : 6
+        }
         return UUID(uuidString: "00000000-5143-4D50-0000-00000000000\(n)")!
     }
 
@@ -62,13 +65,13 @@ public enum SimpleRules {
         return out
     }
 
-    /// Takes `moved` out of every simple Proxy and Direct rule and, unless `action` is nil, adds
+    /// Takes `moved` out of every rule with only apps or only hosts and, unless `action` is nil, adds
     /// them to the simple editor's rule for that action. Rules left empty by the move are removed.
     public static func move(_ moved: [RuleEntry], to action: CustomRule.Action?, in rules: [CustomRule]) -> [CustomRule] {
         let texts = Dictionary(grouping: moved, by: \.kind).mapValues { Set($0.map { $0.text.lowercased() }) }
         var out: [CustomRule] = []
         for var rule in rules {
-            guard rule.action != .block, isSimple(rule) else { out.append(rule); continue }
+            guard isSimple(rule) else { out.append(rule); continue }
             let apps = split(rule.apps), hosts = split(rule.hosts)
             let keptApps = apps.filter { !(texts[.app]?.contains($0.lowercased()) ?? false) }
             let keptHosts = hosts.filter { !(texts[.host]?.contains($0.lowercased()) ?? false) }
@@ -94,7 +97,7 @@ public enum SimpleRules {
                 if kind == .app { rule.apps = add.joined(separator: "\n") } else { rule.hosts = add.joined(separator: "\n") }
                 // Sites first, then apps after the editor's other rules: a site picked for one column
                 // wins over its app's column.
-                let ours = Set([RuleEntry.Kind.host, .app].flatMap { kind in [ruleID(kind, .proxy), ruleID(kind, .direct)] })
+                let ours = Set([RuleEntry.Kind.host, .app].flatMap { kind in CustomRule.Action.allCases.map { ruleID(kind, $0) } })
                 out.insert(rule, at: kind == .host ? 0 : out.prefix { ours.contains($0.id) }.count)
             }
         }
@@ -136,9 +139,11 @@ public enum SimpleRules {
     static func name(_ kind: RuleEntry.Kind, _ action: CustomRule.Action) -> String {
         switch (kind, action) {
         case (.host, .proxy): String(localized: "Sites through the proxy")
-        case (.host, _): String(localized: "Sites direct")
+        case (.host, .direct): String(localized: "Sites direct")
+        case (.host, .block): String(localized: "Sites blocked")
         case (.app, .proxy): String(localized: "Apps through the proxy")
-        case (.app, _): String(localized: "Apps direct")
+        case (.app, .direct): String(localized: "Apps direct")
+        case (.app, .block): String(localized: "Apps blocked")
         }
     }
 }

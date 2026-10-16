@@ -6,13 +6,14 @@ import V2MacCore
 /// short pause, restarts a running core.
 struct SimpleRuleEditor: View {
     enum Filter: String, CaseIterable, Identifiable {
-        case all, proxy, direct
+        case all, proxy, direct, block
         var id: Self { self }
         var title: LocalizedStringKey {
             switch self {
             case .all: "All"
             case .proxy: "Proxy"
             case .direct: "Direct"
+            case .block: "Block"
             }
         }
     }
@@ -119,6 +120,7 @@ struct SimpleRuleEditor: View {
                 Button("Deselect") { selection.removeAll() }
                 Button("Proxy") { set(Array(selection), .proxy) }.tint(.blue)
                 Button("Direct") { set(Array(selection), .direct) }.tint(.green)
+                Button("Block") { set(Array(selection), .block) }.tint(.red)
             }
         }
         .font(.callout)
@@ -133,6 +135,7 @@ struct SimpleRuleEditor: View {
         case .all: true
         case .proxy: group.state == .proxy
         case .direct: group.state == .direct
+        case .block: group.state == .block
         }
         guard passes else { return false }
         return search.isEmpty || group.title.localizedCaseInsensitiveContains(search)
@@ -210,6 +213,7 @@ private struct EntryLine: View {
         .contextMenu {
             Button("Proxy") { set([tag], .proxy) }
             Button("Direct") { set([tag], .direct) }
+            Button("Block") { set([tag], .block) }
             if state != nil {
                 Divider()
                 Button("Use the Routing Mode") { set([tag], nil) }
@@ -246,14 +250,14 @@ private struct RuleBadge: View {
     }
 }
 
-/// Proxy | Direct, the chosen side filled with its colour; choosing it again hands the row back to the mode.
+/// Proxy | Direct | Block, the chosen side filled with its colour; choosing it again hands the row back to the mode.
 private struct RouteSwitch: View {
     let state: CustomRule.Action?
     let choose: (CustomRule.Action?) -> Void
 
     var body: some View {
         HStack(spacing: 2) {
-            ForEach([CustomRule.Action.proxy, .direct], id: \.self) { action in
+            ForEach(CustomRule.Action.allCases, id: \.self) { action in
                 let list = RuleList(action)
                 let isOn = state == action
                 Button { choose(isOn ? nil : action) } label: {
@@ -355,12 +359,12 @@ struct SeenGroup: Identifiable {
     }
 
     static func hiddenCount(_ rules: [CustomRule]) -> Int {
-        (SimpleRules.entries(rules, action: .proxy) + SimpleRules.entries(rules, action: .direct)).filter(isTechnical).count
+        CustomRule.Action.allCases.flatMap { SimpleRules.entries(rules, action: $0) }.filter(isTechnical).count
     }
 
     /// What connected that no rule covers yet, busiest first, then the rules' apps and sites by name.
     @MainActor static func all(rules: [CustomRule], watcher: ConnectionWatcher) -> [SeenGroup] {
-        let ruled = [CustomRule.Action.proxy, .direct].flatMap { action in
+        let ruled = CustomRule.Action.allCases.flatMap { action in
             column(SimpleRules.entries(rules, action: action).filter { !isTechnical($0) }, action: action,
                    names: SimpleRules.ruleNames(rules, action: action))
         }
