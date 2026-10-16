@@ -142,16 +142,16 @@ struct ConnectionMapView: View {
             let fresh = model.connection.watcher.events.filter { $0.id > lastEvent && $0.kind == .opened }
             lastEvent = model.connection.watcher.events.last?.id ?? lastEvent
             for event in fresh.suffix(4) {
-                guard let code = Self.countryCode(of: event.connection.host),
-                      let name = Locale(identifier: "en").localizedString(forRegionCode: code) else { continue }
-                Task {
-                    guard let place = await Self.locate(name) else { return }
-                    requests.append(MapRequest(host: event.connection.host, flag: Self.flag(code), coordinate: place.coordinate, start: .now))
-                    if requests.count > 10 { requests.removeFirst() }
-                }
+                // Placed from the system's own table: nothing about the traffic leaves the Mac.
+                guard let code = Self.countryCode(of: event.connection.host), let place = Self.countries[code] else { continue }
+                requests.append(MapRequest(host: event.connection.host, flag: Self.flag(code),
+                                           coordinate: .init(latitude: place.latitude, longitude: place.longitude), start: .now))
+                if requests.count > 10 { requests.removeFirst() }
             }
         }
     }
+
+    private static let countries = CountryPlaces.read((try? String(contentsOf: CountryPlaces.systemFile, encoding: .utf8)) ?? "")
 
     /// Two-letter endings used by sites anywhere, not by their country.
     private static let globalEndings: Set<String> = ["io", "co", "ai", "me", "tv", "fm", "ly", "to", "cc", "gg", "so", "sh", "ws", "la", "eu"]
