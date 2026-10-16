@@ -4,6 +4,94 @@
     "": {
       "shouldTranslate": false
     },
+    "App's proxy setting": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنظیم پروکسی برنامه"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройка прокси приложения"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用的代理设置"
+          }
+        }
+      }
+    },
+    "No rule · %@": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بدون قانون · %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без правила · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无规则 · %@"
+          }
+        }
+      }
+    },
+    "This app was set to use V2Mac's proxy port, so it goes to the server without any rule.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "این برنامه برای استفاده از پورت پروکسی V2Mac تنظیم شده است، پس بدون هیچ قانونی به سرور می‌رود."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это приложение настроено на порт прокси V2Mac, поэтому идёт на сервер без правил."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此应用已设置为使用 V2Mac 的代理端口，因此不经任何规则直接发往服务器。"
+          }
+        }
+      }
+    },
+    "Unknown app": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "برنامهٔ ناشناخته"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неизвестное приложение"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未知应用"
+          }
+        }
+      }
+    },
     "View": {
       "localizations": {
         "fa": {

@@ -15,7 +15,6 @@ struct ConnectionsView: View {
     }
 
     @Environment(AppModel.self) private var model
-    @AppStorage("customRuleList") private var stored = "[]"
     @State private var selection: Set<ConnectionWatcher.Connection.ID> = []
     @State private var filter = Filter.all
     @AppStorage("connectionsTab") private var tab = Tab.list
@@ -85,7 +84,6 @@ struct ConnectionsView: View {
     }
 
     @ViewBuilder private var list: some View {
-        let rules = CustomRule.decode(stored)
         let rows = watcher.connections.filter(matches).sorted(using: sortOrder.wrappedValue)
         VSplitView {
             Table(rows, selection: $selection, sortOrder: sortOrder) {
@@ -97,7 +95,7 @@ struct ConnectionsView: View {
                 .width(min: 140, ideal: 220)
                 TableColumn("Time", value: \.start) { row in StatusCell(connection: row) }
                     .width(min: 64, ideal: 76)
-                TableColumn("Rule", value: \.outbound) { row in RuleCell(connection: row, rules: rules) }
+                TableColumn("Rule", value: \.outbound) { row in RuleCell(connection: row) }
                     .width(min: 120, ideal: 190)
                 TableColumn("Sent", value: \.sent) { row in BytesCell(bytes: row.sent, isKnown: !row.untracked) }
                     .width(min: 60, ideal: 72)
@@ -161,7 +159,7 @@ private struct AppCell: View {
                 Image(systemName: connection.inbound == ConfigBuilder.inboundTag ? "questionmark.app.dashed" : "network")
                     .foregroundStyle(.tertiary)
                     .frame(width: 20)
-                Text(connection.process ?? (connection.inbound == ConfigBuilder.inboundTag ? String(localized: "Unknown") : String(localized: "TUN")))
+                Text(connection.process ?? (connection.inbound == ConfigBuilder.inboundTag ? String(localized: "Unknown") : String(localized: "Unknown app")))
                     .foregroundStyle(.secondary).lineLimit(1)
             }
         }
@@ -199,12 +197,12 @@ private struct StatusCell: View {
 /// The outbound the core chose, tinted, with the custom rule that most likely sent it there.
 private struct RuleCell: View {
     let connection: ConnectionWatcher.Connection
-    let rules: [CustomRule]
 
     var body: some View {
         let action = CustomRule.Action(rawValue: connection.outbound)
-        let tint = action.map { RuleList($0).tint } ?? .secondary
-        let rule = matchingRule(action)
+        let viaProxySetting = connection.skipsRules
+        let tint: Color = viaProxySetting ? .orange : action.map { RuleList($0).tint } ?? .secondary
+        let rule = viaProxySetting ? nil : matchingRule(action)
         HStack(spacing: 6) {
             Text(action.map { RuleList($0).title } ?? connection.outbound)
                 .font(.caption.weight(.semibold))
@@ -213,9 +211,16 @@ private struct RuleCell: View {
                 .padding(.vertical, 1)
                 .background(tint.opacity(0.14), in: .capsule)
                 .fixedSize()
-            Text(rule?.name ?? String(localized: "Routing mode"))
-                .foregroundStyle(rule == nil ? .tertiary : .secondary)
-                .lineLimit(1)
+            if viaProxySetting {
+                Label("App's proxy setting", systemImage: "arrow.triangle.branch")
+                    .foregroundStyle(.orange)
+                    .lineLimit(1)
+                    .help("This app was set to use V2Mac's proxy port, so it goes to the server without any rule.")
+            } else {
+                Text(rule?.name ?? connection.routingMode.map { String(localized: "No rule · \($0.title)") } ?? String(localized: "Custom routing"))
+                    .foregroundStyle(rule == nil ? .tertiary : .secondary)
+                    .lineLimit(1)
+            }
         }
     }
 
@@ -231,6 +236,7 @@ private struct RuleCell: View {
 
     /// The first rule naming the app or the host whose action matches where the traffic went.
     private func matchingRule(_ action: CustomRule.Action?) -> CustomRule? {
+        let rules = connection.rules
         let byApp = connection.app.flatMap { app in
             SimpleRules.rule(forApp: app, bundleID: Self.bundleID(of: app), in: rules)
         }

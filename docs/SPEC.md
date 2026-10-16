@@ -680,6 +680,14 @@ Bypass mode. Direct mode uses only Block rules. Full configs (8.2) keep their
 own routing. Apply restarts a running core; a live switch keeps the core only
 when the rules are unchanged.
 
+With System Proxy off, the mixed proxy inbound goes to `proxy` before custom
+and region rules in Global and Bypass modes (`proxyClientsSkipRules`). Local
+names and private addresses still go direct first, and Block QUIC stays first
+when enabled. Direct mode keeps its Block rules and direct catch-all. With
+System Proxy on, the exception is disabled: manual and system proxy traffic
+share the inbound and cannot be distinguished. Changing System Proxy restarts
+the running core to apply this policy. Full configs keep their own routing.
+
 **Rule Editor.** A window (`rule-editor`), opened from the glass button at the
 foot of the main window's sidebar (its name slides out on hover) or from
 Settings → Routing. The toolbar switches between Simple and Advanced and holds
@@ -1572,7 +1580,12 @@ sidebar (beside the Rule Editor's), lists every connection through the core,
 sorted by a click on any column (newest first until changed; the choice is kept across launches as `connectionsSort`): the app (icon and name), the target `host:port`, the time it has
 been open (a green dot) or how long it lasted, the outbound the core chose
 (tinted Proxy, Direct or Block) with the custom rule that most likely sent it
-there (else "Routing mode"), and bytes sent and received. Below it, a log of
+there (else "No rule · <mode>" or "Custom routing"), and bytes sent and received.
+Connections that skip rules through the proxy-port exception show an orange
+"App's proxy setting" label. Each row keeps the mode and custom rules from its
+running configuration, so later edits do not relabel its history. Manually
+proxied connections remain in Connections but do not add discovered apps or
+hosts to the rule editor; existing user rules are preserved. Below it, a log of
 opens and closes with the same details. The toolbar filters All or Open,
 searches apps and targets, and clears closed rows and the log; the subtitle
 sums the open connections.

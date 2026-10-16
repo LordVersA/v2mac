@@ -62,6 +62,33 @@ import Testing
         #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "direct"])
     }
 
+    @Test(arguments: [RoutingPlan.global, .bypass([]), .bypass([
+        RegionRoute(geositeFile: "sites.dat", geositeTags: ["ir"], geoipFile: "ips.dat", geoipTags: ["ir"]),
+    ])], [false, true])
+    func proxyClientsSkipRulesAfterLocalTraffic(plan: RoutingPlan, skip: Bool) throws {
+        var custom = lists(direct: "a.com", block: "b.com")
+        custom.proxyClientsSkipRules = skip
+        let rules = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue)
+        #expect(rules[0]["domain"]?[0]?.stringValue == "full:localhost")
+        #expect(rules[1]["ip"]?[0]?.stringValue == "geoip:private")
+        if skip {
+            #expect(rules[2] == ["type": "field", "inboundTag": ["mixed-in"], "outboundTag": "proxy"])
+        } else {
+            #expect(!rules.contains { $0["inboundTag"] != nil })
+        }
+        #expect(rules[skip ? 3 : 2]["domain"] == ["domain:b.com"])
+        #expect(rules[skip ? 4 : 3]["domain"] == ["domain:a.com"])
+        // QUIC remains blocked before the proxy-port exception.
+        custom.blockQUIC = true
+        let quic = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue)
+        #expect(quic.first == ["type": "field", "network": "udp", "port": "443", "outboundTag": "block"])
+        let direct = try #require(try build(.direct, custom)["routing"]?["rules"]?.arrayValue)
+        #expect(!direct.contains { $0["inboundTag"] != nil })
+        #expect(!direct.contains { $0["outboundTag"] == "proxy" })
+        #expect(direct.contains { $0["domain"] == ["domain:b.com"] && $0["outboundTag"] == "block" })
+        #expect(direct.last?["outboundTag"] == "direct")
+    }
+
     @Test func emptyRulesChangeNothing() throws {
         for plan in [RoutingPlan.global, .direct, .bypass([])] {
             #expect(try build(plan, CustomRules()) == ConfigBuilder.build(outbound: ["protocol": "freedom"], options: RunOptions(metricsPort: 1), routing: plan))

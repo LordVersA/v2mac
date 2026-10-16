@@ -23,6 +23,10 @@ final class ConnectionWatcher {
         let inbound: String
         let outbound: String
         let start: Date
+        var routingMode: RoutingMode?
+        var rules: [CustomRule] = []
+        var usesProxySetting = false
+        var skipsRules: Bool { usesProxySetting && routingMode != .direct && outbound == ConfigBuilder.proxyTag }
         /// The `.app` folder, or the executable for command-line tools.
         var app: String?
         var process: String?
@@ -61,11 +65,13 @@ final class ConnectionWatcher {
     private(set) var events: [Event] = []
 
     @ObservationIgnored var proxyPort: () -> Int = { Prefs.inbound.port }
+    @ObservationIgnored var routingMode: RoutingMode?
+    @ObservationIgnored var customRules = CustomRules()
     @ObservationIgnored private var watchers = 0
     @ObservationIgnored fileprivate var nextID = 0
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     /// Access log lines since the last flush: a burst of lines updates the window once, not per line.
-    @ObservationIgnored private var pending: [SeenConnection] = []
+    @ObservationIgnored private var pending: [Connection] = []
     @ObservationIgnored private var paths: [Int32: String] = [:]
     /// TUN mode: what each site resolves to, to find the app's own connection (`NetFlow.tunClient`).
     @ObservationIgnored private var resolved: [String: Set<String>] = [:]
@@ -98,7 +104,14 @@ final class ConnectionWatcher {
         // The core's own lookups (its DNS inbound) are not an app's traffic, nor are the lookups
         // TUN mode hands to the core's resolver.
         guard isWatching, ConfigBuilder.trafficInboundTags.contains(seen.inbound), seen.outbound != ConfigBuilder.tunDNSTag else { return }
-        pending.append(seen)
+        nextID += 1
+        var connection = Connection(id: nextID, sourcePort: seen.sourcePort, host: seen.host, port: seen.port,
+                                    inbound: seen.inbound, outbound: seen.outbound, start: .now)
+        // Keep the running configuration with the row, even after settings change.
+        connection.routingMode = routingMode
+        connection.rules = routingMode == nil ? [] : customRules.rules.filter { routingMode != .direct || $0.action == .block }
+        connection.usesProxySetting = routingMode != nil && customRules.proxyClientsSkipRules && seen.inbound == ConfigBuilder.inboundTag
+        pending.append(connection)
         guard pending.count == 1 else { return }
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(250))
@@ -111,14 +124,13 @@ final class ConnectionWatcher {
         pending = []
         var list = connections
         var seenHosts = hosts
-        for seen in batch {
-            nextID += 1
-            var connection = Connection(id: nextID, sourcePort: seen.sourcePort, host: seen.host, port: seen.port,
-                                        inbound: seen.inbound, outbound: seen.outbound, start: .now)
-            if RuleMatchers.isIP(seen.host) { connection.remoteAddress = seen.host }
+        for var connection in batch {
+            if RuleMatchers.isIP(connection.host) { connection.remoteAddress = connection.host }
             list.append(connection)
             log(.opened, connection)
-            seenHosts[seen.host, default: Seen(id: seen.host)].note(seen.outbound)
+            if !connection.usesProxySetting {
+                seenHosts[connection.host, default: Seen(id: connection.host)].note(connection.outbound)
+            }
         }
         if list.count > limit { list.removeFirst(list.count - limit) }
         if seenHosts.count > limit { seenHosts = Self.trimmed(seenHosts, to: limit) }
@@ -173,7 +185,7 @@ final class ConnectionWatcher {
                 claimed.insert(flow.key)
                 list[index].process = flow.process
                 list[index].app = app(of: flow.pid)
-                if let app = list[index].app { apps[app, default: Seen(id: app)].note(row.outbound) }
+                if !row.usesProxySetting, let app = list[index].app { apps[app, default: Seen(id: app)].note(row.outbound) }
                 // The open line was logged before the app was known.
                 if let event = events.lastIndex(where: { $0.connection.id == row.id }) { events[event].connection = list[index] }
             } else if row.flowKey != nil {
@@ -229,6 +241,8 @@ extension ConnectionWatcher {
             nextID += 1
             var c = Connection(id: nextID, sourcePort: nil, host: host, port: port, inbound: ConfigBuilder.inboundTag,
                                outbound: outbound, start: .now.addingTimeInterval(-age))
+            c.routingMode = .global
+            c.usesProxySetting = outbound == ConfigBuilder.proxyTag
             c.app = app
             c.process = app == nil ? "curl" : nil
             c.sent = sent

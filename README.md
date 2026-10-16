@@ -111,15 +111,17 @@ Open **Settings → Routing → Custom rules**. It is one list of rules, each wi
 
 Coming from Proxifier? **Import Proxifier Profile…** reads a `.ppx` file. Rules to V2Mac's port become Proxy rules, Direct and Block rules stay as they are, and rules to other proxies or chains are skipped and named. **Block QUIC (UDP 443)** does what Proxifier's option does: browsers fall back to TCP, so their host names reach the rules.
 
-Apps can be written as `Spotify.app`, `com.spotify.client`, `*discord*`, a process name (`curl`) or a full path. App rules work for apps that use the system proxy or are pointed at V2Mac's port; in TUN mode every app reaches V2Mac through the tunnel and app rules cannot tell them apart yet.
+Apps can be written as `Spotify.app`, `com.spotify.client`, `*discord*`, a process name (`curl`) or a full path. App rules work for apps that use the system proxy; in TUN mode every app reaches V2Mac through the tunnel and app rules cannot tell them apart yet.
+
+With **System Proxy off**, apps pointed at V2Mac's proxy port skip custom and region rules and use the server. Connections marks these in orange as **App's proxy setting** and leaves them out of newly discovered rule-editor entries. Local traffic stays direct, Block QUIC still applies, and Direct mode still uses only Block rules before sending everything else direct. With **System Proxy on**, all traffic through that port follows the rules, since manual and system proxy connections share the same port. Full JSON configs keep their own routing.
 
 <p align="center"><img src="docs/images/screenshots/custom-rules.png" alt="Custom rules section in Routing settings, showing a Proxy list with Telegram, AI services, a Clash rule and a wildcard domain" width="560"></p>
 
 **How rules are checked**
 
-1. Local names (`localhost`, `*.local`, `*.test`, …) always go direct.
-2. Your rules, from the top down.
-3. Then the routing mode itself: local network addresses direct, then the Bypass region packs, then everything else to the proxy.
+1. Block QUIC, when enabled; then local names (`localhost`, `*.local`, `*.test`, …) and local network addresses go direct.
+2. The app proxy exception described above, then your rules from the top down.
+3. Then the routing mode itself: the Bypass region packs, then everything else to the proxy (or direct in Direct mode).
 
 The first match wins, so a site in a Proxy rule goes through the proxy even when its country is bypassed, and a Direct rule above a broad Proxy rule wins over it. In **Direct** mode only Block rules are used, since nothing there should reach the proxy. Full Xray JSON configs bring their own routing and ignore custom rules.
 

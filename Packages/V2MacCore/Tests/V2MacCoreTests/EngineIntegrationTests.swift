@@ -24,8 +24,14 @@ struct EngineIntegrationTests {
         return (response as? HTTPURLResponse)?.statusCode ?? -1
     }
 
-    @Test func generatedConfigPassesXrayTest() throws {
-        let (config, _) = try makeConfig()
+    @Test(arguments: [RoutingPlan.global, .bypass([
+        RegionRoute(geositeFile: "geosite.dat", geositeTags: ["category-ads-all"], geoipFile: "geoip.dat", geoipTags: ["private"]),
+    ]), .direct], [false, true])
+    func generatedConfigPassesXrayTest(plan: RoutingPlan, skip: Bool) throws {
+        let (_, options) = try makeConfig()
+        let custom = CustomRules(rules: [CustomRule(name: "Demo", action: .block, hosts: "example.com")],
+                                 blockQUIC: true, proxyClientsSkipRules: skip)
+        let config = try ConfigBuilder.build(outbound: ["protocol": "freedom"], options: options, routing: plan, custom: custom)
         let dir = try TestSupport.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let file = dir.appendingPathComponent("config.json")

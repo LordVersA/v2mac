@@ -181,6 +181,7 @@ final class ConnectionController {
 
     /// Spec 9.9. Takes effect at once while a connection is wanted.
     func setSystemProxyEnabled(_ on: Bool) {
+        guard on != systemProxy.isEnabled else { return }
         systemProxy.setEnabled(on)
         if on, coreState == .running {
             let port = port
@@ -188,6 +189,8 @@ final class ConnectionController {
         } else if !on {
             systemProxy.clear()
         }
+        // Whether the proxy port skips the rules depends on it.
+        reconnectIfRunning()
     }
 
     /// Spec 9.8. Turned on while a connection is wanted, the block goes up at once.
@@ -656,6 +659,8 @@ final class ConnectionController {
                 config = try ConfigBuilder.buildCustom(config: server.config, options: options(metrics: metrics, api: nil))
             }
             logs.append("[v2mac] Connecting to \(server.name)")
+            watcher.routingMode = server.kind == .outbound ? routingMode : nil
+            watcher.customRules = custom
             try await runner.start(config: config, readyPort: port)
             guard commandGeneration == generation, userWantsRunning else { await runner.stop(); return }
             running = started.map { ($0, plan, custom) }

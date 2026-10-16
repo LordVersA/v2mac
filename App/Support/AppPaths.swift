@@ -362,7 +362,8 @@ enum Prefs {
 
     /// Spec 8.6. Keys match `RoutingSettings`.
     static var customRules: CustomRules {
-        CustomRules(rules: customRuleList, blockQUIC: defaults.bool(forKey: "blockQUIC"))
+        CustomRules(rules: customRuleList, blockQUIC: defaults.bool(forKey: "blockQUIC"),
+                    proxyClientsSkipRules: !systemProxy)
     }
 
     static var customRuleList: [CustomRule] {

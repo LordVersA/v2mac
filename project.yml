@@ -77,13 +77,17 @@ targets:
     sources:
       - Tests/V2MacAppTests
       - App/State/ConnectionController.swift
+      - App/State/ConnectionWatcher.swift
       - App/State/AutomaticLatencyResults.swift
       - App/State/TunController.swift
       - App/State/LifecycleMonitor.swift
       - App/State/LogStore.swift
       - App/State/NotificationService.swift
       - App/Features/Settings/SettingsTab.swift
+      - App/Features/Settings/AboutSettings.swift
       - App/Support/AppPaths.swift
+      - App/Support/AdminConsent.swift
+      - App/Support/InstalledApps.swift
       - App/Support/Keychain.swift
       - App/State/KillSwitchController.swift
       - App/State/SystemProxyController.swift
