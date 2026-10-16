@@ -115,6 +115,8 @@ Apps can be written as `Spotify.app`, `com.spotify.client`, `*discord*`, a proce
 
 With **System Proxy off**, apps pointed at V2Mac's proxy port skip custom and region rules and use the server. Connections marks these in orange as **App's proxy setting** and leaves them out of newly discovered rule-editor entries. Local traffic stays direct, Block QUIC still applies, and Direct mode still uses only Block rules before sending everything else direct. With **System Proxy on**, all traffic through that port follows the rules, since manual and system proxy connections share the same port. Full JSON configs follow this policy too.
 
+In **Connections**, use **By Host** or **By Application** to fold traffic into expandable groups like the rule editor. Groups show connection counts, open connections and total traffic; expand them to inspect individual connections and their routing labels. Search and All/Open apply before grouping. All modes keep the same sortable table and single-line rows; groups start collapsed. **No grouping** shows individual connections.
+
 <p align="center"><img src="docs/images/screenshots/custom-rules.png" alt="Custom rules section in Routing settings, showing a Proxy list with Telegram, AI services, a Clash rule and a wildcard domain" width="560"></p>
 
 **How rules are checked**

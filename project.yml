@@ -78,6 +78,7 @@ targets:
       - Tests/V2MacAppTests
       - App/State/ConnectionController.swift
       - App/State/ConnectionWatcher.swift
+      - App/Features/Connections/ConnectionGroup.swift
       - App/State/AutomaticLatencyResults.swift
       - App/State/TunController.swift
       - App/State/LifecycleMonitor.swift

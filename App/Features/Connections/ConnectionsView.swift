@@ -8,6 +8,18 @@ struct ConnectionsView: View {
 
     enum Tab: String { case list, map }
 
+    enum Grouping: String, CaseIterable, Identifiable {
+        case none, host, application
+        var id: Self { self }
+        var title: LocalizedStringKey {
+            switch self {
+            case .none: "No grouping"
+            case .host: "By Host"
+            case .application: "By Application"
+            }
+        }
+    }
+
     enum Filter: String, CaseIterable, Identifiable {
         case all, open
         var id: Self { self }
@@ -15,14 +27,16 @@ struct ConnectionsView: View {
     }
 
     @Environment(AppModel.self) private var model
-    @State private var selection: Set<ConnectionWatcher.Connection.ID> = []
+    @State private var selection: Set<ConnectionGroup.Row.ID> = []
+    @State private var expanded: Set<ConnectionGroup.Row.ID> = []
     @State private var filter = Filter.all
     @AppStorage("connectionsTab") private var tab = Tab.list
+    @AppStorage("connectionsGrouping") private var grouping = Grouping.none
     @State private var search = ""
     /// The column and direction, kept across launches: `<column>:<asc|desc>`.
     @AppStorage("connectionsSort") private var storedSort = "time:desc"
 
-    typealias Row = ConnectionWatcher.Connection
+    typealias Row = ConnectionGroup.Row
     private static let columns: [String: KeyPathComparator<Row>] = [
         "app": KeyPathComparator(\Row.appName), "target": KeyPathComparator(\Row.target),
         "time": KeyPathComparator(\Row.start), "rule": KeyPathComparator(\Row.outbound),
@@ -69,6 +83,12 @@ struct ConnectionsView: View {
                     .pickerStyle(.segmented)
                 }
                 ToolbarItem {
+                    Picker("Group by", selection: $grouping) {
+                        ForEach(Grouping.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.menu)
+                }
+                ToolbarItem {
                     Button("Clear", systemImage: "trash") { watcher.clear() }
                         .help("Clear closed connections and the log")
                 }
@@ -84,25 +104,11 @@ struct ConnectionsView: View {
     }
 
     @ViewBuilder private var list: some View {
-        let rows = watcher.connections.filter(matches).sorted(using: sortOrder.wrappedValue)
+        let rows = watcher.connections.filter(matches).map(Row.connection).sorted(using: sortOrder.wrappedValue)
+        let groups = grouping == .none ? [] : ConnectionGroup.make(rows.compactMap(\.connection), by: grouping == .host ? .host : .app)
+            .map(Row.group).sorted(using: sortOrder.wrappedValue)
         VSplitView {
-            Table(rows, selection: $selection, sortOrder: sortOrder) {
-                TableColumn("Application", value: \.appName) { row in AppCell(connection: row) }
-                    .width(min: 140, ideal: 180)
-                TableColumn("Target", value: \.target) { row in
-                    Text(row.target).lineLimit(1).truncationMode(.middle).help(row.target)
-                }
-                .width(min: 140, ideal: 220)
-                TableColumn("Time", value: \.start) { row in StatusCell(connection: row) }
-                    .width(min: 64, ideal: 76)
-                TableColumn("Rule", value: \.outbound) { row in RuleCell(connection: row) }
-                    .width(min: 120, ideal: 190)
-                TableColumn("Sent", value: \.sent) { row in BytesCell(bytes: row.sent, isKnown: !row.untracked) }
-                    .width(min: 60, ideal: 72)
-                TableColumn("Received", value: \.received) { row in BytesCell(bytes: row.received, isKnown: !row.untracked) }
-                    .width(min: 60, ideal: 72)
-            }
-            .alternatingRowBackgrounds()
+            table(rows, groups: groups)
             .overlay {
                 if rows.isEmpty {
                     ContentUnavailableView {
@@ -127,6 +133,66 @@ struct ConnectionsView: View {
                 .padding(.vertical, 8)
                 .frame(minHeight: 100, idealHeight: 170, maxHeight: 420)
         }
+    }
+
+    private func table(_ rows: [Row], groups: [Row]) -> some View {
+        Table(of: Row.self, selection: $selection, sortOrder: sortOrder) {
+            TableColumn("Application", value: \.appName) { row in
+                if let connection = row.connection {
+                    AppCell(connection: connection)
+                } else if let group = row.group {
+                    HStack(spacing: 8) {
+                        EntryIcon(entry: group.entry).scaleEffect(0.8).frame(width: 20, height: 20)
+                        Text(group.title).fontWeight(.medium).lineLimit(1).truncationMode(.middle)
+                    }
+                }
+            }
+            .width(min: 140, ideal: 180)
+            TableColumn("Target", value: \.target) { row in
+                if let connection = row.connection {
+                    Text(connection.target).lineLimit(1).truncationMode(.middle).help(connection.target)
+                } else if let group = row.group {
+                    HStack(spacing: 4) {
+                        Text("Connections")
+                        Text(group.connections.count, format: .number)
+                    }
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                }
+            }
+            .width(min: 140, ideal: 220)
+            TableColumn("Time", value: \.start) { row in
+                if let connection = row.connection {
+                    StatusCell(connection: connection)
+                } else if let group = row.group {
+                    Text("\(group.openCount) open").foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            .width(min: 64, ideal: 76)
+            TableColumn("Rule", value: \.outbound) { row in
+                if let connection = row.connection { RuleCell(connection: connection) }
+            }
+            .width(min: 120, ideal: 190)
+            TableColumn("Sent", value: \.sent) { row in BytesCell(bytes: row.sent, isKnown: row.hasTrackedTraffic) }
+                .width(min: 60, ideal: 72)
+            TableColumn("Received", value: \.received) { row in BytesCell(bytes: row.received, isKnown: row.hasTrackedTraffic) }
+                .width(min: 60, ideal: 72)
+        } rows: {
+            if grouping == .none {
+                ForEach(rows) { TableRow($0) }
+            } else {
+                ForEach(groups) { group in
+                    DisclosureTableRow(group, isExpanded: Binding {
+                        expanded.contains(group.id)
+                    } set: { open in
+                        if open { expanded.insert(group.id) } else { expanded.remove(group.id) }
+                    }) {
+                        ForEach(group.children) { TableRow($0) }
+                    }
+                }
+            }
+        }
+        .alternatingRowBackgrounds()
     }
 
     private var summary: String {
@@ -229,22 +295,12 @@ private struct RuleCell: View {
         }
     }
 
-    /// Read from disk once per app: every visible row asks again each second.
-    private static var bundleIDs: [String: String] = [:]
-
-    private static func bundleID(of app: String) -> String {
-        if let known = bundleIDs[app] { return known }
-        let id = Bundle(path: app)?.bundleIdentifier ?? ""
-        bundleIDs[app] = id
-        return id
-    }
-
     /// The first rule naming the app or the host whose action matches where the traffic went.
     private func matchingRule(_ action: CustomRule.Action?) -> CustomRule? {
         guard !connection.isDefaultRoute else { return nil }
         let rules = connection.rules
         let byApp = connection.app.flatMap { app in
-            SimpleRules.rule(forApp: app, bundleID: Self.bundleID(of: app), in: rules)
+            SimpleRules.rule(forApp: app, bundleID: ConnectionGroup.bundleID(of: app), in: rules)
         }
         return [byApp, SimpleRules.rule(forHost: connection.host, in: rules)].compactMap { $0 }.first { $0.action == action }
     }

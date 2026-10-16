@@ -1,6 +1,41 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "No grouping": {
+      "localizations": {
+        "fa": { "stringUnit": { "state": "translated", "value": "بدون گروه‌بندی" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Без группировки" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不分组" } }
+      }
+    },
+    "By Host": {
+      "localizations": {
+        "fa": { "stringUnit": { "state": "translated", "value": "بر اساس میزبان" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "По хосту" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "按主机分组" } }
+      }
+    },
+    "By Application": {
+      "localizations": {
+        "fa": { "stringUnit": { "state": "translated", "value": "بر اساس برنامه" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "По приложению" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "按应用分组" } }
+      }
+    },
+    "Group by": {
+      "localizations": {
+        "fa": { "stringUnit": { "state": "translated", "value": "گروه‌بندی" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Группировка" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "分组方式" } }
+      }
+    },
+    "%lld open": {
+      "localizations": {
+        "fa": { "stringUnit": { "state": "translated", "value": "%lld باز" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Открыто: %lld" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%lld 个活动连接" } }
+      }
+    },
     "This config has no outbound for routing.": {
       "extractionState": "manual",
       "localizations": {

@@ -1601,6 +1601,20 @@ opens and closes with the same details. The toolbar filters All or Open,
 searches apps and targets, and clears closed rows and the log; the subtitle
 sums the open connections.
 
+The list's Group by picker (`connectionsGrouping`, default `none`) adds By Host
+and By Application alongside No grouping. It reuses `EntryGroups` from the rule
+editor: related domains and installed apps from the same vendor share an
+expandable table row. IP addresses and named command-line processes keep their
+own groups; unidentified apps share an Unknown app group. All modes keep the
+same six columns and single-line rows.
+Collapsed group rows show connection/open counts and summed traffic in those columns.
+Search and All/Open filter the connections before grouping and totals; children
+keep their individual app, target, time, routing label and traffic. Groups are
+collapsed by default. Column sorting applies to both groups and children, using
+aggregate traffic and the latest start time for group rows.
+Expanding a group stays stable as its connections update. No grouping retains
+individual rows without group headers. The event log stays below the table.
+
 `ConnectionWatcher` records only while this window or the rule editor's Simple
 mode is open (`watch()` / `unwatch()`). Access log lines from the `mixed-in` and
 `tun-in` inbounds make the rows (the core's own DNS lookups, and those TUN mode hands to its resolver, are left out). Once a
