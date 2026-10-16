@@ -4,6 +4,28 @@
     "": {
       "shouldTranslate": false
     },
+    "View": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نما"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вид"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视图"
+          }
+        }
+      }
+    },
     "\"Lost or failed\" covers a server that will not connect, a core that stopped and could not be restarted, and a busy port. These stay silent while a V2Mac window is in front.": {
       "localizations": {
         "fa": {

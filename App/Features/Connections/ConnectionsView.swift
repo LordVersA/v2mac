@@ -55,17 +55,20 @@ struct ConnectionsView: View {
         .navigationSubtitle(summary)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                GlassSegments(selection: $tab, items: [
-                    .init(value: .list, title: "Connections", systemImage: "list.bullet"),
-                    .init(value: .map, title: "Map", systemImage: "globe.europe.africa.fill"),
-                ])
+                Picker("View", selection: $tab) {
+                    Label("Connections", systemImage: "list.bullet").tag(Tab.list)
+                    Label("Map", systemImage: "globe.europe.africa.fill").tag(Tab.map)
+                }
+                .pickerStyle(.segmented)
+                .labelStyle(.titleAndIcon)
             }
-            .sharedBackgroundVisibility(.hidden)
             if tab == .list {
                 ToolbarItem {
-                    GlassSegments(selection: $filter, items: Filter.allCases.map { .init(value: $0, title: $0.title) })
+                    Picker("Filter", selection: $filter) {
+                        ForEach(Filter.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
                 }
-                .sharedBackgroundVisibility(.hidden)
                 ToolbarItem {
                     Button("Clear", systemImage: "trash") { watcher.clear() }
                         .help("Clear closed connections and the log")
