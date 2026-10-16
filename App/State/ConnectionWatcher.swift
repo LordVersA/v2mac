@@ -35,6 +35,11 @@ final class ConnectionWatcher {
         var untracked = false
 
         var target: String { port.map { "\(host):\($0)" } ?? host }
+        /// Sort keys for the Connections table.
+        var appName: String {
+            app.map { ($0 as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "") } ?? process ?? ""
+        }
+        var lifetime: TimeInterval { (end ?? .now).timeIntervalSince(start) }
         var isOpen: Bool { end == nil && !untracked }
     }
 
@@ -86,7 +91,9 @@ final class ConnectionWatcher {
 
     func record(_ seen: SeenConnection) {
         // The core's own lookups (its DNS inbound) are not an app's traffic.
-        guard isWatching, ConfigBuilder.trafficInboundTags.contains(seen.inbound) else { return }
+        // The core's own lookups (its DNS inbound) are not an app's traffic, nor are the lookups
+        // TUN mode hands to the core's resolver.
+        guard isWatching, ConfigBuilder.trafficInboundTags.contains(seen.inbound), seen.outbound != ConfigBuilder.tunDNSTag else { return }
         nextID += 1
         let connection = Connection(id: nextID, sourcePort: seen.sourcePort, host: seen.host, port: seen.port,
                                     inbound: seen.inbound, outbound: seen.outbound, start: .now)

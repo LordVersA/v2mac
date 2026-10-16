@@ -17,27 +17,48 @@ struct ConnectionsView: View {
     @State private var selection: Set<ConnectionWatcher.Connection.ID> = []
     @State private var filter = Filter.all
     @State private var search = ""
+    /// The column and direction, kept across launches: `<column>:<asc|desc>`.
+    @AppStorage("connectionsSort") private var storedSort = "time:desc"
+
+    typealias Row = ConnectionWatcher.Connection
+    private static let columns: [String: KeyPathComparator<Row>] = [
+        "app": KeyPathComparator(\Row.appName), "target": KeyPathComparator(\Row.target),
+        "time": KeyPathComparator(\Row.start), "rule": KeyPathComparator(\Row.outbound),
+        "sent": KeyPathComparator(\Row.sent), "received": KeyPathComparator(\Row.received),
+    ]
+
+    private var sortOrder: Binding<[KeyPathComparator<Row>]> {
+        Binding {
+            let parts = storedSort.split(separator: ":").map(String.init)
+            guard var comparator = Self.columns[parts.first ?? ""] else { return [KeyPathComparator(\Row.start, order: .reverse)] }
+            comparator.order = parts.last == "asc" ? .forward : .reverse
+            return [comparator]
+        } set: { order in
+            guard let first = order.first, let key = Self.columns.first(where: { $0.value.keyPath == first.keyPath })?.key else { return }
+            storedSort = key + (first.order == .forward ? ":asc" : ":desc")
+        }
+    }
 
     private var watcher: ConnectionWatcher { model.connection.watcher }
 
     var body: some View {
         let rules = CustomRule.decode(stored)
-        let rows = watcher.connections.reversed().filter(matches)
+        let rows = watcher.connections.filter(matches).sorted(using: sortOrder.wrappedValue)
         VSplitView {
-            Table(rows, selection: $selection) {
-                TableColumn("Application") { row in AppCell(connection: row) }
+            Table(rows, selection: $selection, sortOrder: sortOrder) {
+                TableColumn("Application", value: \.appName) { row in AppCell(connection: row) }
                     .width(min: 160, ideal: 220)
-                TableColumn("Target") { row in
+                TableColumn("Target", value: \.target) { row in
                     Text(row.target).lineLimit(1).truncationMode(.middle).help(row.target)
                 }
                 .width(min: 160, ideal: 260)
-                TableColumn("Time") { row in StatusCell(connection: row) }
+                TableColumn("Time", value: \.start) { row in StatusCell(connection: row) }
                     .width(min: 80, ideal: 96)
-                TableColumn("Rule") { row in RuleCell(connection: row, rules: rules) }
+                TableColumn("Rule", value: \.outbound) { row in RuleCell(connection: row, rules: rules) }
                     .width(min: 120, ideal: 200)
-                TableColumn("Sent") { row in BytesCell(bytes: row.sent, isKnown: !row.untracked) }
+                TableColumn("Sent", value: \.sent) { row in BytesCell(bytes: row.sent, isKnown: !row.untracked) }
                     .width(min: 64, ideal: 80)
-                TableColumn("Received") { row in BytesCell(bytes: row.received, isKnown: !row.untracked) }
+                TableColumn("Received", value: \.received) { row in BytesCell(bytes: row.received, isKnown: !row.untracked) }
                     .width(min: 64, ideal: 80)
             }
             .alternatingRowBackgrounds()
@@ -50,9 +71,9 @@ struct ConnectionsView: View {
                     }
                 }
             }
-            .frame(minHeight: 220)
+            .frame(minHeight: 260, idealHeight: 520)
             EventLog(events: watcher.events, search: search)
-                .frame(minHeight: 120, idealHeight: 220)
+                .frame(minHeight: 90, idealHeight: 150, maxHeight: 400)
         }
         .searchable(text: $search, placement: .toolbar, prompt: "Apps and targets")
         .navigationSubtitle(summary)
@@ -104,7 +125,9 @@ private struct AppCell: View {
                 EntryIcon(entry: RuleEntry(.app, app)).scaleEffect(0.8).frame(width: 20, height: 20)
                 Text(Self.name(of: app)).lineLimit(1)
             } else {
-                Image(systemName: "questionmark.app.dashed").foregroundStyle(.tertiary).frame(width: 20)
+                Image(systemName: connection.inbound == ConfigBuilder.inboundTag ? "questionmark.app.dashed" : "network")
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 20)
                 Text(connection.process ?? (connection.inbound == ConfigBuilder.inboundTag ? String(localized: "Unknown") : String(localized: "TUN")))
                     .foregroundStyle(.secondary).lineLimit(1)
             }
@@ -128,7 +151,7 @@ private struct StatusCell: View {
             } else if let end = connection.end {
                 Text(Self.duration(end.timeIntervalSince(connection.start))).foregroundStyle(.secondary)
             } else {
-                Text(connection.start, format: .dateTime.hour().minute().second()).foregroundStyle(.secondary)
+                Text(verbatim: "—").foregroundStyle(.tertiary)
             }
         }
         .monospacedDigit()
@@ -156,6 +179,7 @@ private struct RuleCell: View {
                 .padding(.horizontal, 7)
                 .padding(.vertical, 1)
                 .background(tint.opacity(0.14), in: .capsule)
+                .fixedSize()
             Text(rule?.name ?? String(localized: "Routing mode"))
                 .foregroundStyle(rule == nil ? .tertiary : .secondary)
                 .lineLimit(1)

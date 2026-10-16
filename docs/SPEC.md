@@ -1557,7 +1557,7 @@ newer V2Mac".
 
 A `connections` window, opened from the second glass button at the foot of the
 sidebar (beside the Rule Editor's), lists every connection through the core,
-newest first: the app (icon and name), the target `host:port`, the time it has
+sorted by a click on any column (newest first until changed; the choice is kept across launches as `connectionsSort`): the app (icon and name), the target `host:port`, the time it has
 been open (a green dot) or how long it lasted, the outbound the core chose
 (tinted Proxy, Direct or Block) with the custom rule that most likely sent it
 there (else "Routing mode"), and bytes sent and received. Below it, a log of
@@ -1567,7 +1567,7 @@ sums the open connections.
 
 `ConnectionWatcher` records only while this window or the rule editor's Simple
 mode is open (`watch()` / `unwatch()`). Access log lines from the `mixed-in` and
-`tun-in` inbounds make the rows (the core's own DNS lookups are left out). Once a
+`tun-in` inbounds make the rows (the core's own DNS lookups, and those TUN mode hands to its resolver, are left out). Once a
 second it runs `nettop` (`ProxyFlow`, no privileges needed) for every TCP
 connection to the proxy port: its source port links it to a row and gives the
 process, whose path (`proc_pidpath`) names the app, and the bytes each way. A
