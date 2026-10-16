@@ -127,7 +127,7 @@ public actor CoreRunner {
         try? "\(process.processIdentifier)".write(to: pidURL, atomically: true, encoding: .utf8)
 
         let deadline = ContinuousClock.now + .seconds(5)
-        while ContinuousClock.now < deadline {
+        while true {
             try Task.checkCancellation()
             guard state == .starting else { throw CoreError.cancelled }
             if !process.isRunning {
@@ -140,9 +140,10 @@ public actor CoreRunner {
                 )
             }
             if output.readySeen || PortUtil.canConnect(port: readyPort) { return }
+            // A busy executor can resume this poll late, after the core is already ready.
+            guard ContinuousClock.now < deadline else { throw CoreError.readyTimeout }
             try await Task.sleep(for: .milliseconds(50))
         }
-        throw CoreError.readyTimeout
     }
 
     // MARK: Live switch
