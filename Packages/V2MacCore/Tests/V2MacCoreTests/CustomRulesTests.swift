@@ -44,9 +44,9 @@ import Testing
     @Test func rulesComeFirstInOrder() throws {
         let c = try build(.global, lists(proxy: "a.com", direct: "b.com\n1.1.1.1", block: "c.com"))
         let rules = try #require(c["routing"]?["rules"]?.arrayValue)
-        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "block", "proxy", "direct", "direct", "direct"])
+        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "proxy", "direct", "direct"])
         #expect(rules[0]["domain"]?[0]?.stringValue == "full:localhost")
-        #expect(rules[5]["ip"]?[0]?.stringValue == "geoip:private")
+        #expect(rules[1]["ip"]?[0]?.stringValue == "geoip:private")
         #expect(c["routing"]?["domainStrategy"]?.stringValue == "IPIfNonMatch")
         #expect(c["dns"] != nil)
     }
@@ -59,7 +59,7 @@ import Testing
 
     @Test func directModeKeepsOnlyBlock() throws {
         let rules = try #require(try build(.direct, lists(proxy: "a.com", block: "c.com"))["routing"]?["rules"]?.arrayValue)
-        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "block", "direct"])
+        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "direct"])
     }
 
     @Test func emptyRulesChangeNothing() throws {
@@ -99,9 +99,9 @@ import Testing
         ], installedApps: apps, blockQUIC: true)
         let rules = try #require(try build(.global, custom)["routing"]?["rules"]?.arrayValue)
         #expect(rules[0] == ["type": "field", "network": "udp", "port": "443", "outboundTag": "block"])
-        #expect(rules.dropFirst(2).map { $0["outboundTag"]?.stringValue } == ["direct", "proxy", "block", "direct"])
-        #expect(rules[3]["process"] == ["/Applications/Spotify.app/"])
-        #expect(rules[4]["process"] == ["curl"] && rules[4]["domain"] == ["domain:b.com"])
+        #expect(rules.dropFirst(3).map { $0["outboundTag"]?.stringValue } == ["direct", "proxy", "block"])
+        #expect(rules[4]["process"] == ["/Applications/Spotify.app/"])
+        #expect(rules[5]["process"] == ["curl"] && rules[5]["domain"] == ["domain:b.com"])
     }
 
     @Test func storedRulesRoundTrip() {

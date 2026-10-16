@@ -30,10 +30,11 @@ import Testing
     }
 
     @Test func globalRoutingSendsPrivateDirect() throws {
-        let rule = try build()["routing"]?["rules"]?[0]
-        #expect(rule?["ip"]?[0]?.stringValue == "geoip:private")
-        #expect(rule?["outboundTag"]?.stringValue == "direct")
-        #expect(try build()["routing"]?["rules"]?[1] == nil)
+        let rules = try #require(try build()["routing"]?["rules"]?.arrayValue)
+        #expect(rules.count == 2)
+        #expect(rules[0]["domain"]?[0]?.stringValue == "full:localhost")
+        #expect(rules[1]["ip"]?[0]?.stringValue == "geoip:private")
+        for rule in rules { #expect(rule["outboundTag"]?.stringValue == "direct") }
     }
 
     @Test func logConnectionsOmitsAccessNone() throws {

@@ -63,12 +63,13 @@ extension ConfigBuilder {
             hasCustomIPs = hasCustomIPs || !hosts.ips.isEmpty
             customRules += made
         }
-        if !customRules.isEmpty || custom.blockQUIC {
-            customRules.insert(["type": "field", "domain": .array(CustomRules.localNames.map { .string($0) }), "outboundTag": .string(directTag)], at: 0)
-        }
+        // This Mac and the LAN always go direct, before any rule: a proxy rule for an app must not
+        // send its localhost traffic to the server's own localhost.
+        let localNames: JSONValue = ["type": "field", "domain": .array(CustomRules.localNames.map { .string($0) }), "outboundTag": .string(directTag)]
+        if plan != .direct || !customRules.isEmpty { customRules.insert(contentsOf: [localNames, privateRule], at: 0) }
         if custom.blockQUIC { customRules.insert(["type": "field", "network": "udp", "port": "443", "outboundTag": .string(blockTag)], at: 0) }
 
-        var tail: [JSONValue] = [privateRule]
+        var tail: [JSONValue] = []
         var hasIPRules = hasCustomIPs
         switch plan {
         case .direct:
