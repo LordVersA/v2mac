@@ -7,6 +7,8 @@ enum RuleList: String, CaseIterable, Identifiable {
     var id: Self { self }
     var key: String { "customRules\(rawValue)" }
     var saved: String { UserDefaults.standard.string(forKey: key) ?? "" }
+    /// The list Settings → Routing shows; not a setting, so not in `Prefs.backupKeys`.
+    static let shownKey = "customRulesShown"
 
     var symbol: String {
         switch self {
@@ -304,6 +306,7 @@ struct RuleBuilderView: View {
             text = current + (current.hasSuffix("\n") ? "\n" : "\n\n") + block
         }
         UserDefaults.standard.set(text, forKey: list.key)
+        UserDefaults.standard.set(list.rawValue, forKey: RuleList.shownKey)
         model.connection.reconnectIfRunning()
         dismissWindow(id: RuleBuilderView.windowID)
     }

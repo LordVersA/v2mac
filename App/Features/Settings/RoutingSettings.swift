@@ -39,7 +39,8 @@ private struct CustomRulesSection: View {
     @AppStorage("customRulesProxy") private var proxy = ""
     @AppStorage("customRulesDirect") private var direct = ""
     @AppStorage("customRulesBlock") private var block = ""
-    @State private var list = List.proxy
+    // The rule builder sets this to the list it wrote, so its rules are on screen afterwards.
+    @AppStorage(List.shownKey) private var list = List.proxy
     @State private var drafts: [List: String] = [:]
 
     private func saved(_ list: List) -> String {
