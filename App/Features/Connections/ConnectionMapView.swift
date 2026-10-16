@@ -173,8 +173,11 @@ struct ConnectionMapView: View {
     static func countryCode(of host: String) -> String? {
         guard let ending = host.lowercased().split(separator: ".").last, ending.count == 2, !globalEndings.contains(String(ending)) else { return nil }
         let code = ending == "uk" ? "GB" : ending.uppercased()
-        return Locale.Region.isoRegions.contains(Locale.Region(code)) ? code : nil
+        return isoRegions.contains(code) ? code : nil
     }
+
+    /// Built once: `Locale.Region.isoRegions` makes a new list on every call.
+    private static let isoRegions = Set(Locale.Region.isoRegions.map(\.identifier))
 
     static func flag(_ code: String) -> String {
         String(String.UnicodeScalarView(code.unicodeScalars.compactMap { Unicode.Scalar(0x1F1E6 - 65 + $0.value) }))

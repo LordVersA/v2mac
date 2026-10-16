@@ -216,10 +216,20 @@ private struct RuleCell: View {
         }
     }
 
+    /// Read from disk once per app: every visible row asks again each second.
+    private static var bundleIDs: [String: String] = [:]
+
+    private static func bundleID(of app: String) -> String {
+        if let known = bundleIDs[app] { return known }
+        let id = Bundle(path: app)?.bundleIdentifier ?? ""
+        bundleIDs[app] = id
+        return id
+    }
+
     /// The first rule naming the app or the host whose action matches where the traffic went.
     private func matchingRule(_ action: CustomRule.Action?) -> CustomRule? {
         let byApp = connection.app.flatMap { app in
-            SimpleRules.rule(forApp: app, bundleID: Bundle(path: app)?.bundleIdentifier ?? "", in: rules)
+            SimpleRules.rule(forApp: app, bundleID: Self.bundleID(of: app), in: rules)
         }
         return [byApp, SimpleRules.rule(forHost: connection.host, in: rules)].compactMap { $0 }.first { $0.action == action }
     }

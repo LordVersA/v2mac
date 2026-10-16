@@ -64,6 +64,8 @@ final class ConnectionWatcher {
     @ObservationIgnored private var watchers = 0
     @ObservationIgnored fileprivate var nextID = 0
     @ObservationIgnored private var pollTask: Task<Void, Never>?
+    /// Access log lines since the last flush: a burst of lines updates the window once, not per line.
+    @ObservationIgnored private var pending: [SeenConnection] = []
     @ObservationIgnored private var paths: [Int32: String] = [:]
     /// TUN mode: what each site resolves to, to find the app's own connection (`NetFlow.tunClient`).
     @ObservationIgnored private var resolved: [String: Set<String>] = [:]
@@ -93,19 +95,35 @@ final class ConnectionWatcher {
     }
 
     func record(_ seen: SeenConnection) {
-        // The core's own lookups (its DNS inbound) are not an app's traffic.
         // The core's own lookups (its DNS inbound) are not an app's traffic, nor are the lookups
         // TUN mode hands to the core's resolver.
         guard isWatching, ConfigBuilder.trafficInboundTags.contains(seen.inbound), seen.outbound != ConfigBuilder.tunDNSTag else { return }
-        nextID += 1
-        var connection = Connection(id: nextID, sourcePort: seen.sourcePort, host: seen.host, port: seen.port,
-                                    inbound: seen.inbound, outbound: seen.outbound, start: .now)
-        if RuleMatchers.isIP(seen.host) { connection.remoteAddress = seen.host }
-        connections.append(connection)
-        if connections.count > limit { connections.removeFirst(connections.count - limit) }
-        log(.opened, connection)
-        hosts[seen.host, default: Seen(id: seen.host)].note(seen.outbound)
-        if hosts.count > limit { hosts = Self.trimmed(hosts, to: limit) }
+        pending.append(seen)
+        guard pending.count == 1 else { return }
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(250))
+            self?.flush()
+        }
+    }
+
+    private func flush() {
+        let batch = pending
+        pending = []
+        var list = connections
+        var seenHosts = hosts
+        for seen in batch {
+            nextID += 1
+            var connection = Connection(id: nextID, sourcePort: seen.sourcePort, host: seen.host, port: seen.port,
+                                        inbound: seen.inbound, outbound: seen.outbound, start: .now)
+            if RuleMatchers.isIP(seen.host) { connection.remoteAddress = seen.host }
+            list.append(connection)
+            log(.opened, connection)
+            seenHosts[seen.host, default: Seen(id: seen.host)].note(seen.outbound)
+        }
+        if list.count > limit { list.removeFirst(list.count - limit) }
+        if seenHosts.count > limit { seenHosts = Self.trimmed(seenHosts, to: limit) }
+        connections = list
+        hosts = seenHosts
     }
 
     func clear() {
@@ -124,6 +142,7 @@ final class ConnectionWatcher {
     private func poll() async {
         guard connections.contains(where: \.isOpen) else { return }
         let flows = await NetFlow.read()
+        let byKey = Dictionary(flows.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
         let proxyPort = proxyPort()
         var list = connections
         var claimed = Set(list.filter(\.isOpen).compactMap(\.flowKey))
@@ -132,7 +151,7 @@ final class ConnectionWatcher {
             let isTun = row.inbound == ConfigBuilder.tunInboundTag
             let flow: NetFlow?
             if let key = row.flowKey {
-                flow = flows.first { $0.key == key }
+                flow = byKey[key]
             } else if isTun {
                 if let addresses = resolved[row.host] {
                     flow = NetFlow.tunClient(flows, port: row.port, addresses: addresses, claimed: claimed, skipping: Self.coreProcesses)
