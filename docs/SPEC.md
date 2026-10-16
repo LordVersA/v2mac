@@ -1608,7 +1608,9 @@ expandable table row. IP addresses and named command-line processes keep their
 own groups; unidentified apps share an Unknown app group. All modes keep the
 same six columns and single-line rows.
 Collapsed group rows show connection/open counts and summed traffic in those columns.
-Search and All/Open filter the connections before grouping and totals; children
+The Group by menu always shows the selected grouping in its label.
+Search, All/Open and an All/Proxy/Direct/Block route filter apply before grouping
+and totals; children
 keep their individual app, target, time, routing label and traffic. Groups are
 collapsed by default. Column sorting applies to both groups and children, using
 aggregate traffic and the latest start time for group rows.

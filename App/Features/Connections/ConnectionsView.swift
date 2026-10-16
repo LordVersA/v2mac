@@ -30,6 +30,7 @@ struct ConnectionsView: View {
     @State private var selection: Set<ConnectionGroup.Row.ID> = []
     @State private var expanded: Set<ConnectionGroup.Row.ID> = []
     @State private var filter = Filter.all
+    @State private var actionFilter: CustomRule.Action?
     @AppStorage("connectionsTab") private var tab = Tab.list
     @AppStorage("connectionsGrouping") private var grouping = Grouping.none
     @State private var search = ""
@@ -83,10 +84,30 @@ struct ConnectionsView: View {
                     .pickerStyle(.segmented)
                 }
                 ToolbarItem {
-                    Picker("Group by", selection: $grouping) {
-                        ForEach(Grouping.allCases) { Text($0.title).tag($0) }
+                    Menu {
+                        Picker("Filter by route", selection: $actionFilter) {
+                            Text("All").tag(Optional<CustomRule.Action>.none)
+                            ForEach(CustomRule.Action.allCases, id: \.self) { action in
+                                Text(RuleList(action).title).tag(Optional(action))
+                            }
+                        }
+                    } label: {
+                        Label(actionFilter.map { RuleList($0).title } ?? String(localized: "All"), systemImage: "line.3.horizontal.decrease")
                     }
-                    .pickerStyle(.menu)
+                    .labelStyle(.titleAndIcon)
+                    .fixedSize()
+                    .help("Filter by route")
+                }
+                ToolbarItem {
+                    Menu {
+                        Picker("Group by", selection: $grouping) {
+                            ForEach(Grouping.allCases) { Text($0.title).tag($0) }
+                        }
+                    } label: {
+                        Text(grouping.title)
+                    }
+                    .fixedSize()
+                    .help("Group by")
                 }
                 ToolbarItem {
                     Button("Clear", systemImage: "trash") { watcher.clear() }
@@ -202,9 +223,7 @@ struct ConnectionsView: View {
     }
 
     private func matches(_ row: ConnectionWatcher.Connection) -> Bool {
-        (filter == .all || row.isOpen)
-            && (search.isEmpty || row.target.localizedCaseInsensitiveContains(search)
-                || (row.app.map(AppCell.name(of:)) ?? row.process ?? "").localizedCaseInsensitiveContains(search))
+        row.matches(search: search, onlyOpen: filter == .open, action: actionFilter)
     }
 }
 

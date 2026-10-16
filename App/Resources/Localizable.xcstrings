@@ -1,6 +1,13 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Filter by route": {
+      "localizations": {
+        "fa": { "stringUnit": { "state": "translated", "value": "فیلتر بر اساس مسیر" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Фильтр по маршруту" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "按路由筛选" } }
+      }
+    },
     "No grouping": {
       "localizations": {
         "fa": { "stringUnit": { "state": "translated", "value": "بدون گروه‌بندی" } },

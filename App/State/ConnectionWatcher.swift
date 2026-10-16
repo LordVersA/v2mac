@@ -51,6 +51,11 @@ final class ConnectionWatcher {
         }
         var lifetime: TimeInterval { (end ?? .now).timeIntervalSince(start) }
         var isOpen: Bool { end == nil && !untracked }
+
+        func matches(search: String, onlyOpen: Bool, action: CustomRule.Action?) -> Bool {
+            (!onlyOpen || isOpen) && (action == nil || self.action == action)
+                && (search.isEmpty || target.localizedCaseInsensitiveContains(search) || appName.localizedCaseInsensitiveContains(search))
+        }
     }
 
     struct Event: Identifiable {

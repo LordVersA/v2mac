@@ -73,6 +73,28 @@ struct ConnectionGroupTests {
         #expect(Set(([header] + header.children).map(\.id)).count == 1001)
     }
 
+    @Test func routeFilterCombinesWithSearchAndOpenStateBeforeGrouping() throws {
+        var proxy = connection(1, host: "api.example.com", process: "curl")
+        proxy.action = .proxy; proxy.sent = 10; proxy.usesProxySetting = true
+        var direct = connection(2, host: "www.example.com")
+        direct.action = .direct; direct.sent = 20; direct.end = .now
+        var block = connection(3, host: "ads.example.com")
+        block.action = .block; block.sent = 30
+        let unknown = connection(4)
+        let rows = [proxy, direct, block, unknown]
+        #expect(rows.filter { $0.matches(search: "", onlyOpen: false, action: nil) }.count == 4)
+        for action in CustomRule.Action.allCases {
+            #expect(rows.filter { $0.matches(search: "", onlyOpen: false, action: action) }.count == 1)
+        }
+        #expect(rows.filter { $0.matches(search: "", onlyOpen: true, action: .direct) }.isEmpty)
+        #expect(rows.filter { $0.matches(search: "CURL", onlyOpen: true, action: .proxy) }.map(\.id) == [1])
+        #expect(rows.filter { $0.matches(search: "ads", onlyOpen: false, action: .proxy) }.isEmpty)
+        let filtered = rows.filter { $0.matches(search: "EXAMPLE.COM", onlyOpen: true, action: .proxy) }
+        let group = try #require(ConnectionGroup.make(filtered, by: .host).first)
+        #expect(group.connections.map(\.id) == [1])
+        #expect(group.sent == 10 && group.openCount == 1)
+    }
+
     @Test func applicationsFromTheSameVendorGroupTogether() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
