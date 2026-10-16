@@ -1545,6 +1545,28 @@ newer V2Mac".
 
 ---
 
+### 12.10 Connections
+
+A `connections` window, opened from the second glass button at the foot of the
+sidebar (beside the Rule Editor's), lists every connection through the core,
+newest first: the app (icon and name), the target `host:port`, the time it has
+been open (a green dot) or how long it lasted, the outbound the core chose
+(tinted Proxy, Direct or Block) with the custom rule that most likely sent it
+there (else "Routing mode"), and bytes sent and received. Below it, a log of
+opens and closes with the same details. The toolbar filters All or Open,
+searches apps and targets, and clears closed rows and the log; the subtitle
+sums the open connections.
+
+`ConnectionWatcher` records only while this window or the rule editor's Simple
+mode is open (`watch()` / `unwatch()`). Access log lines from the `mixed-in` and
+`tun-in` inbounds make the rows (the core's own DNS lookups are left out). Once a
+second it runs `nettop` (`ProxyFlow`, no privileges needed) for every TCP
+connection to the proxy port: its source port links it to a row and gives the
+process, whose path (`proc_pidpath`) names the app, and the bytes each way. A
+row whose connection is gone is closed. A row never seen by `nettop` (TUN
+traffic arrives from the root forwarder, and very short connections close first)
+has no app or bytes. At most 1,000 rows and 2,000 log lines are kept.
+
 ## 13. Settings
 
 | Tab | Setting | Default |

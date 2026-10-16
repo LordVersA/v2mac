@@ -41,7 +41,7 @@ struct SidebarView: View {
 
             SidebarRecents()
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { RuleEditorButton() }
+        .safeAreaInset(edge: .bottom, spacing: 0) { SidebarTools() }
         .sheet(item: $editing) { group in
             GroupEditSheet(group: group)
         }

@@ -45,6 +45,13 @@ struct V2MacApp: App {
         .defaultSize(width: 1040, height: 640)
         .defaultLaunchBehavior(.suppressed)
 
+        Window("Connections", id: ConnectionsView.windowID) {
+            ConnectionsView()
+                .environment(model)
+        }
+        .defaultSize(width: 1040, height: 680)
+        .defaultLaunchBehavior(.suppressed)
+
         Window("Rule Builder", id: RuleBuilderView.windowID) {
             RuleBuilderView()
                 .environment(model)
@@ -77,6 +84,7 @@ struct WindowRequestHandler: View {
                 case .main: model.openMainWindow(openWindow)
                 case .ruleBuilder: model.openRuleBuilder(openWindow)
                 case .ruleEditor: model.openRuleEditor(openWindow)
+                case .connections: model.openConnections(openWindow)
                 case .settings(let tab): model.openSettings(openSettings, tab: tab)
                 }
             }

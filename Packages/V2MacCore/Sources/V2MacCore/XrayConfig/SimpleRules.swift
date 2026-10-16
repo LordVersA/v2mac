@@ -107,6 +107,10 @@ public enum SimpleRules {
     /// The action of the first enabled rule with only hosts that names `host`: as written, by
     /// keyword, or as a parent domain. Geo lists and regular expressions are not checked.
     public static func action(forHost host: String, in rules: [CustomRule]) -> CustomRule.Action? {
+        rule(forHost: host, in: rules)?.action
+    }
+
+    public static func rule(forHost host: String, in rules: [CustomRule]) -> CustomRule? {
         let host = host.lowercased()
         for rule in rules where rule.enabled && split(rule.apps).isEmpty {
             let parsed = RuleMatchers(parsing: rule.hosts)
@@ -118,20 +122,24 @@ public enum SimpleRules {
                 case "keyword": host.contains(value)
                 default: false
                 }
-                if hit { return rule.action }
+                if hit { return rule }
             }
-            if parsed.ips.contains(host) { return rule.action }
+            if parsed.ips.contains(host) { return rule }
         }
         return nil
     }
 
     /// The action of the first enabled rule with only apps that names the app at `path`.
     public static func action(forApp path: String, bundleID: String, in rules: [CustomRule]) -> CustomRule.Action? {
+        rule(forApp: path, bundleID: bundleID, in: rules)?.action
+    }
+
+    public static func rule(forApp path: String, bundleID: String, in rules: [CustomRule]) -> CustomRule? {
         let app = InstalledApp(path: path, bundleID: bundleID)
         let folder = path.hasSuffix(".app") ? path + "/" : path
         for rule in rules where rule.enabled && split(rule.hosts).isEmpty {
             let processes = AppMatchers(parsing: rule.apps, apps: [app]).processes
-            if processes.contains(folder) || processes.contains((path as NSString).lastPathComponent) { return rule.action }
+            if processes.contains(folder) || processes.contains((path as NSString).lastPathComponent) { return rule }
         }
         return nil
     }

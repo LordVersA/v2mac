@@ -54,8 +54,8 @@ struct SimpleRuleEditor: View {
         .searchable(text: $search, placement: .toolbar, prompt: "Apps and sites")
         .environment(icons)
         .task { await icons.load() }
-        .onAppear { model.connection.watcher.isWatching = true }
-        .onDisappear { model.connection.watcher.isWatching = false }
+        .onAppear { model.connection.watcher.watch() }
+        .onDisappear { model.connection.watcher.unwatch() }
     }
 
     private var header: some View {
@@ -306,7 +306,7 @@ private struct RouteSwitch: View {
     }
 }
 
-private struct EntryIcon: View {
+struct EntryIcon: View {
     @Environment(EntryIcons.self) private var icons
     let entry: RuleEntry
 

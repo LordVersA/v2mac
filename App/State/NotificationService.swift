@@ -49,6 +49,7 @@ enum WindowRequest: Equatable, Sendable {
     case settings(SettingsTab)
     case ruleBuilder
     case ruleEditor
+    case connections
 
     /// The Rule Builder's window id; here so state code does not need the view.
     static let ruleBuilderID = "rule-builder"
@@ -58,6 +59,7 @@ enum WindowRequest: Equatable, Sendable {
         case .main: "main"
         case .ruleBuilder: Self.ruleBuilderID
         case .ruleEditor: "rule-editor"
+        case .connections: "connections"
         case .settings(let tab): "settings:\(tab.rawValue)"
         }
     }
@@ -69,6 +71,8 @@ enum WindowRequest: Equatable, Sendable {
             self = .ruleBuilder
         } else if code == "rule-editor" {
             self = .ruleEditor
+        } else if code == "connections" {
+            self = .connections
         } else {
             self = .main
         }

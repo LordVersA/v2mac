@@ -6,6 +6,7 @@ public struct SeenConnection: Sendable, Equatable {
     public var sourcePort: Int?
     /// A domain or an IP address, without the port.
     public var host: String
+    public var port: Int?
     public var inbound: String
     public var outbound: String
 
@@ -23,10 +24,13 @@ public struct SeenConnection: Sendable, Equatable {
         } else if target.hasPrefix("tcp:") || target.hasPrefix("udp:") {
             target.removeFirst(4)
         }
-        // Drop the port; an IPv6 address comes as `[addr]:port`.
+        // Split off the port; an IPv6 address comes as `[addr]:port`. A URL without one uses its scheme's.
+        port = line[accepted.upperBound...].hasPrefix("http://") ? 80 : nil
         if target.hasPrefix("["), let end = target.firstIndex(of: "]") {
+            port = Int(target[target.index(after: end)...].dropFirst())
             target = String(target[target.index(after: target.startIndex)..<end])
         } else if target.filter({ $0 == ":" }).count == 1, let colon = target.lastIndex(of: ":") {
+            port = Int(target[target.index(after: colon)...])
             target = String(target[..<colon])
         }
         guard !target.isEmpty else { return nil }
@@ -38,43 +42,53 @@ public struct SeenConnection: Sendable, Equatable {
     }
 }
 
-/// Which process owns each local TCP socket connected to the proxy port, by the socket's local port.
-/// Only this user's processes can be read; others are simply not in the result.
-public enum SocketOwners {
-    public static func scan(proxyPort: Int) -> [Int: String] {
-        let count = proc_listallpids(nil, 0)
-        guard count > 0 else { return [:] }
-        var pids = [pid_t](repeating: 0, count: Int(count) + 64)
-        let found = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size))
-        var out: [Int: String] = [:]
-        for pid in pids.prefix(Int(max(found, 0))) where pid > 0 && pid != getpid() {
-            for port in proxyClientPorts(pid: pid, proxyPort: proxyPort) {
-                if let path = path(of: pid) { out[port] = path }
+/// One TCP connection from an app to the proxy port, as `nettop` reports it: who owns it and how
+/// many bytes went each way. `nettop` needs no privileges and lists every process's connections.
+public struct ProxyFlow: Sendable, Equatable {
+    /// The app's end: the source port the access log names.
+    public var localPort: Int
+    public var pid: Int32
+    public var process: String
+    public var sent: Int64
+    public var received: Int64
+
+    /// Every connection to `proxyPort` on this Mac, or none if `nettop` fails.
+    public static func read(proxyPort: Int) async -> [ProxyFlow] {
+        let args = ["-L", "1", "-m", "tcp", "-n", "-x", "-J", "bytes_in,bytes_out"]
+        guard let out = try? await CoreUpdater.run("/usr/bin/nettop", args, timeout: .seconds(5)), out.status == 0 else { return [] }
+        return parse(out.output, proxyPort: proxyPort)
+    }
+
+    /// `nettop -L 1 -J bytes_in,bytes_out` CSV: a process line (`curl.17295,in,out,`) followed by
+    /// its connections (`tcp4 127.0.0.1:56187<->127.0.0.1:10808,in,out,`).
+    static func parse(_ csv: String, proxyPort: Int) -> [ProxyFlow] {
+        var out: [ProxyFlow] = []
+        var owner: (name: String, pid: Int32)?
+        for line in csv.split(whereSeparator: \.isNewline) {
+            let fields = line.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
+            guard let first = fields.first, !first.isEmpty else { continue }
+            guard first.contains("<->") else {
+                if let dot = first.lastIndex(of: "."), let pid = Int32(first[first.index(after: dot)...]) {
+                    owner = (String(first[..<dot]), pid)
+                }
+                continue
             }
+            let ends = first.split(separator: " ").last?.components(separatedBy: "<->") ?? []
+            guard let owner, ends.count == 2, fields.count >= 3,
+                  let local = port(of: ends[0]), port(of: ends[1]) == proxyPort, local != proxyPort else { continue }
+            out.append(ProxyFlow(localPort: local, pid: owner.pid, process: owner.name,
+                                 sent: Int64(fields[2]) ?? 0, received: Int64(fields[1]) ?? 0))
         }
         return out
     }
 
-    static func proxyClientPorts(pid: pid_t, proxyPort: Int) -> [Int] {
-        let size = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
-        guard size > 0 else { return [] }
-        var fds = [proc_fdinfo](repeating: proc_fdinfo(), count: Int(size) / MemoryLayout<proc_fdinfo>.stride)
-        let used = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, &fds, size)
-        guard used > 0 else { return [] }
-        var ports: [Int] = []
-        for fd in fds.prefix(Int(used) / MemoryLayout<proc_fdinfo>.stride) where fd.proc_fdtype == PROX_FDTYPE_SOCKET {
-            var info = socket_fdinfo()
-            let read = proc_pidfdinfo(pid, fd.proc_fd, PROC_PIDFDSOCKETINFO, &info, Int32(MemoryLayout<socket_fdinfo>.size))
-            guard read == MemoryLayout<socket_fdinfo>.size, info.psi.soi_kind == SOCKINFO_TCP else { continue }
-            let ini = info.psi.soi_proto.pri_tcp.tcpsi_ini
-            let remote = Int(UInt16(bigEndian: UInt16(truncatingIfNeeded: ini.insi_fport)))
-            let local = Int(UInt16(bigEndian: UInt16(truncatingIfNeeded: ini.insi_lport)))
-            if remote == proxyPort { ports.append(local) }
-        }
-        return ports
+    private static func port(of end: String) -> Int? {
+        end.split(separator: ":").last.flatMap { Int($0) }
     }
+}
 
-    static func path(of pid: pid_t) -> String? {
+public enum SocketOwners {
+    public static func path(of pid: pid_t) -> String? {
         var buffer = [CChar](repeating: 0, count: 4096)
         guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { return nil }
         return String(decoding: buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)

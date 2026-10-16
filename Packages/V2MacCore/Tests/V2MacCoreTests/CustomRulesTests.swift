@@ -154,10 +154,25 @@ import Testing
 @Suite struct SimpleRulesTests {
     @Test func readsAccessLog() throws {
         let a = try #require(SeenConnection(line: "2026/10/17 00:34:27.238170 from tcp:127.0.0.1:51973 accepted tcp:Example.com:443 [mixed-in >> direct]"))
-        #expect(a.sourcePort == 51973 && a.host == "example.com" && a.inbound == "mixed-in" && a.outbound == "direct")
+        #expect(a.sourcePort == 51973 && a.host == "example.com" && a.port == 443 && a.inbound == "mixed-in" && a.outbound == "direct")
         let b = try #require(SeenConnection(line: "2026/10/17 00:34:30.875797 from 127.0.0.1:51978 accepted http://blockme.example.org/x [mixed-in -> block]"))
-        #expect(b.host == "blockme.example.org" && b.sourcePort == 51978 && b.outbound == "block")
-        #expect(SeenConnection(line: "x from 1.2.3.4:5 accepted udp:[2001:db8::1]:53 [tun-in -> proxy]")?.host == "2001:db8::1")
+        #expect(b.host == "blockme.example.org" && b.port == 80 && b.sourcePort == 51978 && b.outbound == "block")
+        let v6 = SeenConnection(line: "x from 1.2.3.4:5 accepted udp:[2001:db8::1]:53 [tun-in -> proxy]")
+        #expect(v6?.host == "2001:db8::1" && v6?.port == 53)
+        let flows = ProxyFlow.parse("""
+        ,bytes_in,bytes_out,
+        launchd.1,,,
+        tcp4 127.0.0.1:10808<->*:*,,,
+        curl.17295,30758,1814,
+        tcp4 127.0.0.1:56187<->127.0.0.1:10808,30758,1814,
+        tcp4 10.0.0.2:5000<->1.2.3.4:443,1,1,
+        xray.900,1,1,
+        tcp4 127.0.0.1:10808<->127.0.0.1:56187,1814,30758,
+        Google Chrome H.4410,9,9,
+        tcp6 ::1:61000<->::1:10808,100,200,
+        """, proxyPort: 10808)
+        #expect(flows == [ProxyFlow(localPort: 56187, pid: 17295, process: "curl", sent: 1814, received: 30758),
+                          ProxyFlow(localPort: 61000, pid: 4410, process: "Google Chrome H", sent: 200, received: 100)])
         #expect(SeenConnection(line: "2026/10/17 [Warning] core: Xray started") == nil)
         #expect(SocketOwners.appBundle(of: "/Applications/A.app/Contents/Frameworks/H.app/Contents/MacOS/H") == "/Applications/A.app")
         #expect(SocketOwners.appBundle(of: "/usr/bin/curl") == nil)
