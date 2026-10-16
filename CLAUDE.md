@@ -76,6 +76,7 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     `-debugEditProtocol <protocol>` and `-debugEditorHeight <points>` show a whole form in a snapshot.
   - `-debugWindowRequest <settings tab>|main|rule-builder` opens that window after 2 seconds (also with demo
     data), so a snapshot can show a settings tab: `-debugWindowRequest about`.
+    With `rule-editor`, `-debugFocusRule <part of a rule name>` shows Advanced lit up at that rule.
     With `rule-builder`, `-debugRuleBuilder <step>[:<source>]` (`targets:countries`, `review`) shows a step.
   - `-debugBackupRoundTrip <path>` (with demo data) writes a backup there, removes the servers, restores
     the file twice and prints what came back.

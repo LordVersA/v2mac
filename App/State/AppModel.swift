@@ -37,6 +37,8 @@ final class AppModel {
     var settingsTab: SettingsTab = .general
     /// A window a notification click asked for; `WindowRequestHandler` opens it.
     var windowRequest: WindowRequest?
+    /// A custom rule the rule editor's Advanced mode scrolls to and lights up once.
+    var focusedRule: UUID?
     /// The server editor's sheet (spec 12.7).
     var serverEditor: ServerEditorRequest?
     /// The Add sheet's "Enter Details Manually": the editor opens once that sheet has closed.

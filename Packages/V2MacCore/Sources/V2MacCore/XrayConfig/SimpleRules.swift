@@ -55,12 +55,12 @@ public enum SimpleRules {
         return out.filter { seen.insert($0).inserted }
     }
 
-    /// The name of the first rule each entry of `entries(_:action:)` comes from, by entry id.
-    public static func ruleNames(_ rules: [CustomRule], action: CustomRule.Action) -> [String: String] {
-        var out: [String: String] = [:]
+    /// The first rule each entry of `entries(_:action:)` comes from, by entry id.
+    public static func sourceRules(_ rules: [CustomRule], action: CustomRule.Action) -> [String: CustomRule] {
+        var out: [String: CustomRule] = [:]
         for rule in rules where rule.enabled && rule.action == action && isSimple(rule) {
-            for app in split(rule.apps) where out[RuleEntry(.app, app).id] == nil { out[RuleEntry(.app, app).id] = rule.name }
-            for host in split(rule.hosts) where out[RuleEntry(.host, host).id] == nil { out[RuleEntry(.host, host).id] = rule.name }
+            for app in split(rule.apps) where out[RuleEntry(.app, app).id] == nil { out[RuleEntry(.app, app).id] = rule }
+            for host in split(rule.hosts) where out[RuleEntry(.host, host).id] == nil { out[RuleEntry(.host, host).id] = rule }
         }
         return out
     }

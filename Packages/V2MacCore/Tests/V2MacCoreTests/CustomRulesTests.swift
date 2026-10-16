@@ -177,7 +177,7 @@ import Testing
                      CustomRule(name: "Ads", action: .block, hosts: "a.com")]
         #expect(SimpleRules.entries(rules, action: .direct) == [RuleEntry(.host, "a.com"), RuleEntry(.host, "b.com")])
         #expect(SimpleRules.entries(rules, action: .proxy).isEmpty)
-        #expect(SimpleRules.ruleNames(rules, action: .direct) == ["host:a.com": "Mine", "host:b.com": "Mine"])
+        #expect(SimpleRules.sourceRules(rules, action: .direct).mapValues(\.name) == ["host:a.com": "Mine", "host:b.com": "Mine"])
         rules = SimpleRules.move([RuleEntry(.host, "A.com"), RuleEntry(.app, "/Applications/S.app")], to: .proxy, in: rules)
         #expect(rules.map(\.name) == ["Sites through the proxy", "Apps through the proxy", "Mine", "Both"])
         // A blocked entry moved to Proxy leaves the block rule; an emptied rule goes.

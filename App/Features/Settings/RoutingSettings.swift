@@ -61,6 +61,8 @@ struct CustomRulesSection: View {
                 CustomRuleRow(rule: rule, enabled: Binding { rule.enabled } set: { on in change { $0[index].enabled = on } }) {
                     editing = rule
                 }
+                .id(rule.id)
+                .modifier(FocusGlow(isFocused: model.focusedRule == rule.id) { model.focusedRule = nil })
                 .contextMenu {
                     Button("Edit…") { editing = rule }
                     Button("Move Up") { change { $0.swapAt(index, index - 1) } }.disabled(index == 0)
@@ -229,5 +231,37 @@ private struct CustomRuleEditor: View {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             ToolbarItem(placement: .confirmationAction) { Button("Done") { save(rule); dismiss() } }
         }
+    }
+}
+
+/// Lights a row up when the rule editor sends someone to it, then fades and clears the request.
+private struct FocusGlow: ViewModifier {
+    let isFocused: Bool
+    let done: () -> Void
+    @State private var isLit = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.accentColor.opacity(isLit ? 0.18 : 0))
+                    .padding(-6)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.accentColor, lineWidth: 2)
+                    .padding(-6)
+                    .shadow(color: .accentColor, radius: isLit ? 10 : 0)
+                    .opacity(isLit ? 1 : 0)
+            }
+            .task(id: isFocused) {
+                guard isFocused else { return }
+                try? await Task.sleep(for: .milliseconds(300))
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) { isLit = true }
+                try? await Task.sleep(for: .seconds(1.6))
+                withAnimation(.easeIn(duration: 0.6)) { isLit = false }
+                done()
+            }
     }
 }

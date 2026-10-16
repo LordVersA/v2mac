@@ -704,7 +704,8 @@ the rule profile menu.
   then apps, for Proxy, Direct and Block). A run of changes restarts a running core once,
   1.5 s after the last.
   The list has New, Apps and Sites sections and a search field in the toolbar.
-  Each ruled row carries a badge with its rule's name; a click opens Advanced.
+  Each ruled row carries a badge with its rule's name; a click opens Advanced,
+  scrolled to that rule, which glows for a moment (`AppModel.focusedRule`).
   Icons come from this Mac only (`EntryIcons`): an app entry's own icon (by path,
   `Name.app`, bundle id or `*word*`), a gear for daemons and tools, the Apple logo
   for Apple's domains, a site's icon from an installed app of the same name or

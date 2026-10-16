@@ -95,7 +95,10 @@ struct SimpleRuleEditor: View {
         if !groups.isEmpty {
             Section {
                 ForEach(groups) { group in
-                    GroupRow(group: group, set: set) { mode = .advanced }
+                    GroupRow(group: group, set: set) { id in
+                        model.focusedRule = id
+                        mode = .advanced
+                    }
                 }
             } header: {
                 Label(title, systemImage: systemImage)
@@ -165,20 +168,20 @@ struct SimpleRuleEditor: View {
 private struct GroupRow: View {
     let group: SeenGroup
     let set: ([String], CustomRule.Action?) -> Void
-    let showAdvanced: () -> Void
+    let showAdvanced: (UUID) -> Void
 
     var body: some View {
         if group.members.count == 1, let member = group.members.first {
-            EntryLine(entry: member.entry, title: group.title, subtitle: group.subtitle, ruleName: member.ruleName,
+            EntryLine(entry: member.entry, title: group.title, subtitle: group.subtitle, rule: member.rule.map { ($0.name, $0.id) },
                       state: member.column, tag: group.ids[0], set: set, showAdvanced: showAdvanced)
         } else {
             DisclosureGroup {
                 ForEach(group.members) { member in
                     EntryLine(entry: member.entry, title: SeenGroup.displayName(member.entry), subtitle: nil,
-                              ruleName: member.ruleName, state: member.column, tag: member.id, set: set, showAdvanced: showAdvanced)
+                              rule: member.rule.map { ($0.name, $0.id) }, state: member.column, tag: member.id, set: set, showAdvanced: showAdvanced)
                 }
             } label: {
-                EntryLine(entry: group.members[0].entry, title: group.title, subtitle: group.subtitle, ruleName: group.ruleName,
+                EntryLine(entry: group.members[0].entry, title: group.title, subtitle: group.subtitle, rule: group.rule,
                           state: group.state, tag: group.ids.joined(separator: "\n"), set: set, showAdvanced: showAdvanced)
             }
         }
@@ -189,11 +192,11 @@ private struct EntryLine: View {
     let entry: RuleEntry
     let title: String
     let subtitle: String?
-    let ruleName: String?
+    let rule: (name: String, id: UUID)?
     let state: CustomRule.Action?
     let tag: String
     let set: ([String], CustomRule.Action?) -> Void
-    let showAdvanced: () -> Void
+    let showAdvanced: (UUID) -> Void
 
     var body: some View {
         HStack(spacing: 10) {
@@ -205,7 +208,7 @@ private struct EntryLine: View {
                 }
             }
             Spacer(minLength: 8)
-            if let ruleName { RuleBadge(name: ruleName, action: state, open: showAdvanced) }
+            if let rule { RuleBadge(name: rule.name, action: state) { showAdvanced(rule.id) } }
             RouteSwitch(state: state) { set([tag], $0) }
         }
         .padding(.vertical, 3)
@@ -306,7 +309,7 @@ struct SeenGroup: Identifiable {
         let entry: RuleEntry
         let count: Int
         let column: CustomRule.Action?
-        var ruleName: String?
+        var rule: CustomRule?
         var id: String { entry.id }
     }
 
@@ -325,10 +328,12 @@ struct SeenGroup: Identifiable {
         return states.count == 1 ? states.first ?? nil : nil
     }
 
-    var ruleName: String? {
-        let names = Set(members.compactMap(\.ruleName))
-        if names.count > 1 { return String(localized: "\(names.count) rules") }
-        return names.first
+    /// The one rule all members come from; with several, the first, named as a count.
+    var rule: (name: String, id: UUID)? {
+        let rules = members.compactMap(\.rule)
+        guard let first = rules.first else { return nil }
+        let count = Set(rules.map(\.id)).count
+        return (count > 1 ? String(localized: "\(count) rules") : first.name, first.id)
     }
 
     var subtitle: String? {
@@ -366,7 +371,7 @@ struct SeenGroup: Identifiable {
     @MainActor static func all(rules: [CustomRule], watcher: ConnectionWatcher) -> [SeenGroup] {
         let ruled = CustomRule.Action.allCases.flatMap { action in
             column(SimpleRules.entries(rules, action: action).filter { !isTechnical($0) }, action: action,
-                   names: SimpleRules.ruleNames(rules, action: action))
+                   sources: SimpleRules.sourceRules(rules, action: action))
         }
         let new = (apps(watcher.apps.values, rules: rules) + sites(watcher.hosts.values, rules: rules)).compactMap(\.unruled)
         return new + ruled.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
@@ -399,8 +404,8 @@ struct SeenGroup: Identifiable {
     }
 
     /// One action's rule entries grouped the same way; a group's row stands for its members.
-    static func column(_ entries: [RuleEntry], action: CustomRule.Action, names: [String: String]) -> [SeenGroup] {
-        let members = entries.map { (Member(entry: $0, count: 0, column: action, ruleName: names[$0.id]), brand(of: $0)) }
+    static func column(_ entries: [RuleEntry], action: CustomRule.Action, sources: [String: CustomRule]) -> [SeenGroup] {
+        let members = entries.map { (Member(entry: $0, count: 0, column: action, rule: sources[$0.id]), brand(of: $0)) }
         let keys = EntryGroups.keys(for: Set(members.compactMap(\.1)))
         let byKey = Dictionary(grouping: members) { $0.1.flatMap { keys[$0] } ?? $0.0.entry.text }
         return byKey.map { key, list in

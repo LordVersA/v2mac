@@ -12,6 +12,7 @@ struct RuleEditorView: View {
         var title: LocalizedStringKey { self == .simple ? "Simple" : "Advanced" }
     }
 
+    @Environment(AppModel.self) private var model
     @AppStorage("ruleEditorMode") private var mode = Mode.simple
 
     var body: some View {
@@ -19,11 +20,27 @@ struct RuleEditorView: View {
             switch mode {
             case .simple: SimpleRuleEditor()
             case .advanced:
-                Form { CustomRulesSection() }
-                    .formStyle(.grouped)
+                ScrollViewReader { proxy in
+                    Form { CustomRulesSection() }
+                        .formStyle(.grouped)
+                        .task(id: model.focusedRule) {
+                            guard let id = model.focusedRule else { return }
+                            // After the form has laid out its rows.
+                            try? await Task.sleep(for: .milliseconds(150))
+                            withAnimation(.smooth) { proxy.scrollTo(id, anchor: .center) }
+                        }
+                }
             }
         }
         .frame(minWidth: 860, minHeight: 520)
+        #if DEBUG
+        // `-debugFocusRule <part of a rule's name>` shows Advanced lit up at that rule, for `-debugSnapshot`.
+        .task {
+            guard let name = UserDefaults.standard.string(forKey: "debugFocusRule") else { return }
+            mode = .advanced
+            model.focusedRule = Prefs.customRuleList.first { $0.name.localizedCaseInsensitiveContains(name) }?.id
+        }
+        #endif
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker("Mode", selection: $mode) {
