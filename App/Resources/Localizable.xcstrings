@@ -18382,6 +18382,28 @@
           }
         }
       }
+    },
+    "Connections": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتصال‌ها"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Соединения"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接数"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
