@@ -164,25 +164,27 @@ struct SimpleRuleEditor: View {
     }
 }
 
-/// One group, or one app or site, with its switch; a group opens to show its members.
+/// One group, or one app or site, with its switch; a group opens to show its members, indented below it.
 private struct GroupRow: View {
     let group: SeenGroup
     let set: ([String], CustomRule.Action?) -> Void
     let showAdvanced: (UUID) -> Void
+    @State private var isExpanded = false
 
     var body: some View {
         if group.members.count == 1, let member = group.members.first {
             EntryLine(entry: member.entry, title: group.title, subtitle: group.subtitle, rule: member.rule.map { ($0.name, $0.id) },
                       state: member.column, tag: group.ids[0], set: set, showAdvanced: showAdvanced)
         } else {
-            DisclosureGroup {
+            EntryLine(entry: group.members[0].entry, title: group.title, subtitle: group.subtitle, rule: group.rule,
+                      state: group.state, tag: group.ids.joined(separator: "\n"), set: set, showAdvanced: showAdvanced,
+                      isExpanded: $isExpanded)
+            if isExpanded {
                 ForEach(group.members) { member in
                     EntryLine(entry: member.entry, title: SeenGroup.displayName(member.entry), subtitle: nil,
-                              rule: member.rule.map { ($0.name, $0.id) }, state: member.column, tag: member.id, set: set, showAdvanced: showAdvanced)
+                              rule: member.rule.map { ($0.name, $0.id) }, state: member.column, tag: member.id,
+                              set: set, showAdvanced: showAdvanced, indent: 1)
                 }
-            } label: {
-                EntryLine(entry: group.members[0].entry, title: group.title, subtitle: group.subtitle, rule: group.rule,
-                          state: group.state, tag: group.ids.joined(separator: "\n"), set: set, showAdvanced: showAdvanced)
             }
         }
     }
@@ -197,9 +199,31 @@ private struct EntryLine: View {
     let tag: String
     let set: ([String], CustomRule.Action?) -> Void
     let showAdvanced: (UUID) -> Void
+    /// Set for a group's row, which then shows a chevron.
+    var isExpanded: Binding<Bool>? = nil
+    var indent = 0
 
     var body: some View {
         HStack(spacing: 10) {
+            // One slot on every row, so icons line up whether or not there is a chevron.
+            ZStack {
+                if let isExpanded {
+                    Button {
+                        withAnimation(.snappy) { isExpanded.wrappedValue.toggle() }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(isExpanded.wrappedValue ? 90 : 0))
+                            .frame(width: 16, height: 24)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(isExpanded.wrappedValue ? "Collapse" : "Expand")
+                }
+            }
+            .frame(width: 16)
+            .padding(.leading, CGFloat(indent) * 26)
             EntryIcon(entry: entry)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).lineLimit(1).truncationMode(.middle)
