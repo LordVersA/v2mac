@@ -2,6 +2,27 @@ import Foundation
 
 /// Real-shaped share links, one per scheme and transport.
 enum Fixtures {
+    /// A made-up Proxifier profile: a local proxy (V2Mac), another proxy, and one rule of each kind.
+    static let proxifierProfile = """
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <ProxifierProfile version="102" platform="MacOSX">
+      <Options><BlockUDP443 enabled="true" /><ExclusionList>%ComputerName%; localhost; *.local</ExclusionList></Options>
+      <ProxyList>
+        <Proxy id="100" type="SOCKS5"><Address>127.0.0.1</Address><Port>10808</Port></Proxy>
+        <Proxy id="101" type="HTTPS"><Address>proxy.example.net</Address><Port>8080</Port></Proxy>
+      </ProxyList>
+      <RuleList>
+        <Rule enabled="true"><Name>Direct - LAN</Name><Targets>10.0.0.0-10.255.255.255; 192.168.*</Targets><Action type="Direct" /></Rule>
+        <Rule enabled="true"><Name>Apps</Name><Applications>"Example.app"; com.example.chat; *tool*</Applications><Action type="Proxy">100</Action></Rule>
+        <Rule enabled="false"><Name>Hosts</Name><Targets>*search*; example.org</Targets><Action type="Proxy">100</Action></Rule>
+        <Rule enabled="true"><Name>Elsewhere</Name><Targets>example.com</Targets><Action type="Proxy">101</Action></Rule>
+        <Rule enabled="true"><Name>Chain</Name><Targets>example.info</Targets><Action type="Chain">200</Action></Rule>
+        <Rule enabled="true"><Name>Ads</Name><Targets>ads.example.org</Targets><Action type="Block" /></Rule>
+        <Rule enabled="true"><Name>Default</Name><Action type="Proxy">100</Action></Rule>
+      </RuleList>
+    </ProxifierProfile>
+    """
+
     static let uuid = "b831381d-6324-4d53-ad4f-8cda48b30811"
     static let realityKey = "jmsHqm9I9NJN3d3cZmhU6iM3sFM0q9D9p1tBvXkQm2E"
     static let sha = "4b363bd924df5bf09f87bd445755ff8e5742b9a8a0480cda261061416c3c7dce"

@@ -585,7 +585,8 @@ final class ConnectionController {
         if tunLink == nil { tun.down() }
         let inbound = Prefs.inbound
         let plan = routingPlan
-        let custom = Prefs.customRules
+        var custom = Prefs.customRules
+        if custom.needsApps { custom.installedApps = await InstalledApps.all() }
         func options(metrics: Int, api: Int?) -> RunOptions {
             RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: Prefs.logConnections, metricsPort: metrics,
                        tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api, warpExit: Prefs.warpExit)

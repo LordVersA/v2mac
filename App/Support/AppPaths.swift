@@ -80,6 +80,7 @@ enum Prefs {
     /// Spec 13 defaults. Registered so `@AppStorage` in Settings and these getters agree.
     static func registerDefaults() {
         defaults.register(defaults: defaultValues)
+        migrateCustomRules()
         defaults.register(defaults: Dictionary(uniqueKeysWithValues: NotificationKind.allCases.map { ($0.key, $0.defaultOn) }))
         if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
         // The proxy password used to be kept in the preferences file; it moves to the keychain once.
@@ -98,15 +99,14 @@ enum Prefs {
     /// without one. Region packs are restored through their service, since they need downloading.
     static var backupKeys: [String] {
         Array(defaultValues.keys) + NotificationKind.allCases.map(\.key)
-            + ["routingMode", "tunEnabled", "packUpdateIntervals", "userAgent"]
+            + ["routingMode", "tunEnabled", "packUpdateIntervals", "userAgent"] + legacyRuleKeys
     }
 
     private static var defaultValues: [String: Any] {
         [
             "proxyPort": defaultPort,
-            "customRulesProxy": "",
-            "customRulesDirect": "",
-            "customRulesBlock": "",
+            "customRuleList": "[]",
+            "blockQUIC": false,
             "reconnectOnLaunch": true,
             "warpExit": false,
             "restartOnWakeOrNetwork": true,
@@ -356,9 +356,23 @@ enum Prefs {
 
     /// Spec 8.6. Keys match `RoutingSettings`.
     static var customRules: CustomRules {
-        CustomRules(proxy: defaults.string(forKey: "customRulesProxy") ?? "",
-                    direct: defaults.string(forKey: "customRulesDirect") ?? "",
-                    block: defaults.string(forKey: "customRulesBlock") ?? "")
+        CustomRules(rules: customRuleList, blockQUIC: defaults.bool(forKey: "blockQUIC"))
+    }
+
+    static var customRuleList: [CustomRule] {
+        get { CustomRule.decode(defaults.string(forKey: "customRuleList") ?? "[]") }
+        set { defaults.set(CustomRule.encode(newValue), forKey: "customRuleList") }
+    }
+
+    /// The Block, Proxy and Direct lists of earlier versions; still read from old backups.
+    private static let legacyRuleKeys = ["customRulesProxy", "customRulesDirect", "customRulesBlock"]
+
+    /// The three lists become the ordered list once, in the order they were applied, so nothing changes.
+    static func migrateCustomRules() {
+        guard legacyRuleKeys.contains(where: { defaults.object(forKey: $0) != nil }) else { return }
+        let text = legacyRuleKeys.map { defaults.string(forKey: $0) ?? "" }
+        customRuleList = CustomRule.migrating(proxy: text[0], direct: text[1], block: text[2])
+        legacyRuleKeys.forEach(defaults.removeObject)
     }
 
     static var enabledRegionPacks: Set<String> {

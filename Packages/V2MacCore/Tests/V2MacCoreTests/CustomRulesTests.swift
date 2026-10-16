@@ -37,30 +37,90 @@ import Testing
         try ConfigBuilder.build(outbound: ["protocol": "freedom"], options: RunOptions(metricsPort: 1), routing: plan, custom: custom)
     }
 
+    func lists(proxy: String = "", direct: String = "", block: String = "") -> CustomRules {
+        CustomRules(rules: CustomRule.migrating(proxy: proxy, direct: direct, block: block))
+    }
+
     @Test func rulesComeFirstInOrder() throws {
-        let c = try build(.global, CustomRules(proxy: "a.com", direct: "b.com\n1.1.1.1", block: "c.com"))
+        let c = try build(.global, lists(proxy: "a.com", direct: "b.com\n1.1.1.1", block: "c.com"))
         let rules = try #require(c["routing"]?["rules"]?.arrayValue)
-        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["block", "proxy", "direct", "direct", "direct"])
-        #expect(rules[4]["ip"]?[0]?.stringValue == "geoip:private")
+        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "block", "proxy", "direct", "direct", "direct"])
+        #expect(rules[0]["domain"]?[0]?.stringValue == "full:localhost")
+        #expect(rules[5]["ip"]?[0]?.stringValue == "geoip:private")
         #expect(c["routing"]?["domainStrategy"]?.stringValue == "IPIfNonMatch")
         #expect(c["dns"] != nil)
     }
 
     @Test func domainOnlyGlobalStaysAsIs() throws {
-        let c = try build(.global, CustomRules(proxy: "a.com"))
+        let c = try build(.global, lists(proxy: "a.com"))
         #expect(c["routing"]?["domainStrategy"]?.stringValue == "AsIs")
         #expect(c["dns"] == nil)
     }
 
     @Test func directModeKeepsOnlyBlock() throws {
-        let rules = try #require(try build(.direct, CustomRules(proxy: "a.com", block: "c.com"))["routing"]?["rules"]?.arrayValue)
-        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["block", "direct"])
+        let rules = try #require(try build(.direct, lists(proxy: "a.com", block: "c.com"))["routing"]?["rules"]?.arrayValue)
+        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "block", "direct"])
     }
 
     @Test func emptyRulesChangeNothing() throws {
         for plan in [RoutingPlan.global, .direct, .bypass([])] {
             #expect(try build(plan, CustomRules()) == ConfigBuilder.build(outbound: ["protocol": "freedom"], options: RunOptions(metricsPort: 1), routing: plan))
         }
+    }
+
+    @Test func proxifierHostForms() {
+        let m = RuleMatchers(parsing: "*google*; *.example.com\n10.0.0.0-10.255.255.255\n10.0.0.1-10.0.0.6\n2001:db8::-2001:db8::ffff\n0.0.0.0-255.255.255.255\n*a*b*")
+        #expect(m.domains == ["keyword:google", "domain:example.com"])
+        #expect(m.ips == ["10.0.0.0/8", "10.0.0.1/32", "10.0.0.2/31", "10.0.0.4/31", "10.0.0.6/32", "2001:db8::/112", "0.0.0.0/0"])
+        #expect(m.invalid == ["*a*b*"])
+        #expect(RuleMatchers.range("::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff") == ["::/0"])
+        #expect(RuleMatchers.range("10.0.0.9-10.0.0.1") == nil)
+        #expect(RuleMatchers.range("10.0.0.1-::1") == nil)
+    }
+
+    @Test func appForms() {
+        let apps = [InstalledApp(path: "/Applications/Spotify.app", bundleID: "com.spotify.client"),
+                    InstalledApp(path: "/Applications/Discord.app", bundleID: "com.hnc.Discord")]
+        let m = AppMatchers(parsing: "\"Spotify.app\"; com.hnc.discord\n*disc*\ncurl\n/usr/bin/git\n~/Apps/Tool.app\nMissing.app\norg.unknown.chat", apps: apps)
+        #expect(m.processes == ["/Applications/Spotify.app/", "/Applications/Discord.app/", "curl",
+                                "/usr/bin/git", NSHomeDirectory() + "/Apps/Tool.app/", "org.unknown.chat"])
+        #expect(m.unmatched == ["Missing.app"])
+        #expect(AppMatchers(parsing: "Spotify", apps: apps).processes == ["Spotify", "/Applications/Spotify.app/"])
+    }
+
+    @Test func orderedRulesWithAppsAndQUIC() throws {
+        let apps = [InstalledApp(path: "/Applications/Spotify.app", bundleID: "com.spotify.client")]
+        let custom = CustomRules(rules: [
+            CustomRule(name: "LAN", action: .direct, hosts: "10.0.0.0/8"),
+            CustomRule(name: "Off", action: .block, hosts: "a.com", enabled: false),
+            CustomRule(name: "Music", action: .proxy, apps: "Spotify.app"),
+            CustomRule(name: "Gone", action: .proxy, apps: "Missing.app"),
+            CustomRule(name: "Both", action: .block, apps: "curl", hosts: "b.com"),
+        ], installedApps: apps, blockQUIC: true)
+        let rules = try #require(try build(.global, custom)["routing"]?["rules"]?.arrayValue)
+        #expect(rules[0] == ["type": "field", "network": "udp", "port": "443", "outboundTag": "block"])
+        #expect(rules.dropFirst(2).map { $0["outboundTag"]?.stringValue } == ["direct", "proxy", "block", "direct"])
+        #expect(rules[3]["process"] == ["/Applications/Spotify.app/"])
+        #expect(rules[4]["process"] == ["curl"] && rules[4]["domain"] == ["domain:b.com"])
+    }
+
+    @Test func storedRulesRoundTrip() {
+        let rules = [CustomRule(name: "A", action: .proxy, apps: "x", hosts: "y.com", enabled: false)]
+        #expect(CustomRule.decode(CustomRule.encode(rules)) == rules)
+        #expect(CustomRule.decode("not json").isEmpty)
+        #expect(CustomRule.migrating(proxy: "a.com", direct: " ", block: "b.com").map(\.action) == [.block, .proxy])
+    }
+
+    @Test func importsProxifierProfile() throws {
+        let p = try ProxifierProfile(data: Data(Fixtures.proxifierProfile.utf8))
+        #expect(p.blockQUIC)
+        #expect(p.skipped == ["Elsewhere", "Chain"])
+        #expect(p.rules.map(\.name) == ["Proxifier exclusions", "Direct - LAN", "Apps", "Hosts", "Ads"])
+        #expect(p.rules.map(\.action) == [.direct, .direct, .proxy, .proxy, .block])
+        #expect(p.rules[0].hosts == "localhost\n*.local")
+        #expect(p.rules[2].apps == "\"Example.app\"\ncom.example.chat\n*tool*")
+        #expect(!p.rules[3].enabled)
+        #expect(throws: (any Error).self) { try ProxifierProfile(data: Data("<x/>".utf8)) }
     }
 }
 

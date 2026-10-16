@@ -481,6 +481,7 @@ final class AppModel {
         for (key, value) in backup.settings where allowed.contains(key) {
             if let preference = Backup.preference(from: value) { UserDefaults.standard.set(preference, forKey: key) }
         }
+        Prefs.migrateCustomRules()
         let packs = Set(backup.settings["enabledRegionPacks"]?.arrayValue?.compactMap(\.stringValue) ?? [])
         for pack in regionPacks.packs where packs.contains(pack.id) && !regionPacks.enabledIDs.contains(pack.id) {
             Task { await regionPacks.enable(pack) }

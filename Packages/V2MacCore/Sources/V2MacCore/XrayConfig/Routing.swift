@@ -45,10 +45,28 @@ extension ConfigBuilder {
             return out
         }
         // Direct mode keeps only the user's block rules: nothing there should reach the proxy.
-        let lists = custom.lists.filter { plan != .direct || $0.tag == blockTag }
-        let parsed = lists.map { (RuleMatchers(parsing: $0.text), $0.tag) }
-        let customRules = parsed.flatMap { rules($0.0.domains, $0.0.ips, to: $0.1) }
-        let hasCustomIPs = parsed.contains { !$0.0.ips.isEmpty }
+        var customRules: [JSONValue] = []
+        var hasCustomIPs = false
+        for rule in custom.rules where rule.enabled && (plan != .direct || rule.action == .block) {
+            let hosts = RuleMatchers(parsing: rule.hosts)
+            let hasApps = !rule.apps.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let apps = AppMatchers(parsing: rule.apps, apps: custom.installedApps).processes
+            // A rule whose apps are all missing must not turn into a rule for every app.
+            if hasApps, apps.isEmpty { continue }
+            var made = rules(hosts.domains, hosts.ips, to: rule.tag)
+            if hasApps {
+                let process: JSONValue = .array(apps.map { .string($0) })
+                made = made.isEmpty && hosts.invalid.isEmpty
+                    ? [["type": "field", "process": process, "outboundTag": .string(rule.tag)]]
+                    : made.map { $0.setting("process", to: process) }
+            }
+            hasCustomIPs = hasCustomIPs || !hosts.ips.isEmpty
+            customRules += made
+        }
+        if !customRules.isEmpty || custom.blockQUIC {
+            customRules.insert(["type": "field", "domain": .array(CustomRules.localNames.map { .string($0) }), "outboundTag": .string(directTag)], at: 0)
+        }
+        if custom.blockQUIC { customRules.insert(["type": "field", "network": "udp", "port": "443", "outboundTag": .string(blockTag)], at: 0) }
 
         var tail: [JSONValue] = [privateRule]
         var hasIPRules = hasCustomIPs

@@ -1,14 +1,12 @@
 import SwiftUI
 import V2MacCore
 
-/// The three lists of spec 8.6, stored in `UserDefaults` under `key`.
+/// The three actions of a custom rule (spec 8.6), as the UI shows them.
 enum RuleList: String, CaseIterable, Identifiable {
     case proxy = "Proxy", direct = "Direct", block = "Block"
     var id: Self { self }
-    var key: String { "customRules\(rawValue)" }
-    var saved: String { UserDefaults.standard.string(forKey: key) ?? "" }
-    /// The list Settings → Routing shows; not a setting, so not in `Prefs.backupKeys`.
-    static let shownKey = "customRulesShown"
+    var action: CustomRule.Action { CustomRule.Action(rawValue: rawValue.lowercased())! }
+    init(_ action: CustomRule.Action) { self = Self.allCases.first { $0.action == action }! }
 
     var symbol: String {
         switch self {
@@ -86,7 +84,6 @@ struct RuleBuilderView: View {
     @State private var countryOptions = CountryRuleOptions()
     @State private var services: Set<String> = []
     @State private var manual = ""
-    @State private var replace = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -244,39 +241,29 @@ struct RuleBuilderView: View {
         return out.filter { seen.insert($0).inserted }
     }
 
+    /// Host entries the enabled rules with the same action already have.
     private var existing: Set<String> {
-        let parsed = RuleMatchers(parsing: list.saved)
-        return Set(parsed.domains + parsed.ips)
+        let parsed = Prefs.customRuleList.filter { $0.enabled && $0.action == list.action }.map { RuleMatchers(parsing: $0.hosts) }
+        return Set(parsed.flatMap { $0.domains + $0.ips })
     }
 
-    /// The rules this run adds: in replace mode all of them, otherwise only the new ones.
+    /// The rules this run adds: only the new ones.
     private var toWrite: [String] {
-        replace ? generated : generated.filter { !existing.contains($0) }
+        generated.filter { !existing.contains($0) }
     }
 
     private var reviewStep: some View {
         let rules = generated
-        let already = replace ? [] : rules.filter(existing.contains)
+        let already = rules.filter(existing.contains)
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 Label {
-                    Text(toWrite.count == 1 ? "1 rule for the \(list.title) list" : "\(toWrite.count) rules for the \(list.title) list")
+                    Text(toWrite.count == 1 ? "1 entry for a new \(list.title) rule" : "\(toWrite.count) entries for a new \(list.title) rule")
                         .font(.title2.weight(.semibold))
                 } icon: {
                     Image(systemName: list.symbol).foregroundStyle(list.tint)
                 }
                 Spacer()
-                Picker("", selection: $replace) {
-                    Text("Add to the list").tag(false)
-                    Text("Replace the list").tag(true)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-            }
-            if replace, !list.saved.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Label("The \(list.title) list's current rules will be removed.", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
             }
             if rules.isEmpty {
                 ContentUnavailableView("Nothing chosen", systemImage: "tray",
@@ -288,7 +275,7 @@ struct RuleBuilderView: View {
                 .listStyle(.bordered)
                 .alternatingRowBackgrounds()
             }
-            Text("Rules are checked before the routing mode: Block first, then Proxy, then Direct. The core restarts to use them.")
+            Text("The rules become one new rule in Settings → Routing, where the list is checked top to bottom. Block rules go to the top, the others to the bottom. The core restarts to use them.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -296,17 +283,12 @@ struct RuleBuilderView: View {
     }
 
     private func save() {
-        let header = "# Rule Builder, \(Date.now.formatted(date: .abbreviated, time: .omitted))"
-        let block = ([header] + toWrite).joined(separator: "\n")
-        let current = list.saved
-        let text: String
-        if replace || current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            text = block
-        } else {
-            text = current + (current.hasSuffix("\n") ? "\n" : "\n\n") + block
-        }
-        UserDefaults.standard.set(text, forKey: list.key)
-        UserDefaults.standard.set(list.rawValue, forKey: RuleList.shownKey)
+        let rule = CustomRule(name: String(localized: "Rule Builder, \(Date.now.formatted(date: .abbreviated, time: .omitted))"),
+                              action: list.action, hosts: toWrite.joined(separator: "\n"))
+        var rules = Prefs.customRuleList
+        // As before the list was ordered: blocking wins over the rest.
+        if rule.action == .block { rules.insert(rule, at: 0) } else { rules.append(rule) }
+        Prefs.customRuleList = rules
         model.connection.reconnectIfRunning()
         dismissWindow(id: RuleBuilderView.windowID)
     }
@@ -331,7 +313,7 @@ struct RuleBuilderView: View {
             if step == .review {
                 Button("Add Rules") { save() }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(toWrite.isEmpty && !replace)
+                    .disabled(toWrite.isEmpty)
             } else {
                 Button("Continue") { step = Step(rawValue: step.rawValue + 1) ?? .review }
                     .keyboardShortcut(.defaultAction)

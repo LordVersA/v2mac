@@ -14,7 +14,7 @@
 - **Latency tests:** real-delay and TCP ping for a whole group at once, sorted by speed.
 - **Optional automatic selection:** off by default; chooses a working server using real HTTP response delay, monitors the running proxy, and falls back to peers in group order. Manual choices stay selected while they respond. Optional conditions also switch when the delay stays high or the download stays slow for as long as you set.
 - **Routing:** Global, Direct, or Bypass regions (Iran, China, Russia) to send local traffic direct.
-- **Custom routing rules:** your own Proxy, Direct and Block lists on top of any mode. Paste domains, IP ranges, geosite/geoip tags, Clash rules, hosts files or Adblock lists, or build them in the **Rule Builder** by picking countries on a map and services from a list. [More below](#custom-routing-rules).
+- **Custom routing rules:** your own ordered Proxy, Direct and Block rules on top of any mode, by site and by app, like Proxifier (whose profiles it imports). Paste domains, IP ranges, geosite/geoip tags, Clash rules, hosts files or Adblock lists, or build them in the **Rule Builder** by picking countries on a map and services from a list. [More below](#custom-routing-rules).
 - **TUN mode:** one switch routes all traffic on the Mac through the proxy, including apps with no proxy setting and every DNS lookup. No paid developer account or system extension needed. `Scripts/check-tun.sh` checks that nothing leaks.
 - **System proxy:** one switch in the menu bar or the window points the macOS system proxy at V2Mac while it is connected. A dot shows whether the system proxy is V2Mac (green), something else (red) or not set (grey).
 - **Kill switch:** optional, off by default. While V2Mac is connected or reconnecting, only the server, the local network and name servers can be reached; everything else is blocked, also when the connection drops or V2Mac stops unexpectedly, until you disconnect. It uses the macOS firewall (pf).
@@ -107,34 +107,37 @@ Closing the window keeps the proxy running. Quit with ⌘Q to stop it.
 
 The routing mode decides what happens to most traffic. Custom rules decide the exceptions: which sites, countries or addresses always go **through the proxy**, always go **direct**, or are **blocked**. They work in every mode and next to Bypass regions, so you can, for example, bypass Iran but still send one Iranian site through the proxy, or block ads whichever mode you use.
 
-Open **Settings → Routing → Custom rules**. There are three lists, Proxy, Direct and Block, with one rule per line. Edit them and click **Apply**; a running connection restarts to use them.
+Open **Settings → Routing → Custom rules**. It is one list of rules, each with a name, an on/off switch, an action (Proxy, Direct or Block), the apps it applies to and the hosts it matches. Click **Add Rule** or **Edit…**, drag rules to reorder them, and click **Apply**; a running connection restarts to use them. A rule with both apps and hosts needs both to match; an empty field matches everything.
+
+Coming from Proxifier? **Import Proxifier Profile…** reads a `.ppx` file. Rules to V2Mac's port become Proxy rules, Direct and Block rules stay as they are, and rules to other proxies or chains are skipped and named. **Block QUIC (UDP 443)** does what Proxifier's option does: browsers fall back to TCP, so their host names reach the rules.
+
+Apps can be written as `Spotify.app`, `com.spotify.client`, `*discord*`, a process name (`curl`) or a full path. App rules work for apps that use the system proxy or are pointed at V2Mac's port; in TUN mode every app reaches V2Mac through the tunnel and app rules cannot tell them apart yet.
 
 <p align="center"><img src="docs/images/screenshots/custom-rules.png" alt="Custom rules section in Routing settings, showing a Proxy list with Telegram, AI services, a Clash rule and a wildcard domain" width="560"></p>
 
 **How rules are checked**
 
-1. **Block** list
-2. **Proxy** list
-3. **Direct** list
-4. then the routing mode itself: local network addresses direct, then the Bypass region packs, then everything else to the proxy.
+1. Local names (`localhost`, `*.local`, `*.test`, …) always go direct.
+2. Your rules, from the top down.
+3. Then the routing mode itself: local network addresses direct, then the Bypass region packs, then everything else to the proxy.
 
-The first match wins, so a site in the Proxy list goes through the proxy even when its country is bypassed. In **Direct** mode only the Block list is used, since nothing there should reach the proxy. Full Xray JSON configs bring their own routing and ignore custom rules.
+The first match wins, so a site in a Proxy rule goes through the proxy even when its country is bypassed, and a Direct rule above a broad Proxy rule wins over it. In **Direct** mode only Block rules are used, since nothing there should reach the proxy. Full Xray JSON configs bring their own routing and ignore custom rules.
 
 **What you can write**
 
-You can paste lists in the formats most guides and rule sets online use. Commas and spaces also separate rules, and lines starting with `#`, `//` or `!` are comments.
+A rule's hosts take the formats most guides, rule sets and Proxifier use. Commas, spaces and `;` also separate entries, and lines starting with `#`, `//` or `!` are comments.
 
 | Write | Matches |
 |---|---|
 | `example.com`, `*.example.com`, `+.example.com`, `.ir` | the domain and all its subdomains (`.ir` covers every `.ir` site) |
 | `full:www.example.com` | only that exact name |
-| `keyword:shop` | any name containing the word |
+| `keyword:shop`, `*shop*` | any name containing the word |
 | `regexp:^ads\d+\.` | names matching a regular expression |
-| `1.2.3.4`, `10.0.0.0/8`, `2001:db8::/32` | an address or a range, IPv4 or IPv6 |
+| `1.2.3.4`, `10.0.0.0/8`, `2001:db8::/32`, `10.0.0.1-10.0.0.9` | an address or a range, IPv4 or IPv6 |
 | `geosite:google`, `geosite:category-ads-all` | a site list from the core's `geosite.dat` (1,500+ lists) |
 | `geoip:de`, `geoip:telegram` | a country's or service's addresses from `geoip.dat` |
 | `ext:region-ir-geosite.dat:ir` | a list from a downloaded region pack |
-| `DOMAIN-SUFFIX,example.com,DIRECT` | Clash rules: `DOMAIN`, `DOMAIN-SUFFIX`, `DOMAIN-KEYWORD`, `DOMAIN-REGEX`, `IP-CIDR`, `IP-CIDR6`, `GEOIP`, `GEOSITE` (the list you paste into decides the action) |
+| `DOMAIN-SUFFIX,example.com,DIRECT` | Clash rules: `DOMAIN`, `DOMAIN-SUFFIX`, `DOMAIN-KEYWORD`, `DOMAIN-REGEX`, `IP-CIDR`, `IP-CIDR6`, `GEOIP`, `GEOSITE` (the rule's action decides, not the policy column) |
 | `0.0.0.0 ads.example.com` | lines from a hosts file |
 | `\|\|ads.example.com^` | Adblock domain lines |
 
@@ -142,7 +145,7 @@ Anything that is not a rule is skipped and named under the editor, so a typo nev
 
 ### Rule Builder
 
-Rather not type rules? Click **Rule Builder…** under the lists. It writes them for you in three steps.
+Rather not type rules? Click **Rule Builder…** under the rules. It writes them for you in three steps.
 
 **1. Action.** Choose what should happen: Proxy, Direct or Block. Or start from a common setup, such as keeping your own country direct, blocking ads and trackers, or sending AI services, Telegram or streaming through the proxy.
 
@@ -162,7 +165,7 @@ Rather not type rules? Click **Rule Builder…** under the lists. It writes them
 
 <p align="center"><img src="docs/images/screenshots/rule-builder-domains.png" alt="Rule Builder domains step with a text editor, a live count and a guide to accepted formats" width="720"></p>
 
-**3. Review.** See every rule that will be written and what kind it is. Rules already in the list are marked and not added twice. Choose **Add to the list** or **Replace the list**, then click **Add Rules**. The rules are saved under a dated `# Rule Builder` comment, so you can find and edit them later in Settings.
+**3. Review.** See every entry that will be written and what kind it is. Entries your rules with the same action already have are marked and not added twice. Click **Add Rules** to save them as one new rule named after the date: a Block rule goes to the top of the list, the others to the bottom. You can rename, edit or move it later in Settings.
 
 <p align="center"><img src="docs/images/screenshots/rule-builder-review.png" alt="Rule Builder review step listing thirteen rules for the Direct list" width="720"></p>
 

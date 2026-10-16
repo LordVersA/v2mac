@@ -14,7 +14,7 @@
 - **延迟测试：** 批量测试整个分组的真实延迟（Real Delay）和 TCP Ping，并按速度排序。
 - **可选的自动选择：** 默认关闭。根据真实 HTTP 响应延迟选择可用服务器，检查正在运行的代理，并在故障时按分组顺序切换到其他服务器。手动选择的服务器只要仍能响应，就会保持选中。还可选择在延迟持续过高或下载持续过慢（时长可设置）时自动切换。
 - **路由：** 支持全局（Global）、直连（Direct）和绕过地区（Bypass regions，包含伊朗）模式，让指定地区的流量直连。
-- **自定义路由规则：** 在任何路由模式之上添加你自己的 Proxy、Direct 和 Block 列表。可以粘贴域名、IP 段、geosite/geoip 标签、Clash 规则、hosts 文件或 Adblock 列表，也可以用 **Rule Builder** 在地图上选国家、从列表里选服务来生成规则。[详见下文](#自定义路由规则)。
+- **自定义路由规则：** 在任何路由模式之上添加你自己的有序 Proxy、Direct 和 Block 规则，可按网站和按应用匹配，与 Proxifier 一样（也能导入其配置文件）。可以粘贴域名、IP 段、geosite/geoip 标签、Clash 规则、hosts 文件或 Adblock 列表，也可以用 **Rule Builder** 在地图上选国家、从列表里选服务来生成规则。[详见下文](#自定义路由规则)。
 - **TUN 模式：** 通过一个开关，将 Mac 上的所有流量转发到代理，包括没有代理设置的应用和所有 DNS 查询。无需付费开发者账号或系统扩展。`Scripts/check-tun.sh` 可检查是否有泄漏。
 - **系统代理：** 在菜单栏或窗口中用一个开关，让 macOS 系统代理在连接期间指向 V2Mac。圆点显示系统代理是 V2Mac（绿色）、其他代理（红色）还是未设置（灰色）。
 - **断网保护（Kill Switch）：** 可选，默认关闭。V2Mac 连接或重新连接期间，只能访问服务器、局域网和域名服务器，其他流量都会被拦截；即使连接断开或 V2Mac 意外退出也是如此，直到你断开连接。使用 macOS 防火墙（pf）。
@@ -101,34 +101,37 @@
 
 路由模式决定大部分流量怎么走，自定义规则决定例外：哪些网站、国家或地址始终**走代理**、始终**直连**，或被**拦截**。它们在所有模式下都生效，也能和绕过地区一起使用。例如：绕过伊朗，但仍让某个伊朗网站走代理；或者无论用哪种模式都拦截广告。
 
-打开 **Settings → Routing → Custom rules**。这里有 Proxy、Direct、Block 三个列表，每行一条规则。编辑后点击 **Apply**；如果已连接，连接会重启以使用新规则。
+打开 **Settings → Routing → Custom rules**。这里是一个规则列表，每条规则有名称、开关、动作（Proxy、Direct 或 Block）、适用的应用和匹配的主机。点击 **Add Rule** 或 **Edit…**，拖动规则调整顺序，然后点击 **Apply**；如果已连接，连接会重启以使用新规则。同时写了应用和主机的规则需两者都匹配；留空表示全部。
+
+从 Proxifier 迁移？**Import Proxifier Profile…** 可读取 `.ppx` 文件。指向 V2Mac 端口的规则变为 Proxy 规则，Direct 和 Block 规则保持不变，指向其他代理或代理链的规则会被跳过并列出。**Block QUIC (UDP 443)** 与 Proxifier 的同名选项作用相同：浏览器改用 TCP，主机名就能交给规则处理。
+
+应用可以写成 `Spotify.app`、`com.spotify.client`、`*discord*`、进程名（`curl`）或完整路径。应用规则适用于使用系统代理或设置为 V2Mac 端口的应用；在 TUN 模式下，所有应用都经隧道到达 V2Mac，应用规则暂时无法区分它们。
 
 <p align="center"><img src="docs/images/screenshots/custom-rules.png" alt="路由设置中的自定义规则部分，Proxy 列表包含 Telegram、AI 服务、一条 Clash 规则和一个通配符域名" width="560"></p>
 
 **规则的检查顺序**
 
-1. **Block** 列表
-2. **Proxy** 列表
-3. **Direct** 列表
-4. 然后才是路由模式本身：局域网地址直连，再是绕过地区的规则包，其余走代理。
+1. 本地名称（`localhost`、`*.local`、`*.test` 等）始终直连。
+2. 你的规则，从上到下。
+3. 然后才是路由模式本身：局域网地址直连，再是绕过地区的规则包，其余走代理。
 
-先匹配到的规则生效，所以即使某个网站所在的国家被绕过，只要它在 Proxy 列表里，就仍然走代理。在 **Direct** 模式下只使用 Block 列表，因为此时不应有任何流量进入代理。完整的 Xray JSON 配置自带路由，不使用自定义规则。
+先匹配到的规则生效，所以即使某个网站所在的国家被绕过，只要它在 Proxy 规则里，就仍然走代理；放在宽泛 Proxy 规则上方的 Direct 规则会优先生效。在 **Direct** 模式下只使用 Block 规则，因为此时不应有任何流量进入代理。完整的 Xray JSON 配置自带路由，不使用自定义规则。
 
 **可以写什么**
 
-网上大多数教程和规则集使用的格式都可以直接粘贴。逗号和空格也能分隔规则，以 `#`、`//` 或 `!` 开头的行是注释。
+规则的主机支持大多数教程、规则集和 Proxifier 使用的格式。逗号、空格和 `;` 也能分隔条目，以 `#`、`//` 或 `!` 开头的行是注释。
 
 | 写法 | 匹配 |
 |---|---|
 | `example.com`、`*.example.com`、`+.example.com`、`.ir` | 该域名及其所有子域名（`.ir` 表示所有 `.ir` 网站） |
 | `full:www.example.com` | 仅这个完整域名 |
-| `keyword:shop` | 包含该关键词的任何域名 |
+| `keyword:shop`、`*shop*` | 包含该关键词的任何域名 |
 | `regexp:^ads\d+\.` | 匹配正则表达式的域名 |
-| `1.2.3.4`、`10.0.0.0/8`、`2001:db8::/32` | 单个地址或地址段，IPv4 或 IPv6 |
+| `1.2.3.4`、`10.0.0.0/8`、`2001:db8::/32`、`10.0.0.1-10.0.0.9` | 单个地址或地址段，IPv4 或 IPv6 |
 | `geosite:google`、`geosite:category-ads-all` | 核心 `geosite.dat` 中的站点列表（1500 多个） |
 | `geoip:de`、`geoip:telegram` | `geoip.dat` 中某个国家或服务的地址 |
 | `ext:region-ir-geosite.dat:ir` | 已下载地区规则包中的列表 |
-| `DOMAIN-SUFFIX,example.com,DIRECT` | Clash 规则：`DOMAIN`、`DOMAIN-SUFFIX`、`DOMAIN-KEYWORD`、`DOMAIN-REGEX`、`IP-CIDR`、`IP-CIDR6`、`GEOIP`、`GEOSITE`（动作由你粘贴到的列表决定） |
+| `DOMAIN-SUFFIX,example.com,DIRECT` | Clash 规则：`DOMAIN`、`DOMAIN-SUFFIX`、`DOMAIN-KEYWORD`、`DOMAIN-REGEX`、`IP-CIDR`、`IP-CIDR6`、`GEOIP`、`GEOSITE`（动作由规则决定，而不是 policy 列） |
 | `0.0.0.0 ads.example.com` | hosts 文件中的行 |
 | `\|\|ads.example.com^` | Adblock 域名规则 |
 
@@ -136,7 +139,7 @@
 
 ### Rule Builder
 
-不想手写规则？点击列表下方的 **Rule Builder…**，它会分三步帮你生成规则。
+不想手写规则？点击规则下方的 **Rule Builder…**，它会分三步帮你生成规则。
 
 **1. 动作（Action）。** 选择要怎么处理：Proxy、Direct 或 Block。也可以从常用方案开始，例如让本国流量直连、拦截广告和跟踪器，或让 AI 服务、Telegram、流媒体走代理。
 
@@ -156,7 +159,7 @@
 
 <p align="center"><img src="docs/images/screenshots/rule-builder-domains.png" alt="Rule Builder 域名步骤：文本编辑框、实时计数和格式说明" width="720"></p>
 
-**3. 确认（Review）。** 查看将要写入的每条规则及其类型。列表中已有的规则会被标出，不会重复添加。选择 **Add to the list**（追加）或 **Replace the list**（替换），然后点击 **Add Rules**。规则会保存在一行带日期的 `# Rule Builder` 注释下面，之后可以在设置中找到并修改。
+**3. 确认（Review）。** 查看将要写入的每个条目及其类型。相同动作的规则中已有的条目会被标出，不会重复添加。点击 **Add Rules**，它们会保存为一条以日期命名的新规则：Block 规则放在列表顶部，其他放在底部。之后可以在设置中重命名、修改或移动它。
 
 <p align="center"><img src="docs/images/screenshots/rule-builder-review.png" alt="Rule Builder 确认步骤，列出 Direct 列表的十三条规则" width="720"></p>
 

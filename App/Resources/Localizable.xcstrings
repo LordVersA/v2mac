@@ -409,34 +409,6 @@
         }
       }
     },
-    "%lld rules for the %@ list": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$lld rules for the %2$@ list"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld قانون برای فهرست %2$@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Правил для списка «%2$@»: %1$lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%2$@ 列表的 %1$lld 条规则"
-          }
-        }
-      }
-    },
     "%lld rules so far": {
       "localizations": {
         "fa": {
@@ -718,28 +690,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 个收藏的服务器已不在其订阅中。"
-          }
-        }
-      }
-    },
-    "1 rule for the %@ list": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "۱ قانون برای فهرست %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 правило для списка «%@»"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 列表的 1 条规则"
           }
         }
       }
@@ -1456,28 +1406,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加到收藏（%lld）"
-          }
-        }
-      }
-    },
-    "Add to the list": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "افزودن به فهرست"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавить в список"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加到列表"
           }
         }
       }
@@ -8238,28 +8166,6 @@
         }
       }
     },
-    "One rule per line. Checked before the mode's own rules: Block first, then Proxy, then Direct. Direct mode uses only the Block list. Accepts domains (example.com also matches its subdomains), IP addresses and ranges (10.0.0.0/8), geosite:… and geoip:… tags, Xray prefixes (full:, keyword:, regexp:, ext:), Clash rules (DOMAIN-SUFFIX,example.com) and hosts or Adblock lists. Full configs keep their own routing.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "هر خط یک قانون. پیش از قوانین خود حالت بررسی می‌شوند: اول مسدود، بعد پروکسی، بعد مستقیم. حالت مستقیم فقط از فهرست مسدود استفاده می‌کند. دامنه‌ها (example.com زیردامنه‌هایش را هم شامل می‌شود)، آدرس‌ها و محدوده‌های IP (‎10.0.0.0/8‎)، برچسب‌های geosite:… و geoip:…، پیشوندهای Xray (full:، keyword:، regexp:، ext:)، قوانین Clash (DOMAIN-SUFFIX,example.com) و فهرست‌های hosts یا Adblock پذیرفته می‌شوند. کانفیگ‌های کامل مسیریابی خودشان را نگه می‌دارند."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "По одному правилу в строке. Проверяются раньше правил режима: сначала «Блокировать», затем «Прокси», затем «Напрямую». В режиме «Напрямую» действует только список блокировки. Принимаются домены (example.com включает и поддомены), IP-адреса и диапазоны (10.0.0.0/8), метки geosite:… и geoip:…, префиксы Xray (full:, keyword:, regexp:, ext:), правила Clash (DOMAIN-SUFFIX,example.com) и списки hosts или Adblock. Полные конфигурации сохраняют свою маршрутизацию."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每行一条规则。会先于模式自身的规则检查：先拦截，再代理，最后直连。直连模式只使用拦截列表。支持域名（example.com 也匹配其子域名）、IP 地址和范围（10.0.0.0/8）、geosite:… 和 geoip:… 标签、Xray 前缀（full:、keyword:、regexp:、ext:）、Clash 规则（DOMAIN-SUFFIX,example.com）以及 hosts 或 Adblock 列表。完整配置保留其自身的路由。"
-          }
-        }
-      }
-    },
     "Only this exact name": {
       "localizations": {
         "fa": {
@@ -9701,28 +9607,6 @@
         }
       }
     },
-    "Replace the list": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "جایگزینی فهرست"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Заменить список"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "替换列表"
-          }
-        }
-      }
-    },
     "Report a Problem": {
       "localizations": {
         "fa": {
@@ -10160,28 +10044,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "规则构建器…"
-          }
-        }
-      }
-    },
-    "Rules are checked before the routing mode: Block first, then Proxy, then Direct. The core restarts to use them.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "قوانین پیش از حالت مسیریابی بررسی می‌شوند: اول مسدود، بعد پروکسی، بعد مستقیم. هسته برای استفاده از آن‌ها از نو شروع می‌شود."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Правила проверяются раньше режима маршрутизации: сначала «Блокировать», затем «Прокси», затем «Напрямую». Ядро перезапускается, чтобы их применить."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "规则先于路由模式检查：先拦截，再代理，最后直连。内核会重启以应用它们。"
           }
         }
       }
@@ -12838,28 +12700,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "测试"
-          }
-        }
-      }
-    },
-    "The %@ list's current rules will be removed.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "قوانین فعلی فهرست %@ حذف می‌شوند."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Текущие правила списка «%@» будут удалены."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 列表的现有规则将被移除。"
           }
         }
       }
@@ -17393,6 +17233,513 @@
     },
     "—": {
       "shouldTranslate": false
+    },
+    "No rules yet. Every connection follows the routing mode.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنوز قانونی نیست. همه‌ی اتصال‌ها از حالت مسیریابی پیروی می‌کنند."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Правил пока нет. Все подключения следуют режиму маршрутизации."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有规则。所有连接都按路由模式处理。"
+          }
+        }
+      }
+    },
+    "Move Up": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "انتقال به بالا"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переместить вверх"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上移"
+          }
+        }
+      }
+    },
+    "Move Down": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "انتقال به پایین"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переместить вниз"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下移"
+          }
+        }
+      }
+    },
+    "Add Rule": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افزودن قانون"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить правило"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加规则"
+          }
+        }
+      }
+    },
+    "Import Proxifier Profile…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وارد کردن پروفایل Proxifier…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Импорт профиля Proxifier…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 Proxifier 配置文件…"
+          }
+        }
+      }
+    },
+    "New rule": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قانون جدید"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новое правило"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新规则"
+          }
+        }
+      }
+    },
+    "Block QUIC (UDP 443)": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مسدود کردن QUIC (UDP 443)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Блокировать QUIC (UDP 443)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阻止 QUIC（UDP 443）"
+          }
+        }
+      }
+    },
+    "Browsers then fall back to TCP, so their host names reach the rules above.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مرورگرها به TCP برمی‌گردند تا نام میزبان‌هایشان به قانون‌های بالا برسد."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Браузеры переходят на TCP, и имена хостов доходят до правил выше."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浏览器会改用 TCP，这样其主机名就能交给上面的规则处理。"
+          }
+        }
+      }
+    },
+    "Imported %lld rules. Check them and click Apply.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld قانون وارد شد. بررسی کنید و «اعمال» را بزنید."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Импортировано правил: %lld. Проверьте их и нажмите «Применить»."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入 %lld 条规则。请检查后点按“应用”。"
+          }
+        }
+      }
+    },
+    "Imported %lld rules. Skipped, they use another proxy or a chain: %@.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld قانون وارد شد. رد شده، چون از پروکسی یا زنجیره‌ی دیگری استفاده می‌کنند: %@."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Импортировано правил: %lld. Пропущены, так как используют другой прокси или цепочку: %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入 %lld 条规则。已跳过使用其他代理或代理链的规则：%@。"
+          }
+        }
+      }
+    },
+    "Could not read the profile: %@": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پروفایل خوانده نشد: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось прочитать профиль: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取配置文件：%@"
+          }
+        }
+      }
+    },
+    "%@ · Apps: %lld · Hosts: %lld": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · برنامه‌ها: %2$lld · میزبان‌ها: %3$lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · Приложения: %2$lld · Хосты: %3$lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · 应用：%2$lld · 主机：%3$lld"
+          }
+        }
+      }
+    },
+    "Apps": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "برنامه‌ها"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приложения"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用"
+          }
+        }
+      }
+    },
+    "Hosts": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "میزبان‌ها"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хосты"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主机"
+          }
+        }
+      }
+    },
+    "Delete Rule": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف قانون"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить правило"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除规则"
+          }
+        }
+      }
+    },
+    "Rule Builder, %@": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سازنده‌ی قانون، %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Конструктор правил, %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则构建器，%@"
+          }
+        }
+      }
+    },
+    "1 entry for a new %@ rule": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "۱ مورد برای یک قانون %@ جدید"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 запись для нового правила «%@»"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新的“%@”规则中有 1 项"
+          }
+        }
+      }
+    },
+    "%lld entries for a new %@ rule": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld مورد برای یک قانون %2$@ جدید"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Записей для нового правила «%2$@»: %1$lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新的“%2$@”规则中有 %1$lld 项"
+          }
+        }
+      }
+    },
+    "Proxifier exclusions": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استثناهای Proxifier"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Исключения Proxifier"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proxifier 排除项"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Checked from the top, before the mode's own rules; the first rule that matches decides. Drag to reorder. A rule with apps and hosts needs both. Direct mode uses only Block rules. Local names (localhost, *.local) always go direct. Full configs keep their own routing.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "از بالا و پیش از قانون‌های خود حالت بررسی می‌شوند؛ اولین قانونی که منطبق شود تصمیم می‌گیرد. برای تغییر ترتیب بکشید. قانونی که برنامه و میزبان دارد به هر دو نیاز دارد. حالت مستقیم فقط از قانون‌های مسدودسازی استفاده می‌کند. نام‌های محلی (localhost، ‎*.local) همیشه مستقیم می‌روند. پیکربندی‌های کامل مسیریابی خودشان را نگه می‌دارند."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверяются сверху вниз, до правил режима; решает первое совпавшее правило. Перетащите, чтобы изменить порядок. Правилу с приложениями и хостами нужны оба совпадения. Режим «Напрямую» использует только правила блокировки. Локальные имена (localhost, *.local) всегда идут напрямую. Полные конфигурации сохраняют свою маршрутизацию."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从上到下检查，先于模式自身的规则；第一条匹配的规则生效。拖动可调整顺序。同时包含应用和主机的规则需两者都匹配。直连模式只使用阻止规则。本地名称（localhost、*.local）始终直连。完整配置保留其自身的路由。"
+          }
+        }
+      }
+    },
+    "One per line: Spotify.app, com.spotify.client, *discord*, a process name (curl) or a full path. Empty means every app.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هر مورد در یک خط: Spotify.app، com.spotify.client، ‎*discord*، نام یک پردازه (curl) یا یک مسیر کامل. خالی یعنی همه‌ی برنامه‌ها."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По одному в строке: Spotify.app, com.spotify.client, *discord*, имя процесса (curl) или полный путь. Пусто — все приложения."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每行一个：Spotify.app、com.spotify.client、*discord*、进程名（curl）或完整路径。留空表示所有应用。"
+          }
+        }
+      }
+    },
+    "One per line. Domains (example.com also matches its subdomains), *word* keywords, IP addresses, ranges (10.0.0.0/8 or 10.0.0.1-10.0.0.9), geosite:… and geoip:… tags, Xray prefixes (full:, keyword:, regexp:, ext:), Clash rules and hosts or Adblock lists. Empty means every host.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هر مورد در یک خط. دامنه‌ها (example.com زیردامنه‌هایش را هم شامل می‌شود)، کلیدواژه‌های ‎*word*، نشانی‌های IP، بازه‌ها (10.0.0.0/8 یا 10.0.0.1-10.0.0.9)، برچسب‌های geosite:… و geoip:…، پیشوندهای Xray ‏(full:، keyword:، regexp:، ext:)، قانون‌های Clash و فهرست‌های hosts یا Adblock. خالی یعنی همه‌ی میزبان‌ها."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По одному в строке. Домены (example.com включает и поддомены), ключевые слова *word*, IP-адреса, диапазоны (10.0.0.0/8 или 10.0.0.1-10.0.0.9), теги geosite:… и geoip:…, префиксы Xray (full:, keyword:, regexp:, ext:), правила Clash и списки hosts или Adblock. Пусто — все хосты."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每行一个。域名（example.com 也匹配其子域名）、*word* 关键词、IP 地址、范围（10.0.0.0/8 或 10.0.0.1-10.0.0.9）、geosite:… 和 geoip:… 标签、Xray 前缀（full:、keyword:、regexp:、ext:）、Clash 规则以及 hosts 或 Adblock 列表。留空表示所有主机。"
+          }
+        }
+      }
+    },
+    "The rules become one new rule in Settings → Routing, where the list is checked top to bottom. Block rules go to the top, the others to the bottom. The core restarts to use them.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "این موارد یک قانون جدید در تنظیمات ← مسیریابی می‌شوند، جایی که فهرست از بالا به پایین بررسی می‌شود. قانون‌های مسدودسازی بالا و بقیه پایین قرار می‌گیرند. هسته برای استفاده از آن‌ها دوباره راه‌اندازی می‌شود."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Записи станут одним новым правилом в «Настройки → Маршрутизация», где список проверяется сверху вниз. Правила блокировки идут в начало, остальные в конец. Ядро перезапустится, чтобы их применить."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些条目会成为“设置 → 路由”中的一条新规则，列表从上到下检查。阻止规则放在顶部，其他放在底部。内核会重启以使用它们。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

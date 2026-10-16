@@ -20,6 +20,11 @@ to bottom with the first match winning:
 Proxifier catches every app's connections, including apps that ignore the system proxy, and
 knows which app opened each one. V2Mac must do both.
 
+## Status (2026-10-17)
+
+Phases 1, 2, 3 and 5 are done (spec 8.6). Phase 4 is not started: it needs TUN mode
+tested while the installed V2Mac is not in use.
+
 ## What works today
 
 These parts need no code changes:
@@ -43,27 +48,28 @@ it through.
 
 Make the v7.1 host rules work as written (`CustomRules.swift`).
 
-- [ ] Turn `*word*` into `keyword:word`. Keep `*.domain` as `domain:` like today.
-- [ ] Turn IP ranges `a-b` (v4 and v6) into the smallest set of CIDR blocks.
-- [ ] Add a "Block QUIC (UDP 443)" setting: one Xray rule, `network: udp, port: 443` → block.
+- [x] Turn `*word*` into `keyword:word`. Keep `*.domain` as `domain:` like today.
+- [x] Turn IP ranges `a-b` (v4 and v6) into the smallest set of CIDR blocks.
+- [x] Add a "Block QUIC (UDP 443)" setting: one Xray rule, `network: udp, port: 443` → block.
       It needs a `Prefs` key, a default, a settings row and the fa/zh-Hans/ru strings.
-- [ ] Always send local names (`*.local`, `*.test`, `localhost`, docker hosts) direct.
-- [ ] Package tests for every new form.
+- [x] Always send local names (`*.local`, `*.test`, `localhost`, docker hosts) direct.
+- [x] Package tests for every new form.
 
 **Done when:** the v7.1 host rules can be pasted into the lists with nothing skipped.
 
 ## Phase 2: app rules in system proxy mode (medium)
 
-- [ ] Add an app list to the Proxy, Direct and Block lists. Each entry becomes an Xray
+- [x] Add an app list to the Proxy, Direct and Block lists. Each entry becomes an Xray
       `process` rule.
-- [ ] Accept Proxifier's forms: `"Spotify.app"`, `Spotify`, `com.spotify.client`, `*discord*`
+- [x] Accept Proxifier's forms: `"Spotify.app"`, `Spotify`, `com.spotify.client`, `*discord*`
       and full paths.
-- [ ] Turn a bundle id into the app's binary name through Launch Services, because Xray
+- [x] Turn a bundle id into the app's binary name through Launch Services, because Xray
       matches process names or paths, not bundle ids.
-- [ ] Decide how `*word*` app patterns map onto Xray's process matching. Check whether it
-      takes wildcards; if not, expand them against the running and installed apps.
-- [ ] Tests for the conversion. Run a manual check with the dev build (system proxy off,
-      apps pointed at the dev port).
+- [x] Decide how `*word*` app patterns map onto Xray's process matching. It takes no
+      wildcards (exact name, exact path, or a folder prefix ending in `/`), so they are
+      expanded against the installed and running apps at connect time.
+- [x] Tests for the conversion.
+- [ ] Run a manual check with the dev build (system proxy off, apps pointed at the dev port).
 
 **Done when:** in system proxy mode, every app that respects the system proxy follows its
 app rule.
@@ -74,12 +80,12 @@ Today V2Mac applies Block, then Proxy, then Direct. Proxifier goes top to bottom
 match wins, and v7.1 depends on it (for example, "Direct - Local Network" comes before the
 broad Proxy rules).
 
-- [ ] One ordered list of rules. Each rule has a name, apps and/or hosts, an action and an
+- [x] One ordered list of rules. Each rule has a name, apps and/or hosts, an action and an
       on/off switch.
-- [ ] Turn the list into Xray rules in the same order.
-- [ ] Move the existing three lists into the new list once (Block, Proxy, Direct order), so
+- [x] Turn the list into Xray rules in the same order.
+- [x] Move the existing three lists into the new list once (Block, Proxy, Direct order), so
       nothing changes for current users.
-- [ ] Update the Rule Builder to add rules to the ordered list.
+- [x] Update the Rule Builder to add rules to the ordered list.
 
 **Done when:** the order of v7.1 can be reproduced exactly.
 
@@ -104,10 +110,10 @@ apps that ignore the system proxy (command-line tools, Docker, Apple background 
 
 ## Phase 5: import a `.ppx` file (small, optional)
 
-- [ ] Read Proxifier's XML: `RuleList`, `Targets`, `Applications`, `Action`, `enabled`,
+- [x] Read Proxifier's XML: `RuleList`, `Targets`, `Applications`, `Action`, `enabled`,
       `BlockUDP443`, `ExclusionList`.
-- [ ] Rules that point at other proxies or chains are skipped and listed.
-- [ ] Test with a made-up profile in `Fixtures.swift` (no real hosts or IPs).
+- [x] Rules that point at other proxies or chains are skipped and listed.
+- [x] Test with a made-up profile in `Fixtures.swift` (no real hosts or IPs).
 
 ## Risks and open questions
 

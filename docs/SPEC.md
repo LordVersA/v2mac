@@ -623,14 +623,24 @@ Hysteria 2 server: both connect with the setting on, Trojan fails with it off.
 
 ### 8.6 Custom rules
 
-Three text lists in Settings → Routing: Proxy, Direct and Block, one entry per
-line (commas and spaces also separate entries; `#`, `//` and `!` start a
-comment). `RuleMatchers` turns each list into Xray `domain` and `ip` entries:
+One ordered list in Settings → Routing (`CustomRule`, stored as JSON under
+`customRuleList`). Each rule has a name, an on/off switch, an action (Proxy,
+Direct or Block), apps and hosts. Rules are checked top to bottom and the first
+match wins, as in Proxifier; a rule with apps and hosts needs both, an empty
+field matches everything. The Block, Proxy and Direct text lists of earlier
+versions become three rules in that order on first launch (and when an old
+backup is restored), so nothing changes.
+
+Hosts are one entry per line (commas, spaces and `;` also separate entries;
+`#`, `//` and `!` start a comment). `RuleMatchers` turns them into Xray
+`domain` and `ip` entries:
 
 - Xray notation as written: `domain:`, `full:`, `keyword:`, `regexp:`,
   `geosite:`, `geoip:`, `ext:<file>:<tag>` (a file whose name contains "ip" is
   an IP list).
-- IP addresses and CIDR ranges, v4 and v6.
+- IP addresses and CIDR ranges, v4 and v6, and Proxifier ranges `a-b`, turned
+  into the fewest CIDR blocks.
+- Proxifier keywords `*word*` → `keyword:word`.
 - Plain domains with at least one dot, and `*.`, `+.`, `.` wildcards →
   `domain:<name>` (the domain and its subdomains). A lone word is skipped.
 - Clash rules `DOMAIN`, `DOMAIN-SUFFIX`, `DOMAIN-KEYWORD`, `DOMAIN-REGEX`,
@@ -638,15 +648,40 @@ comment). `RuleMatchers` turns each list into Xray `domain` and `ip` entries:
   policy column is ignored, the list decides.
 - hosts lines (`0.0.0.0 a.example b.example` → `full:`) and Adblock `||name^`.
 
-Anything else is skipped and named under the editor. The rules come before the
-mode's own rules, Block first, then Proxy, then Direct. In Global mode, IP
+Anything else is skipped and named under the editor.
+
+Apps (`AppMatchers`) become an Xray `process` field, which matches process
+names, absolute paths, and path prefixes ending in `/`. A full path is kept (an
+`.app` path becomes its folder, so helpers match too); a lone word is a process
+name, plus the folder of `<word>.app` when installed; `Name.app`, a bundle id
+and `*word*` (name or bundle id) are looked up at connect time among the apps
+in `/Applications`, `/System/Applications`, `/System/Library/CoreServices`,
+`~/Applications` and the running apps (`InstalledApps`). A bundle id with no
+installed app is kept as a process name; a rule whose apps all match nothing is
+left out. App rules see the app only for connections that reach the core
+directly (system proxy or app settings); in TUN mode the core sees the root
+forwarder (9.5).
+
+Local names (`localhost`, `.local`, `.test`, `.internal`, `.lan`, `.home.arpa`,
+dotless names) always go direct, ahead of the rules. **Block QUIC (UDP 443)**
+(`blockQUIC`, off by default) adds a first rule sending UDP 443 to Block, so
+browsers fall back to TCP and their host names reach the rules.
+
+**Import Proxifier Profile…** reads a `.ppx` file (`ProxifierProfile`): each
+rule to a proxy on 127.0.0.1 or localhost becomes a Proxy rule, Direct and
+Block rules keep their action, `enabled` is kept, rules to other proxies or
+chains are skipped and named, the default rule is left to the routing mode,
+`ExclusionList` becomes a Direct rule at the top and `BlockUDP443` turns on
+Block QUIC. Imported rules are a draft until Apply.
+
+The rules come before the mode's own rules. In Global mode, IP
 entries switch `domainStrategy` to `IPIfNonMatch` with the DoH `dns` section of
-Bypass mode. Direct mode uses only the Block list. Full configs (8.2) keep their
+Bypass mode. Direct mode uses only Block rules. Full configs (8.2) keep their
 own routing. Apply restarts a running core; a live switch keeps the core only
 when the rules are unchanged.
 
 **Rule Builder.** A window (`rule-builder`, opened from the Custom rules
-section) writes rules in three steps: the list (Proxy, Direct, Block, or a
+section) writes a rule in three steps: the action (Proxy, Direct, Block, or a
 common setup that fills in the rest); what to match; a review. What to match
 comes from three panes:
 
@@ -661,9 +696,10 @@ comes from three panes:
   (`GeoTags`), so a rule never names a list the core lacks.
 - Domains & IPs: free text in the formats above.
 
-The review shows each rule and marks the ones already in the list. Add Rules
-appends (or replaces the list, when chosen) under a dated `# Rule Builder`
-comment, saves and restarts a running core.
+The review shows each entry and marks the ones enabled rules with the same
+action already have. Add Rules saves the new entries as one rule named
+"Rule Builder, <date>" (Block rules at the top of the list, the others at the
+bottom) and restarts a running core.
 
 ## 9. Core process management
 
