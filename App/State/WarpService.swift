@@ -18,6 +18,13 @@ final class WarpService {
 
     private var client: WarpClient { WarpClient(route: route()) }
 
+    func reloadSavedAccount() {
+        let next = Prefs.warpAccount
+        let keysChanged = next?.privateKey != account?.privateKey
+        account = next
+        if keysChanged { onAccountChanged() }
+    }
+
     func register() async {
         await run { try await self.client.register() }
     }
@@ -39,7 +46,8 @@ final class WarpService {
         isBusy = true
         try? await client.delete(account)
         isBusy = false
-        save(nil)
+        do { try save(nil) }
+        catch { errorMessage = error.localizedDescription }
     }
 
     /// Adds WARP to Custom Configs as a server of its own; returns its group.
@@ -59,16 +67,16 @@ final class WarpService {
         errorMessage = nil
         defer { isBusy = false }
         do {
-            save(try await work())
+            try save(try await work())
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    private func save(_ new: WarpAccount?) {
+    private func save(_ new: WarpAccount?) throws {
         let keysChanged = new?.privateKey != account?.privateKey
+        try Prefs.setWarpAccount(new)
         account = new
-        Prefs.warpAccount = new
         if keysChanged { onAccountChanged() }
     }
 }

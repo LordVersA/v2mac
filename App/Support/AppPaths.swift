@@ -78,18 +78,19 @@ enum Prefs {
     private static var defaults: UserDefaults { .standard }
 
     /// Spec 13 defaults. Registered so `@AppStorage` in Settings and these getters agree.
-    static func registerDefaults() {
+    @MainActor static func registerDefaults() {
         defaults.register(defaults: defaultValues)
         migrateCustomRules()
-        // TUN mode and the system proxy need administrator access; they start off, so launching
-        // never asks for a password. The user turns them on when wanted.
-        defaults.set(false, forKey: "tunEnabled")
+        // Keep the TUN choice for reconnect-on-launch; the system proxy starts off.
         defaults.set(false, forKey: "systemProxy")
         defaults.register(defaults: Dictionary(uniqueKeysWithValues: NotificationKind.allCases.map { ($0.key, $0.defaultOn) }))
         if defaults.string(forKey: "speedTestURL") == retiredSpeedURL { defaults.removeObject(forKey: "speedTestURL") }
-        // The proxy password used to be kept in the preferences file; it moves to the keychain once.
-        if let old = defaults.string(forKey: "proxyPassword"), old.isEmpty || Keychain.set(old, for: .proxyPassword) {
-            defaults.removeObject(forKey: "proxyPassword")
+        // Remove the old plaintext preference only after the selected secret store saves it.
+        if let old = defaults.string(forKey: "proxyPassword") {
+            do {
+                try setProxyPassword(old)
+                defaults.removeObject(forKey: "proxyPassword")
+            } catch { /* SecretStore exposes the error in Settings. */ }
         }
         // macOS puts a new menu bar icon at the far left, where a notch hides it first. This is
         // AppKit's own (undocumented) key for a dragged icon, in points from the right edge of
@@ -197,7 +198,7 @@ enum Prefs {
     }
 
     /// Port, LAN and credentials as the core should listen.
-    static var inbound: InboundSettings {
+    @MainActor static var inbound: InboundSettings {
         InboundSettings(
             port: port,
             allowLAN: defaults.bool(forKey: "allowLAN"),
@@ -206,34 +207,41 @@ enum Prefs {
         )
     }
 
-    /// The registered WARP device, kept in the keychain as JSON (spec 9.10).
-    static var warpAccount: WarpAccount? {
-        get { Keychain.string(.warpAccount).flatMap { try? JSONDecoder().decode(WarpAccount.self, from: Data($0.utf8)) } }
-        set { Keychain.set(newValue.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) }, for: .warpAccount) }
+    /// The registered WARP device, kept in the selected secret store as JSON (spec 9.10).
+    @MainActor static var warpAccount: WarpAccount? {
+        (try? SecretStore.shared.string(.warpAccount)).flatMap { try? JSONDecoder().decode(WarpAccount.self, from: Data($0.utf8)) }
+    }
+
+    @MainActor static func setWarpAccount(_ account: WarpAccount?) throws {
+        let json = try account.map { String(decoding: try JSONEncoder().encode($0), as: UTF8.self) }
+        try SecretStore.shared.set(json, for: .warpAccount)
     }
 
     /// The WARP outbound traffic leaves through after the server, when that is on.
-    static var warpExit: JSONValue? {
+    @MainActor static var warpExit: JSONValue? {
         defaults.bool(forKey: "warpExit") ? warpAccount?.outbound : nil
     }
 
-    /// Kept in the keychain (spec 13).
-    static var proxyPassword: String {
-        get { Keychain.string(.proxyPassword) ?? "" }
-        set { Keychain.set(newValue, for: .proxyPassword) }
+    /// Kept in the selected secret store (spec 13).
+    @MainActor static var proxyPassword: String {
+        (try? SecretStore.shared.string(.proxyPassword)) ?? ""
+    }
+
+    @MainActor static func setProxyPassword(_ password: String) throws {
+        try SecretStore.shared.set(password, for: .proxyPassword)
     }
 
     /// An administrator account the user chose to save, so the root helper starts without the
-    /// system's prompt (spec 9.5). The password is in the keychain.
-    static var adminAccount: (user: String, password: String)? {
+    /// system's prompt (spec 9.5). The password is in the selected secret store.
+    @MainActor static var adminAccount: (user: String, password: String)? {
         guard let user = defaults.string(forKey: "adminUser"), !user.isEmpty,
-              let password = Keychain.string(.adminPassword) else { return nil }
+              let password = try? SecretStore.shared.string(.adminPassword) else { return nil }
         return (user, password)
     }
 
-    static func setAdminAccount(_ account: (user: String, password: String)?) {
+    @MainActor static func setAdminAccount(_ account: (user: String, password: String)?) throws {
+        try SecretStore.shared.set(account?.password, for: .adminPassword)
         defaults.set(account?.user, forKey: "adminUser")
-        Keychain.set(account?.password, for: .adminPassword)
     }
 
     /// Spec 9.9: point the system proxy at the local port while connected.

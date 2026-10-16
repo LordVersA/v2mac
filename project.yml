@@ -90,6 +90,7 @@ targets:
       - App/Support/AdminConsent.swift
       - App/Support/InstalledApps.swift
       - App/Support/Keychain.swift
+      - App/Support/SecretStore.swift
       - App/State/KillSwitchController.swift
       - App/State/SystemProxyController.swift
       - App/Support/ServerName.swift

@@ -573,6 +573,11 @@ final class ConnectionController {
         guard commandGeneration == generation, userWantsRunning else { return }
         localError = nil
         portConflict = nil
+        do { try SecretStore.shared.values() }
+        catch {
+            localError = String(localized: "Saved secrets could not be read. Check Secret storage in General settings.")
+            return
+        }
         // Before anything connects, so nothing leaves around the connection meanwhile (spec 9.8).
         if Prefs.killSwitch {
             let armed = await killSwitch.arm(allowing: KillSwitch.hosts(in: server.config, kind: server.kind))

@@ -7,6 +7,7 @@ struct ProxySettings: View {
     @AppStorage("allowLAN") private var allowLAN = false
     @AppStorage("proxyUsername") private var username = ""
     @State private var password = Prefs.proxyPassword
+    @State private var passwordError: String?
     @State private var portText = ""
     @State private var pending: Task<Void, Never>?
 
@@ -46,13 +47,17 @@ struct ProxySettings: View {
                     .onChange(of: username) { restartSoon() }
                 SecureField("Password", text: $password)
                     .onChange(of: password) {
-                        Prefs.proxyPassword = password
-                        restartSoon()
+                        do {
+                            try Prefs.setProxyPassword(password)
+                            passwordError = nil
+                            restartSoon()
+                        } catch { passwordError = error.localizedDescription }
                     }
+                if let passwordError { Text(passwordError).font(.caption).foregroundStyle(.red) }
             } header: {
                 Text("Authentication")
             } footer: {
-                note("Optional. When both are set, every app and device must send them to use the proxy; browsers ask for them once. The password is kept in your keychain.")
+                note("Optional. When both are set, every app and device must send them to use the proxy; browsers ask for them once. Choose how secrets are stored in General settings.")
             }
             Section("Local network") {
                 Toggle("Allow connections from LAN", isOn: $allowLAN)
@@ -72,7 +77,11 @@ struct ProxySettings: View {
         .animation(.default, value: allowLAN)
         .animation(.default, value: portValid)
         .animation(.default, value: username.isEmpty || password.isEmpty)
-        .onAppear { portText = String(port) }
+        .onAppear {
+            portText = String(port)
+            password = Prefs.proxyPassword
+        }
+        .onChange(of: SecretStore.shared.usesKeychain) { password = Prefs.proxyPassword }
         .onDisappear { commitPort() }
     }
 

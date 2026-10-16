@@ -109,9 +109,11 @@ change without affecting the rest.
 5. **Log storage.** In-memory ring buffer of 5,000 lines; nothing written to
    disk. "Copy All" in the panel.
 6. **Subscription User-Agent.** `v2mac/<version>`, editable in Settings.
-7. **Secrets.** Stored with the rest of the app data (owner-only directory), not
-   in the Keychain, because ad-hoc builds change signature on every release and
-   would trigger Keychain prompts. Revisit when Developer ID signing arrives.
+7. **Secrets.** Server and subscription secrets stay with the app data (owner-only
+   directory). Proxy and administrator passwords and WARP credentials use a local
+   AES-GCM encrypted file by default; its random 256-bit key is stored beside it.
+   Keychain storage is optional and off by default (section 13), because ad-hoc
+   builds can trigger new access prompts after updates.
 8. **Helper location.** The core lives in `Contents/Helpers/xray` rather than
    `Contents/Resources/core/`, which is the bundle location code signing expects
    for executables. Geo data stays in `Resources`.
@@ -811,9 +813,11 @@ Every failed state offers "Show Logs", which opens the log panel.
 
 ### 9.5 TUN mode
 
-**Asking for access.** TUN mode and the system proxy always start off at launch
-(`Prefs.registerDefaults` clears `tunEnabled` and `systemProxy`), so opening the
-app never asks for a password; the kill switch keeps its setting. Before macOS's
+**Asking for access.** TUN mode defaults off and keeps its choice across launches
+(`tunEnabled`). The active server and previous running state are restored too;
+with Reconnect on launch enabled, a previously running connection resumes with
+the saved TUN setting. The system proxy starts off (`Prefs.registerDefaults`
+clears `systemProxy`); the kill switch keeps its setting. Before macOS's
 own administrator prompt (not with a saved administrator account, which needs
 none), `AdminConsent` explains what the helper changes, that nothing is saved or
 sent, and links to the source on GitHub. Not Now cancels as if the prompt was
@@ -904,7 +908,7 @@ proxy, but cannot block other apps' direct traffic. The kill switch (section 9.8
 **One session, three uses.** The same root helper also sets the system proxy (9.9) and
 holds the kill switch (9.8); whichever needs it first starts it, with one administrator
 prompt per app session. Settings → General → "Administrator access" can save an
-administrator account: the password is kept in the keychain, checked before it is saved,
+administrator account: the password is kept in the selected secret store, checked before it is saved,
 and handed to `osascript` on standard input (`do shell script … user name … password …`),
 so no prompt appears and the password is never in the process list. A saved password the
 system refuses (`-60007`) is forgotten and the prompt is shown instead. The helper's
@@ -1063,7 +1067,7 @@ them, so they follow the open-source clients (wgcf, usque):
 
 Requests go through the local proxy while the core runs and direct otherwise, since the API is
 often blocked where the app is needed. Registering accepts Cloudflare's terms, which the button's
-note links to. The device (keys, token, endpoint, account) is kept in the keychain as JSON.
+note links to. The device (keys, token, endpoint, account) is kept in the selected secret store as JSON.
 Cloudflare's `warp_plus` flag is true on free accounts too, so the plan comes from
 `account_type` alone: `free`, `limited` (WARP+ with a data allowance), `unlimited`, `team`.
 
@@ -1557,8 +1561,8 @@ too) is base64 text, 76 characters a line, of one JSON object (`Backup`, package
 - `settings`: every setting that has a default (section 13), the notification switches,
   routing mode, TUN switch, pack intervals, User-Agent and the enabled region packs.
 
-Not in it: the proxy and administrator passwords (keychain), the active and recent
-servers, traffic totals, delays.
+Not in it: the proxy and administrator passwords, the registered WARP credentials,
+the Keychain storage choice, the active and recent servers, traffic totals, delays.
 
 A restore asks first, saying when and with which version the file was made and how many
 subscriptions and servers it holds. It adds and never removes: a subscription that is not
@@ -1641,11 +1645,12 @@ another address) has no app or bytes. At most 1,000 rows and 2,000 log lines are
 | | Restart core after sleep or network change | On |
 | | Count traffic usage (section 12.8) | On |
 | | Check for app updates | On |
-| | Administrator access: account and password, kept in the keychain (section 9.5) | Not saved |
+| | Store secrets in Apple Keychain: opt in after a notice about the macOS password prompt; otherwise use the encrypted local file | Off |
+| | Administrator access: account and password, kept in the selected secret store (section 9.5) | Not saved |
 | | Backup: Export Backup…, Restore Backup… (section 12.9) | — |
 | Proxy | Port | 10808 |
 | | Set as system proxy, with its dot (section 9.9) | Off |
-| | Username / Password, optional; the password is kept in the keychain (an older one in the preferences moves there on launch) | Empty |
+| | Username / Password, optional; the password uses the selected secret store (an older plaintext preference moves there on launch, and is removed only after a successful save) | Empty |
 | | Allow connections from LAN (shows the Mac's LAN address; warning when it is on and there are no credentials) | Off |
 | Routing | Mode: Global / Bypass regions / Direct | Global |
 | | Bypass regions list: enable, status, Update Now, auto-update interval | None enabled |
@@ -1681,11 +1686,41 @@ or DNS while connected restarts the core.
 
 ---
 
+### Secret storage
+
+`useKeychain` is a device-local preference, false when absent and excluded from backups.
+With it off, startup and all secret operations avoid Keychain entirely. `SecretStore`
+encrypts the proxy password, saved administrator password and WARP JSON with CryptoKit
+AES-GCM, using a random 256-bit key stored in the same 0700 directory; both files are
+0600. No built-in/shared password is used. This hides plaintext at rest but does not
+protect against software running as the same user, since it can read the key too.
+
+Settings → General → Secret storage explains these limits. Enabling Keychain first
+shows a cancellable notice, like the TUN consent notice; macOS handles any login
+password request in its own dialog. Only then are legacy Keychain secrets read and
+merged with local values (local values, including explicitly forgotten secrets, win).
+After all target writes succeed, the choice is committed and local secret files are
+removed. A failure preserves the source and reports the error; a cleanup failure
+after commit keeps Keychain selected and reports the remaining local-copy error.
+Turning the option off first saves the secrets locally, then commits the preference.
+Old Keychain entries are left intact, avoiding extra access prompts; with the option
+off they are never accessed. Old installations default to local storage too: users
+must re-enter secrets or enable Keychain to recover the old values.
+
+Reads, including denied Keychain reads, are cached for the app session to avoid
+repeated prompts. Settings exposes read/write errors and an explicit retry. A corrupt
+encrypted file or a missing key is never silently replaced, and connection startup
+refuses to run with unreadable secrets rather than dropping proxy authentication.
+Successful storage changes refresh the WARP account and reconnect a running core.
+
 ## 14. Files on disk
 
 ```
 ~/Library/Application Support/v2mac/        (0700)
 ├─ default.store                 SwiftData
+├─ secrets/                      0700, default secret storage
+│  ├─ secrets.enc                0600, AES-GCM encrypted secrets
+│  └─ secrets.key                0600, random local encryption key
 ├─ core/xray                     only after an in-app core update
 ├─ assets/
 │  ├─ geoip.dat, geosite.dat     symlinks to the bundle, or updated copies
@@ -1705,7 +1740,8 @@ or DNS while connected restarts the core.
 
 /var/run/v2mac-killswitch-<uid>  pf's enable token while the kill switch is up
 
-Keychain (login): service = bundle id, accounts proxyPassword and adminPassword.
+Keychain (login, opt-in only): service = bundle id; accounts proxyPassword,
+adminPassword and warpAccount. Debug uses its own bundle id and data directory.
 
 v2mac.app/Contents/
 ├─ MacOS/v2mac
@@ -1808,8 +1844,9 @@ v2mac/
   addresses, each checked. The helper also changes the system's DNS servers to
   fixed public addresses while the tunnel is up, in memory only, and the system
   proxy while asked to.
-- A saved administrator password lets any process that can read V2Mac's keychain
-  item act as administrator through it; the setting says so.
+- A saved administrator password lets software that can read the selected secret
+  store act as administrator through it; the setting says so. Default local encryption
+  keeps its key on disk and does not isolate secrets from other apps run by the same user.
 
 ---
 

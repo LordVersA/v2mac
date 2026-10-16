@@ -1,6 +1,138 @@
 {
   "sourceLanguage": "en",
   "strings": {
+      "Store secrets in Apple Keychain": {
+        "localizations": {
+          "fa": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "ذخیره اطلاعات محرمانه در زنجیره کلید اپل"
+            }
+          },
+          "ru": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Хранить секреты в Связке ключей Apple"
+            }
+          },
+          "zh-Hans": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "将凭据存储在 Apple 钥匙串中"
+            }
+          }
+        }
+      },
+      "Secret storage": {
+        "localizations": {
+          "fa": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "ذخیره اطلاعات محرمانه"
+            }
+          },
+          "ru": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Хранение секретов"
+            }
+          },
+          "zh-Hans": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "凭据存储"
+            }
+          }
+        }
+      },
+      "Off by default. Passwords and WARP credentials are encrypted in a local file with a key stored on this Mac. Apps running as your user can decrypt it. Keychain adds macOS access controls and may ask for your login password, including after app updates. Old Keychain secrets are only read when you enable this option.": {
+        "localizations": {
+          "fa": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "به‌صورت پیش‌فرض خاموش است. رمزها و اطلاعات WARP در یک فایل محلی با کلیدی که روی این مک ذخیره می‌شود رمزنگاری می‌شوند. برنامه‌هایی که با حساب شما اجرا می‌شوند می‌توانند آن را رمزگشایی کنند. زنجیره کلید کنترل دسترسی macOS را اضافه می‌کند و ممکن است رمز ورود شما را بخواهد، از جمله پس از به‌روزرسانی برنامه. اطلاعات قبلی زنجیره کلید فقط با فعال کردن این گزینه خوانده می‌شوند."
+            }
+          },
+          "ru": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "По умолчанию выключено. Пароли и данные WARP шифруются в локальном файле ключом, сохранённым на этом Mac. Приложения, запущенные от вашего имени, могут его расшифровать. Связка ключей добавляет контроль доступа macOS и может запрашивать пароль входа, в том числе после обновлений приложения. Старые секреты из Связки ключей читаются только при включении этой опции."
+            }
+          },
+          "zh-Hans": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "默认关闭。密码和 WARP 凭据使用保存在本机的密钥加密，存储在本地文件中。以你身份运行的应用可以解密。钥匙串提供 macOS 访问控制，可能会要求输入登录密码，应用更新后也可能再次询问。只有启用此选项时才会读取旧的钥匙串凭据。"
+            }
+          }
+        }
+      },
+      "Use Apple Keychain?": {
+        "localizations": {
+          "fa": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "از زنجیره کلید اپل استفاده شود؟"
+            }
+          },
+          "ru": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Использовать Связку ключей Apple?"
+            }
+          },
+          "zh-Hans": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "使用 Apple 钥匙串？"
+            }
+          }
+        }
+      },
+      "V2Mac will move saved passwords and WARP credentials to your login Keychain and recover any older Keychain secrets. macOS may ask for your login password next, and may ask again after app updates. Enter it only in the macOS Keychain dialog. Cancel to keep using the encrypted local file.": {
+        "localizations": {
+          "fa": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "V2Mac رمزهای ذخیره‌شده و اطلاعات WARP را به زنجیره کلید ورود شما منتقل می‌کند و اطلاعات قبلی آن را بازیابی می‌کند. macOS ممکن است در مرحله بعد رمز ورود شما را بخواهد و پس از به‌روزرسانی برنامه دوباره بپرسد. رمز را فقط در پنجره زنجیره کلید macOS وارد کنید. برای ادامه استفاده از فایل محلی رمزنگاری‌شده، لغو کنید."
+            }
+          },
+          "ru": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "V2Mac перенесёт сохранённые пароли и данные WARP в вашу Связку ключей входа и восстановит старые секреты из неё. Затем macOS может запросить пароль входа и повторить запрос после обновлений приложения. Вводите его только в диалоге Связки ключей macOS. Отмените, чтобы продолжить использовать зашифрованный локальный файл."
+            }
+          },
+          "zh-Hans": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "V2Mac 会将已保存的密码和 WARP 凭据移入登录钥匙串，并恢复其中的旧凭据。macOS 接下来可能要求输入登录密码，应用更新后也可能再次询问。请仅在 macOS 钥匙串对话框中输入密码。取消即可继续使用加密的本地文件。"
+            }
+          }
+        }
+      },
+      "Saved secrets could not be read. Check Secret storage in General settings.": {
+        "localizations": {
+          "fa": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "اطلاعات محرمانه ذخیره‌شده خوانده نشد. بخش ذخیره اطلاعات محرمانه در تنظیمات عمومی را بررسی کنید."
+            }
+          },
+          "ru": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Не удалось прочитать сохранённые секреты. Проверьте раздел «Хранение секретов» в основных настройках."
+            }
+          },
+          "zh-Hans": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "无法读取已保存的凭据。请检查通用设置中的凭据存储。"
+            }
+          }
+        }
+      },
     "Filter by route": {
       "localizations": {
         "fa": { "stringUnit": { "state": "translated", "value": "فیلتر بر اساس مسیر" } },
@@ -8487,28 +8619,28 @@
         }
       }
     },
-    "Optional. When both are set, every app and device must send them to use the proxy; browsers ask for them once. The password is kept in your keychain.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "اختیاری. اگر هر دو تنظیم شوند، هر برنامه و دستگاهی برای استفاده از پروکسی باید آن‌ها را بفرستد؛ مرورگرها یک بار می‌پرسند. رمز در زنجیره کلید شما نگه داشته می‌شود."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Необязательно. Если заданы оба, каждое приложение и устройство должно передавать их, чтобы пользоваться прокси; браузеры спросят один раз. Пароль хранится в связке ключей."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可选。两者都设置后，所有应用和设备都必须提供它们才能使用代理；浏览器会询问一次。密码保存在你的钥匙串中。"
+      "Optional. When both are set, every app and device must send them to use the proxy; browsers ask for them once. Choose how secrets are stored in General settings.": {
+        "localizations": {
+          "fa": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "اختیاری. اگر هر دو تنظیم شوند، هر برنامه و دستگاهی برای استفاده از پروکسی باید آن‌ها را بفرستد؛ مرورگرها یک بار می‌پرسند. روش ذخیره اطلاعات محرمانه را در تنظیمات عمومی انتخاب کنید."
+            }
+          },
+          "ru": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Необязательно. Если заданы оба, каждое приложение и устройство должно передавать их, чтобы пользоваться прокси; браузеры спросят один раз. Способ хранения секретов выбирается в основных настройках."
+            }
+          },
+          "zh-Hans": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "可选。两者都设置后，所有应用和设备都必须提供它们才能使用代理；浏览器会询问一次。请在通用设置中选择凭据的存储方式。"
+            }
           }
         }
-      }
-    },
+      },
     "Or start from a common setup": {
       "localizations": {
         "fa": {
@@ -12428,28 +12560,28 @@
         }
       }
     },
-    "TUN mode, the system proxy and the kill switch need administrator access once each time V2Mac opens. With the password saved here, V2Mac uses it instead of asking. It is kept encrypted in your keychain; anyone who can use your Mac account can then let V2Mac act as administrator.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "حالت TUN، پروکسی سیستم و کلید قطع اضطراری هر بار که V2Mac باز می‌شود یک بار دسترسی مدیر لازم دارند. اگر رمز اینجا ذخیره شود، V2Mac به‌جای پرسیدن از آن استفاده می‌کند. رمز به‌صورت رمزنگاری‌شده در زنجیره کلید شما نگه داشته می‌شود؛ هر کسی که بتواند از حساب مک شما استفاده کند، می‌تواند V2Mac را وادار به کار در نقش مدیر کند."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Режиму TUN, системному прокси и блокировке трафика нужен доступ администратора один раз при каждом запуске V2Mac. Если сохранить пароль здесь, V2Mac будет использовать его вместо запроса. Он хранится в зашифрованном виде в связке ключей; любой, кто может пользоваться вашей учётной записью Mac, сможет заставить V2Mac действовать от имени администратора."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TUN 模式、系统代理和断网保护在每次打开 V2Mac 时都需要一次管理员授权。在此保存密码后，V2Mac 会直接使用它而不再询问。密码加密保存在你的钥匙串中；能使用你 Mac 账户的人都可以让 V2Mac 以管理员身份操作。"
+      "TUN mode, the system proxy and the kill switch need administrator access once each time V2Mac opens. With the password saved here, V2Mac uses it instead of asking. Anyone who can use your Mac account can then let V2Mac act as administrator. Choose how secrets are stored above.": {
+        "localizations": {
+          "fa": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "حالت TUN، پروکسی سیستم و کلید قطع اضطراری هر بار که V2Mac باز می‌شود یک بار دسترسی مدیر لازم دارند. اگر رمز اینجا ذخیره شود، V2Mac به‌جای پرسیدن از آن استفاده می‌کند. هر کسی که بتواند از حساب مک شما استفاده کند، می‌تواند V2Mac را وادار به کار در نقش مدیر کند. روش ذخیره اطلاعات محرمانه را در بالا انتخاب کنید."
+            }
+          },
+          "ru": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Режиму TUN, системному прокси и блокировке трафика нужен доступ администратора один раз при каждом запуске V2Mac. Если сохранить пароль здесь, V2Mac будет использовать его вместо запроса. Любой, кто может пользоваться вашей учётной записью Mac, сможет заставить V2Mac действовать от имени администратора. Выберите способ хранения секретов выше."
+            }
+          },
+          "zh-Hans": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "TUN 模式、系统代理和断网保护在每次打开 V2Mac 时都需要一次管理员授权。在此保存密码后，V2Mac 会直接使用它而不再询问。能使用你 Mac 账户的人都可以让 V2Mac 以管理员身份操作。请在上方选择凭据的存储方式。"
+            }
           }
         }
-      }
-    },
+      },
     "TUN mode: route all traffic on this Mac through the proxy. Asks for an administrator password once each time V2Mac is opened.": {
       "localizations": {
         "fa": {

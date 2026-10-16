@@ -20,14 +20,15 @@
 - **Kill switch:** optional, off by default. While V2Mac is connected or reconnecting, only the server, the local network and name servers can be reached; everything else is blocked, also when the connection drops or V2Mac stops unexpectedly, until you disconnect. It uses the macOS firewall (pf).
 - **Cloudflare WARP:** register a free WARP device over MASQUE in Settings, enter a WARP+ license key to use its plan, and either add WARP as a server or send traffic out through WARP behind your own server, so sites see a Cloudflare address.
 - **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel.
-- **Administrator access once:** TUN mode, the system proxy and the kill switch share one administrator prompt per launch, or none if you save the password in the keychain.
+- **Administrator access once:** TUN mode, the system proxy and the kill switch share one administrator prompt per launch, or none if you save the password.
+- **Optional Keychain:** passwords and WARP credentials use an encrypted local file by default, without a Keychain prompt. Settings → General can enable Apple Keychain after explaining the macOS password prompt. The local encryption key stays beside the file, so apps running as your user can decrypt it. Older Keychain secrets remain there until you enable the option or re-enter them locally.
 - **Menu bar control:** connect, switch server, live speed, and a local address you can copy.
-- **Reliable:** restarts the core after a crash, sleep or network change, and reconnects on launch.
+- **Reliable:** restarts the core after a crash, sleep or network change. Reconnect on launch restores the active server and TUN choice when the previous session was connected.
 - **Quick import:** click a `vless://`, `vmess://`, `trojan://`, `ss://` or `hy2://` link anywhere, or a provider's "add to app" button (`v2mac://install-config?url=…`), paste a screenshot of a QR code, or drop config files and QR pictures on the window.
 - **Control Center, Shortcuts and Siri:** a V2Mac switch for Control Center and the menu bar; connect, disconnect, and set TUN mode, the routing mode, the system proxy or the kill switch from Shortcuts, Spotlight and Siri, or with a keyboard shortcut you give them there.
 - **Backup:** export subscriptions, servers, favorites and settings to a `.v2m` file and restore them on another Mac.
 - **Languages:** English, Persian (right to left), Simplified Chinese and Russian.
-- **Also:** upload and download speed in the menu bar, LAN sharing with a password kept in the keychain, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
+- **Also:** upload and download speed in the menu bar, password-protected LAN sharing, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
 - **Private:** no analytics or telemetry.
 
 ## Screenshots

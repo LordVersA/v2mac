@@ -78,6 +78,26 @@ struct ConnectionAutomationTests {
         #expect(!Prefs.autoSelectServer)
     }
 
+    @Test(arguments: [false, true])
+    func launchPreservesTunChoiceSelectedServerAndReconnectState(tunEnabled: Bool) async throws {
+        try await withController(tunEnabled: tunEnabled) { controller, directory in
+            let selected = try server()
+            controller.setActive(selected)
+            Prefs.wasRunning = true
+
+            Prefs.registerDefaults()
+
+            #expect(Prefs.tunEnabled == tunEnabled)
+            #expect(Prefs.activeProfileID == selected.id)
+            #expect(Prefs.wasRunning)
+            let restoredTun = TunController(logs: LogStore(), stateDirectory: directory.appendingPathComponent("restored"),
+                                            rootDirectory: directory.appendingPathComponent("restored-helper"),
+                                            authorize: { _ in Issue.record("Restoring a setting must not authorize TUN"); return .cancelled })
+            #expect(restoredTun.isEnabled == tunEnabled)
+            #expect(restoredTun.state == .off)
+        }
+    }
+
     @Test func cancelledAuthorizationStopsTheProxyUnderStrictPolicy() async throws {
         try await withController(policy: .stopProxy, tunEnabled: true) { controller, directory in
             controller.setActive(try server())

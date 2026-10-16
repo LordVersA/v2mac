@@ -32,6 +32,7 @@ struct GeneralSettings: View {
             }
             Toggle("Check for app updates", isOn: $checkUpdates)
             AppUpdateRow()
+            SecretStorageSection()
             AdminAccessSection()
             BackupSection()
             DiagnosticsSection()

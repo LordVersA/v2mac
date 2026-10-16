@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 /// A Cloudflare WARP device registered for MASQUE (spec 9.10). It holds the device's private key
-/// and token, so the app keeps it in the keychain.
+/// and token, so the app keeps it in its selected secret store.
 public struct WarpAccount: Codable, Sendable, Hashable {
     public var deviceID: String
     public var token: String
