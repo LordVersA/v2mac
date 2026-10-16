@@ -96,7 +96,7 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   `macos-26`. Watch it with `gh run watch` after pushing.
 - The menu bar glyph PDFs in the asset catalog are generated: edit the SVGs in `Design/` and run
   `Scripts/make-glyphs.sh` (needs `rsvg-convert`).
-- `README.fa.md` is the Persian translation of `README.md`. Change both together.
+- `README.fa.md`, `README.zh.md` and `README.ru.md` are the Persian, Chinese and Russian translations of `README.md`. Change them together.
 - The app is translated into Persian (`fa`), Simplified Chinese (`zh-Hans`) and Russian (`ru`) in String
   Catalogs: `App/Resources/Localizable.xcstrings`, `App/Resources/AppShortcuts.xcstrings` (Siri phrases)
   and `Extensions/Control/Localizable.xcstrings`. Every new user-visible string needs all three.

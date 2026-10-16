@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/images/banner.jpg" alt="V2Mac, a native macOS Xray-core client for VLESS, VMess, Trojan, Shadowsocks and Hysteria2" width="720"></p>
 
-<p align="center">English | <a href="README.fa.md">فارسی</a> | <a href="README.zh.md">简体中文</a></p>
+<p align="center">English | <a href="README.fa.md">فارسی</a> | <a href="README.zh.md">简体中文</a> | <a href="README.ru.md">Русский</a></p>
 
 # V2Mac
 

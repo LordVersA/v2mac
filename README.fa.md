@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/images/banner.jpg" alt="V2Mac، کلاینت بومی Xray-core برای macOS با پشتیبانی از VLESS، VMess، Trojan، Shadowsocks و Hysteria2" width="720"></p>
 
-<p align="center"><a href="README.md">English</a> | فارسی | <a href="README.zh.md">简体中文</a></p>
+<p align="center"><a href="README.md">English</a> | فارسی | <a href="README.zh.md">简体中文</a> | <a href="README.ru.md">Русский</a></p>
 
 <div dir="rtl">
 

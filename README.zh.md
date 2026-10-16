@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/images/banner.jpg" alt="V2Mac：原生 macOS Xray-core 客户端，支持 VLESS、VMess、Trojan、Shadowsocks 和 Hysteria2" width="720"></p>
 
-<p align="center"><a href="README.md">English</a> | <a href="README.fa.md">فارسی</a> | 简体中文</p>
+<p align="center"><a href="README.md">English</a> | <a href="README.fa.md">فارسی</a> | 简体中文 | <a href="README.ru.md">Русский</a></p>
 
 # V2Mac
 
