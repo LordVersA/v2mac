@@ -1,5 +1,6 @@
 import MapKit
 import SwiftUI
+import V2MacCore
 
 /// The connection on a globe of our own: you, the server, and requests leaving the server as arcs
 /// through the sky. MapKit draws a globe only with aerial pictures, and its plain map stays flat.
@@ -17,6 +18,7 @@ struct ConnectionMapView: View {
     @State private var user: MapPlace?
     @State private var server: MapPlace?
     @State private var requests: [MapRequest] = []
+    @State private var lastEvent = 0
 
     private var isLive: Bool {
         #if DEBUG
@@ -111,9 +113,13 @@ struct ConnectionMapView: View {
                 .padding(16)
         }
         .overlay(alignment: .topTrailing) {
-            if live, !requests.isEmpty {
-                RequestFeed(requests: Array(requests.suffix(6).reversed())).padding(16)
+            let recent = Array(model.connection.watcher.connections.suffix(6).reversed())
+            if live, !recent.isEmpty {
+                RequestFeed(connections: recent).padding(16)
             }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            TopApps(connections: model.connection.watcher.connections).padding(16)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Connection map")
@@ -128,18 +134,37 @@ struct ConnectionMapView: View {
                 camera.longitude = (u.longitude + s.longitude) / 2
             }
         }
-        .task(id: live && appearsActive) {
-            requests.removeAll()
+        .task(id: live && appearsActive) { requests.removeAll() }
+        // Each new connection to a site under a country's domain arcs to that country. Other sites
+        // have no place: their addresses would need a location lookup outside the Mac.
+        .onChange(of: model.connection.watcher.events.last?.id) {
             guard live, appearsActive else { return }
-            // ponytail: simulated traffic for the design pass. Real destinations need the core's
-            // access log plus a local IP -> country lookup (geoip.dat), so nothing leaves the Mac.
-            while !Task.isCancelled {
-                let d = MapRequest.destinations.randomElement()!
-                requests.append(MapRequest(host: d.host, flag: d.flag, coordinate: .init(latitude: d.lat, longitude: d.lon), start: .now))
-                if requests.count > 10 { requests.removeFirst() }
-                try? await Task.sleep(for: .milliseconds(Int.random(in: 300...1100)))
+            let fresh = model.connection.watcher.events.filter { $0.id > lastEvent && $0.kind == .opened }
+            lastEvent = model.connection.watcher.events.last?.id ?? lastEvent
+            for event in fresh.suffix(4) {
+                guard let code = Self.countryCode(of: event.connection.host),
+                      let name = Locale(identifier: "en").localizedString(forRegionCode: code) else { continue }
+                Task {
+                    guard let place = await Self.locate(name) else { return }
+                    requests.append(MapRequest(host: event.connection.host, flag: Self.flag(code), coordinate: place.coordinate, start: .now))
+                    if requests.count > 10 { requests.removeFirst() }
+                }
             }
         }
+    }
+
+    /// Two-letter endings used by sites anywhere, not by their country.
+    private static let globalEndings: Set<String> = ["io", "co", "ai", "me", "tv", "fm", "ly", "to", "cc", "gg", "so", "sh", "ws", "la", "eu"]
+
+    /// The country of a host's domain ending: `bbc.co.uk` → GB.
+    static func countryCode(of host: String) -> String? {
+        guard let ending = host.lowercased().split(separator: ".").last, ending.count == 2, !globalEndings.contains(String(ending)) else { return nil }
+        let code = ending == "uk" ? "GB" : ending.uppercased()
+        return Locale.Region.isoRegions.contains(Locale.Region(code)) ? code : nil
+    }
+
+    static func flag(_ code: String) -> String {
+        String(String.UnicodeScalarView(code.unicodeScalars.compactMap { Unicode.Scalar(0x1F1E6 - 65 + $0.value) }))
     }
 
     /// Dragging turns the globe: a drag across its radius turns it by about a radian.
@@ -204,17 +229,6 @@ struct MapRequest: Identifiable {
     let flag: String
     let coordinate: CLLocationCoordinate2D
     let start: Date
-
-    /// Made-up traffic for the prototype.
-    static let destinations: [(host: String, flag: String, lat: Double, lon: Double)] = [
-        ("google.com", "🇺🇸", 37.42, -122.08), ("github.com", "🇺🇸", 37.77, -122.42),
-        ("wikipedia.org", "🇺🇸", 39.04, -77.49), ("amazon.com", "🇺🇸", 47.61, -122.33),
-        ("bbc.co.uk", "🇬🇧", 51.51, -0.13), ("spotify.com", "🇸🇪", 59.33, 18.07),
-        ("hetzner.de", "🇩🇪", 50.11, 8.68), ("telegram.org", "🇦🇪", 25.20, 55.27),
-        ("tiktok.com", "🇸🇬", 1.35, 103.82), ("nintendo.co.jp", "🇯🇵", 35.01, 135.77),
-        ("atlassian.com", "🇦🇺", -33.87, 151.21), ("mercadolivre.com.br", "🇧🇷", -23.55, -46.63),
-        ("jio.com", "🇮🇳", 19.08, 72.88), ("shopify.ca", "🇨🇦", 45.42, -75.70),
-    ]
 }
 
 /// Where the globe is seen from: straight down at a point, from a height above the ground.
@@ -682,31 +696,68 @@ private struct RouteCard: View {
     }
 }
 
-/// The latest requests, newest on top.
+/// The latest connections, newest on top, each with its app and where it went.
 private struct RequestFeed: View {
-    let requests: [MapRequest]
+    let connections: [ConnectionWatcher.Connection]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 7) {
             Label("Requests", systemImage: "point.3.connected.trianglepath.dotted")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            ForEach(requests) { r in
-                HStack(spacing: 6) {
-                    Text(r.flag)
-                    Text(r.host).lineLimit(1)
+            ForEach(connections) { c in
+                HStack(spacing: 7) {
+                    if let app = c.app {
+                        EntryIcon(entry: RuleEntry(.app, app)).scaleEffect(0.66).frame(width: 16, height: 16)
+                    } else {
+                        Image(systemName: "network").foregroundStyle(.tertiary).frame(width: 16)
+                    }
+                    Text(c.host).lineLimit(1).truncationMode(.middle)
                     Spacer(minLength: 8)
-                    Text(r.start, format: .dateTime.hour().minute().second())
-                        .monospacedDigit()
-                        .foregroundStyle(.tertiary)
+                    Circle()
+                        .fill(CustomRule.Action(rawValue: c.outbound).map { RuleList($0).tint } ?? .secondary)
+                        .frame(width: 6, height: 6)
                 }
                 .font(.caption)
                 .transition(.asymmetric(insertion: .push(from: .top), removal: .opacity))
             }
         }
-        .frame(width: 230, alignment: .leading)
+        .frame(width: 240, alignment: .leading)
         .padding(12)
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
-        .animation(.snappy, value: requests.first?.id)
+        .animation(.snappy, value: connections.first?.id)
+    }
+}
+
+/// The apps that moved the most data while the window has been open.
+private struct TopApps: View {
+    let connections: [ConnectionWatcher.Connection]
+
+    var body: some View {
+        let byApp = Dictionary(grouping: connections.filter { $0.app != nil }, by: { $0.app! })
+            .map { (app: $0.key, bytes: $0.value.reduce(0) { $0 + $1.sent + $1.received }, count: $0.value.count) }
+            .sorted { $0.bytes > $1.bytes }
+            .prefix(4)
+        if !byApp.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Top apps", systemImage: "chart.bar.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(Array(byApp), id: \.app) { item in
+                    HStack(spacing: 8) {
+                        EntryIcon(entry: RuleEntry(.app, item.app)).scaleEffect(0.75).frame(width: 18, height: 18)
+                        Text(((item.app as NSString).lastPathComponent as NSString).deletingPathExtension).lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(item.bytes.formatted(.byteCount(style: .file, spellsOutZero: false)))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.caption)
+                }
+            }
+            .frame(width: 240, alignment: .leading)
+            .padding(12)
+            .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        }
     }
 }

@@ -6,6 +6,8 @@ import V2MacCore
 struct ConnectionsView: View {
     static let windowID = "connections"
 
+    enum Tab: String { case list, map }
+
     enum Filter: String, CaseIterable, Identifiable {
         case all, open
         var id: Self { self }
@@ -16,6 +18,7 @@ struct ConnectionsView: View {
     @AppStorage("customRuleList") private var stored = "[]"
     @State private var selection: Set<ConnectionWatcher.Connection.ID> = []
     @State private var filter = Filter.all
+    @AppStorage("connectionsTab") private var tab = Tab.list
     @State private var search = ""
     /// The column and direction, kept across launches: `<column>:<asc|desc>`.
     @AppStorage("connectionsSort") private var storedSort = "time:desc"
@@ -42,24 +45,61 @@ struct ConnectionsView: View {
     private var watcher: ConnectionWatcher { model.connection.watcher }
 
     var body: some View {
+        Group {
+            switch tab {
+            case .list: list
+            case .map: ConnectionMapView()
+            }
+        }
+        .searchable(text: $search, placement: .toolbar, prompt: "Apps and targets")
+        .navigationSubtitle(summary)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                GlassSegments(selection: $tab, items: [
+                    .init(value: .list, title: "Connections", systemImage: "list.bullet"),
+                    .init(value: .map, title: "Map", systemImage: "globe.europe.africa.fill"),
+                ])
+            }
+            .sharedBackgroundVisibility(.hidden)
+            if tab == .list {
+                ToolbarItem {
+                    GlassSegments(selection: $filter, items: Filter.allCases.map { .init(value: $0, title: $0.title) })
+                }
+                .sharedBackgroundVisibility(.hidden)
+                ToolbarItem {
+                    Button("Clear", systemImage: "trash") { watcher.clear() }
+                        .help("Clear closed connections and the log")
+                }
+            }
+        }
+        .frame(minWidth: 760, minHeight: 440)
+        .task { await EntryIcons.shared.load() }
+        .onAppear { watcher.watch() }
+        .onDisappear { watcher.unwatch() }
+        #if DEBUG
+        .task { if UserDefaults.standard.bool(forKey: "debugDemoData") { watcher.addDemoConnections() } }
+        #endif
+    }
+
+    @ViewBuilder private var list: some View {
         let rules = CustomRule.decode(stored)
         let rows = watcher.connections.filter(matches).sorted(using: sortOrder.wrappedValue)
         VSplitView {
             Table(rows, selection: $selection, sortOrder: sortOrder) {
                 TableColumn("Application", value: \.appName) { row in AppCell(connection: row) }
-                    .width(min: 160, ideal: 220)
+                    .width(min: 140, ideal: 180)
                 TableColumn("Target", value: \.target) { row in
                     Text(row.target).lineLimit(1).truncationMode(.middle).help(row.target)
                 }
-                .width(min: 160, ideal: 260)
+                .width(min: 140, ideal: 220)
                 TableColumn("Time", value: \.start) { row in StatusCell(connection: row) }
-                    .width(min: 80, ideal: 96)
+                    .width(min: 64, ideal: 76)
                 TableColumn("Rule", value: \.outbound) { row in RuleCell(connection: row, rules: rules) }
-                    .width(min: 120, ideal: 200)
+                    .width(min: 120, ideal: 190)
                 TableColumn("Sent", value: \.sent) { row in BytesCell(bytes: row.sent, isKnown: !row.untracked) }
-                    .width(min: 64, ideal: 80)
+                    .width(min: 60, ideal: 72)
                 TableColumn("Received", value: \.received) { row in BytesCell(bytes: row.received, isKnown: !row.untracked) }
-                    .width(min: 64, ideal: 80)
+                    .width(min: 60, ideal: 72)
             }
             .alternatingRowBackgrounds()
             .overlay {
@@ -71,31 +111,21 @@ struct ConnectionsView: View {
                     }
                 }
             }
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(.separator) }
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
             .frame(minHeight: 260, idealHeight: 520)
             EventLog(events: watcher.events, search: search)
-                .frame(minHeight: 90, idealHeight: 150, maxHeight: 400)
+                .scrollContentBackground(.hidden)
+                .background(.quaternary.opacity(0.35))
+                .clipShape(.rect(cornerRadius: 14))
+                .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(.separator) }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .frame(minHeight: 100, idealHeight: 170, maxHeight: 420)
         }
-        .searchable(text: $search, placement: .toolbar, prompt: "Apps and targets")
-        .navigationSubtitle(summary)
-        .toolbar {
-            ToolbarItem {
-                Picker("Show", selection: $filter) {
-                    ForEach(Filter.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-            }
-            ToolbarItem {
-                Button("Clear", systemImage: "trash") { watcher.clear() }
-                    .help("Clear closed connections and the log")
-            }
-        }
-        .frame(minWidth: 760, minHeight: 440)
-        .task { await EntryIcons.shared.load() }
-        .onAppear { watcher.watch() }
-        .onDisappear { watcher.unwatch() }
-        #if DEBUG
-        .task { if UserDefaults.standard.bool(forKey: "debugDemoData") { watcher.addDemoConnections() } }
-        #endif
     }
 
     private var summary: String {

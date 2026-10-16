@@ -1555,6 +1555,14 @@ newer V2Mac".
 
 ### 12.10 Connections
 
+Two tabs, switched by a glass segmented control in the toolbar (`connectionsTab`):
+Connections (below) and Map, the globe that used to be a tab of the main window.
+On the map, the Requests card lists the latest real connections with their app and
+action colour, a Top apps card the apps that moved the most data, and a site under
+a country's domain ending (`.de`, `.co.uk`, but not endings sites use anywhere, such
+as `.io`) arcs from the server to that country. Other sites get no arc: placing them
+would need an address lookup outside the Mac.
+
 A `connections` window, opened from the second glass button at the foot of the
 sidebar (beside the Rule Editor's), lists every connection through the core,
 sorted by a click on any column (newest first until changed; the choice is kept across launches as `connectionsSort`): the app (icon and name), the target `host:port`, the time it has
