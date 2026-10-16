@@ -951,6 +951,42 @@ Beside each switch a dot shows where the system's settings point now
 every enabled proxy is this app's port, red for anything else (another address or port,
 automatic configuration), grey when none is set.
 
+### 9.10 Cloudflare WARP
+
+Settings → WARP registers a Cloudflare WARP device for MASQUE (`WarpClient`). The calls are
+the ones the WARP apps make to `api.cloudflareclient.com/v0a4471`; Cloudflare does not document
+them, so they follow the open-source clients (wgcf, usque):
+
+| Step | Call |
+|---|---|
+| Register | `POST /reg` with a random placeholder WireGuard key; returns the device ID and token |
+| Switch to MASQUE | `PATCH /reg/<id>` with a new ECDSA P-256 public key (`key_type` `secp256r1`, `tunnel_type` `masque`); returns the endpoint's public key, its addresses and the tunnel addresses |
+| Account | `GET /reg/<id>/account`: type, WARP+ data, the account's license key |
+| WARP+ | `PUT /reg/<id>/account` with `{"license": …}` joins the device to that account |
+| Remove | `DELETE /reg/<id>`; the device is forgotten on this Mac even when this fails |
+
+Requests go through the local proxy while the core runs and direct otherwise, since the API is
+often blocked where the app is needed. Registering accepts Cloudflare's terms, which the button's
+note links to. The device (keys, token, endpoint, account) is kept in the keychain as JSON.
+Cloudflare's `warp_plus` flag is true on free accounts too, so the plan comes from
+`account_type` alone: `free`, `limited` (WARP+ with a data allowance), `unlimited`, `team`.
+
+The device becomes Xray's `masque` outbound: `settings.address` the endpoint (IPv4 first), port
+443, `streamSettings.network` `masque` with `security` `tls`, SNI
+`consumer-masque.cloudflareclient.com`, and `masqueSettings.warp` with the device's private key,
+the endpoint's public key (Xray pins it) and the tunnel addresses. It is used in two ways:
+
+- **Add WARP to Servers** puts it in Custom Configs as its own server ("Cloudflare WARP" or
+  "Cloudflare WARP+"), which connects directly. It is a copy: removing the device leaves it.
+- **Send traffic out through WARP** (`warpExit`, off by default) makes WARP the exit behind the
+  active share-link server: `ConfigBuilder` tags the server `warp-upstream` and adds the WARP
+  outbound as `proxy` with `sockopt.dialerProxy` set to it, so routing and custom rules are
+  unchanged. A live switch replaces `warp-upstream` (`ConfigBuilder.serverTag`). Full Xray
+  configs are run as written. Changing the switch, or the device while it is on, restarts the core.
+
+Some servers refuse WARP: one checked on 2026-10-16 reset every TLS connection whose SNI was
+under `cloudflareclient.com`, so traffic through WARP never started.
+
 ---
 
 ## 10. Latency testing
@@ -1476,6 +1512,7 @@ newer V2Mac".
 | | TLS fragment: split (TLS hello / first packets), piece size, pause | Off; `100-200` bytes, `10-20` ms |
 | | Noise packets: packet size, pause | Off; `10-20` bytes, `10-16` ms |
 | | Use custom DNS: servers, addresses (IPv4 and IPv6 / IPv4 only / IPv6 only) | Off; Cloudflare and Google DoH |
+| WARP | Register a WARP device; plan, WARP+ data, device ID, license key; WARP+ license key; Send traffic out through WARP; Add WARP to Servers (section 9.10) | Not registered; exit off |
 | Core | Version, Check for Update, Revert to Bundled | — |
 | Advanced | Log level: error / warning / info / debug | warning |
 | | Log connections | Off |

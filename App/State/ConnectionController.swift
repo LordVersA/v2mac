@@ -588,7 +588,7 @@ final class ConnectionController {
         let custom = Prefs.customRules
         func options(metrics: Int, api: Int?) -> RunOptions {
             RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: Prefs.logConnections, metricsPort: metrics,
-                       tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api)
+                       tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api, warpExit: Prefs.warpExit)
         }
 
         // Before the core stops as well: asking a server for its certificate takes a moment.
@@ -611,7 +611,7 @@ final class ConnectionController {
             isSwitching = true
             do {
                 let outbound = ConfigBuilder.proxyOutbound(outboundConfig, options: running.options)
-                try await runner.replaceOutbound(tag: ConfigBuilder.proxyTag, with: outbound, apiPort: api)
+                try await runner.replaceOutbound(tag: ConfigBuilder.serverTag(running.options), with: outbound, apiPort: api)
                 logs.append("[v2mac] Switched to \(server.name) without restarting the core")
                 noteRecent(server.id)
                 checkExit()

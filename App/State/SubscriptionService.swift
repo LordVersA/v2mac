@@ -118,6 +118,13 @@ final class SubscriptionService {
         return groupID
     }
 
+    /// Adds servers made in the app, such as WARP, to Custom Configs.
+    func addCustom(_ profiles: [ParsedProfile]) async throws -> UUID {
+        let (groupID, added) = try await store.addManual(profiles, groupName: ServerGroup.manualName)
+        guard added > 0 else { throw AddSubscriptionError.alreadyAdded }
+        return groupID
+    }
+
     /// `scheduled` marks an automatic update: only those announce a failure or changed servers,
     /// since a manual update shows both in the window.
     func update(groupID: UUID, viaProxy: Bool, scheduled: Bool = false) async {

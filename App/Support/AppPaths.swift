@@ -108,6 +108,7 @@ enum Prefs {
             "customRulesDirect": "",
             "customRulesBlock": "",
             "reconnectOnLaunch": true,
+            "warpExit": false,
             "restartOnWakeOrNetwork": true,
             "checkAppUpdates": true,
             "allowLAN": false,
@@ -197,6 +198,17 @@ enum Prefs {
             username: defaults.string(forKey: "proxyUsername"),
             password: proxyPassword
         )
+    }
+
+    /// The registered WARP device, kept in the keychain as JSON (spec 9.10).
+    static var warpAccount: WarpAccount? {
+        get { Keychain.string(.warpAccount).flatMap { try? JSONDecoder().decode(WarpAccount.self, from: Data($0.utf8)) } }
+        set { Keychain.set(newValue.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) }, for: .warpAccount) }
+    }
+
+    /// The WARP outbound traffic leaves through after the server, when that is on.
+    static var warpExit: JSONValue? {
+        defaults.bool(forKey: "warpExit") ? warpAccount?.outbound : nil
     }
 
     /// Kept in the keychain (spec 13).

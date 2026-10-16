@@ -1350,6 +1350,28 @@
         }
       }
     },
+    "Add WARP to Servers": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افزودن WARP به سرورها"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить WARP в серверы"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将 WARP 添加到服务器"
+          }
+        }
+      }
+    },
     "Add a subscription URL, or paste configs with ⌘V.": {
       "localizations": {
         "fa": {
@@ -2104,6 +2126,28 @@
         }
       }
     },
+    "Apply Key": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اعمال کلید"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Применить ключ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用密钥"
+          }
+        }
+      }
+    },
     "Approve V2Mac in System Settings → Login Items.": {
       "localizations": {
         "fa": {
@@ -2122,6 +2166,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "请在“系统设置 → 登录项”中批准 V2Mac。"
+          }
+        }
+      }
+    },
+    "Asking Cloudflare…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در حال ارتباط با Cloudflare…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обращение к Cloudflare…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在询问 Cloudflare…"
           }
         }
       }
@@ -2941,6 +3007,74 @@
         }
       }
     },
+    "Cloudflare WARP": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare WARP"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare WARP"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare WARP"
+          }
+        }
+      }
+    },
+    "Cloudflare refused: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare نپذیرفت: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare отказал: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare 拒绝：%@"
+          }
+        }
+      }
+    },
+    "Cloudflare sent an answer V2Mac does not understand.": {
+      "extractionState": "manual",
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare پاسخی داد که V2Mac آن را نمی‌فهمد."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare прислал ответ, который V2Mac не понимает."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare 返回了 V2Mac 无法识别的应答。"
+          }
+        }
+      }
+    },
     "Color": {
       "localizations": {
         "fa": {
@@ -3531,6 +3665,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "拷贝"
+          }
+        }
+      }
+    },
+    "Copy License Key": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "کپی کلید لایسنس"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скопировать ключ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制许可证密钥"
           }
         }
       }
@@ -4400,6 +4556,28 @@
         }
       }
     },
+    "Device ID": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شناسهٔ دستگاه"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID устройства"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设备 ID"
+          }
+        }
+      }
+    },
     "Diagnostics": {
       "localizations": {
         "fa": {
@@ -5045,6 +5223,28 @@
         }
       }
     },
+    "Enter the license key of a WARP+ account to use its plan on this device.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "کلید لایسنس یک حساب WARP+ را وارد کنید تا طرح آن روی این دستگاه فعال شود."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Введите лицензионный ключ аккаунта WARP+, чтобы использовать его тариф на этом устройстве."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入 WARP+ 账户的许可证密钥，即可在此设备上使用其套餐。"
+          }
+        }
+      }
+    },
     "Error": {
       "localizations": {
         "fa": {
@@ -5619,6 +5819,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "分片会拆分每个到服务器的连接的开头；噪声会在基于 UDP 的服务器前发送随机数据包。它们在一些网络中有帮助，在另一些网络中会导致连接失败，若服务器不再响应请关闭。"
+          }
+        }
+      }
+    },
+    "Free": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رایگان"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Бесплатный"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免费"
           }
         }
       }
@@ -6630,6 +6852,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "登录时启动"
+          }
+        }
+      }
+    },
+    "License key": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "کلید لایسنس"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Лицензионный ключ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "许可证密钥"
           }
         }
       }
@@ -8550,6 +8794,28 @@
         }
       }
     },
+    "Plan": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "طرح"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тариф"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "套餐"
+          }
+        }
+      }
+    },
     "Points the system proxy at V2Mac while it is connected, or turns that off.": {
       "localizations": {
         "fa": {
@@ -9127,6 +9393,28 @@
         }
       }
     },
+    "Refresh": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "به‌روزرسانی"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обновить"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刷新"
+          }
+        }
+      }
+    },
     "Refuse the connection, for ads, trackers or anything unwanted.": {
       "localizations": {
         "fa": {
@@ -9145,6 +9433,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "拒绝连接，用于广告、跟踪器或任何不需要的内容。"
+          }
+        }
+      }
+    },
+    "Register a WARP Device": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ثبت دستگاه WARP"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зарегистрировать устройство WARP"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注册 WARP 设备"
+          }
+        }
+      }
+    },
+    "Registers a free WARP device with Cloudflare over MASQUE. By registering you accept [Cloudflare's terms](https://www.cloudflare.com/application/terms/). While connected, Cloudflare is asked through the proxy.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "یک دستگاه رایگان WARP با MASQUE در Cloudflare ثبت می‌کند. با ثبت، [شرایط Cloudflare](https://www.cloudflare.com/application/terms/) را می‌پذیرید. وقتی متصل هستید، درخواست از طریق پراکسی به Cloudflare می‌رود."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Регистрирует бесплатное устройство WARP в Cloudflare по MASQUE. Регистрируясь, вы принимаете [условия Cloudflare](https://www.cloudflare.com/application/terms/). При подключении запрос к Cloudflare идёт через прокси."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Cloudflare 注册一个使用 MASQUE 的免费 WARP 设备。注册即表示你接受 [Cloudflare 的条款](https://www.cloudflare.com/application/terms/)。连接时，将通过代理访问 Cloudflare。"
           }
         }
       }
@@ -9211,6 +9543,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除"
+          }
+        }
+      }
+    },
+    "Remove Device": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف دستگاه"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить устройство"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除设备"
           }
         }
       }
@@ -10205,6 +10559,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "发送到"
+          }
+        }
+      }
+    },
+    "Send traffic out through WARP": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خروج ترافیک از طریق WARP"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выпускать трафик через WARP"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 WARP 出站"
           }
         }
       }
@@ -13027,6 +13403,28 @@
         }
       }
     },
+    "The license key joins another device to this account; keep it private.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "با این کلید لایسنس، دستگاه دیگری به این حساب وصل می‌شود؛ آن را به کسی ندهید."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По лицензионному ключу к этому аккаунту можно подключить другое устройство; не передавайте его."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "许可证密钥可将其他设备加入此账户，请妥善保管。"
+          }
+        }
+      }
+    },
     "The link asks to skip the certificate check (allowInsecure). This server connects only while \"Allow insecure servers\" is on in Settings → Connection, unless its certificate is valid": {
       "extractionState": "manual",
       "localizations": {
@@ -14713,6 +15111,28 @@
         }
       }
     },
+    "Use": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استفاده"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Использование"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用"
+          }
+        }
+      }
+    },
     "Use %lld": {
       "localizations": {
         "fa": {
@@ -15393,6 +15813,94 @@
         }
       }
     },
+    "WARP": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP"
+          }
+        }
+      }
+    },
+    "WARP+": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP+"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP+"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP+"
+          }
+        }
+      }
+    },
+    "WARP+ Unlimited": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP+ نامحدود"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP+ Безлимит"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP+ 无限"
+          }
+        }
+      }
+    },
+    "WARP+ data": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حجم WARP+"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Трафик WARP+"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARP+ 流量"
+          }
+        }
+      }
+    },
     "Warning": {
       "localizations": {
         "fa": {
@@ -15621,6 +16129,28 @@
     },
     "WireGuard": {
       "shouldTranslate": false
+    },
+    "With WARP as the exit, traffic goes through your server and then WARP, so sites see a Cloudflare address. It does not apply to full Xray configs, and some servers block WARP. As a server of its own, WARP connects directly over MASQUE.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وقتی WARP خروجی باشد، ترافیک اول از سرور شما و بعد از WARP می‌گذرد و سایت‌ها یک آدرس Cloudflare می‌بینند. روی کانفیگ‌های کامل Xray اعمال نمی‌شود و بعضی سرورها WARP را مسدود می‌کنند. WARP به‌عنوان یک سرور جداگانه، مستقیم با MASQUE وصل می‌شود."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Когда WARP служит выходом, трафик идёт через ваш сервер, а затем через WARP, и сайты видят адрес Cloudflare. К полным конфигурациям Xray это не применяется, а некоторые серверы блокируют WARP. Как отдельный сервер WARP подключается напрямую по MASQUE."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将 WARP 作为出口时，流量先经过你的服务器再经过 WARP，网站看到的是 Cloudflare 地址。此设置不适用于完整的 Xray 配置，且部分服务器会屏蔽 WARP。作为独立服务器时，WARP 通过 MASQUE 直接连接。"
+          }
+        }
+      }
     },
     "With automatic selection on, these also move to the fastest other server in the group: when two checks in a row (30 seconds apart) answer slower than the delay, or when the download never reaches the speed for that many minutes while traffic flows. An idle connection never counts as slow. A server you picked yourself is switched too.": {
       "localizations": {
@@ -15934,6 +16464,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "已是最新内核。"
+          }
+        }
+      }
+    },
+    "Zero Trust": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zero Trust"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zero Trust"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zero Trust"
           }
         }
       }

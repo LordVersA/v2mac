@@ -23,6 +23,7 @@ final class AppModel {
     let latency: LatencyService
     let regionPacks = RegionPackService()
     let updates = UpdateService()
+    let warp = WarpService()
     let notifications = NotificationService()
 
     var sidebarSelection: SidebarItem = .all
@@ -92,6 +93,10 @@ final class AppModel {
         updates.downloadRoutes = routes
         updates.isCoreRunning = { connection.isRunning }
         updates.restartCore = { connection.reconnectIfRunning() }
+        warp.route = { routes()[0] }
+        warp.onAccountChanged = { if UserDefaults.standard.bool(forKey: "warpExit") { connection.reconnectIfRunning() } }
+        let subscriptions = subscriptions
+        warp.addServer = { try await subscriptions.addCustom($0) }
         regionPacks.startScheduler()
         updates.startScheduler()
         Task { await updates.refreshCoreInfo() }

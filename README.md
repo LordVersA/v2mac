@@ -18,6 +18,7 @@
 - **TUN mode:** one switch routes all traffic on the Mac through the proxy, including apps with no proxy setting and every DNS lookup. No paid developer account or system extension needed. `Scripts/check-tun.sh` checks that nothing leaks.
 - **System proxy:** one switch in the menu bar or the window points the macOS system proxy at V2Mac while it is connected. A dot shows whether the system proxy is V2Mac (green), something else (red) or not set (grey).
 - **Kill switch:** optional, off by default. While V2Mac is connected or reconnecting, only the server, the local network and name servers can be reached; everything else is blocked, also when the connection drops or V2Mac stops unexpectedly, until you disconnect. It uses the macOS firewall (pf).
+- **Cloudflare WARP:** register a free WARP device over MASQUE in Settings, enter a WARP+ license key to use its plan, and either add WARP as a server or send traffic out through WARP behind your own server, so sites see a Cloudflare address.
 - **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel.
 - **Administrator access once:** TUN mode, the system proxy and the kill switch share one administrator prompt per launch, or none if you save the password in the keychain.
 - **Menu bar control:** connect, switch server, live speed, and a local address you can copy.

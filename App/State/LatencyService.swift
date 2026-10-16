@@ -126,7 +126,7 @@ final class LatencyService {
         guard !all.isEmpty else { return }
         // UDP-based servers have no TCP handshake to time. A custom config is pinged at the
         // address of its proxy outbound, and is skipped only when it has none.
-        let udp: Set<String> = ["hysteria", "wireguard"]
+        let udp: Set<String> = ["hysteria", "wireguard", "masque"]
         let applicable = all.filter { !udp.contains($0.protocolName) && $0.transport != "kcp" && !$0.address.isEmpty && $0.port > 0 }
         let notApplicable = all.filter { s in !applicable.contains(where: { $0.id == s.id }) }
 

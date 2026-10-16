@@ -3,11 +3,11 @@ import os
 import Security
 
 /// Secrets, as generic passwords in the login keychain: the local proxy's password and, when
-/// the user saves it, the administrator password for the root helper. Each is read from the
+/// the user saves it, the administrator password for the root helper, and the WARP device (spec 9.10). Each is read from the
 /// keychain once and then kept in memory, so a refused keychain prompt is not asked again.
 enum Keychain {
     enum Item: String {
-        case proxyPassword, adminPassword
+        case proxyPassword, adminPassword, warpAccount
     }
 
     private static let service = Bundle.main.bundleIdentifier ?? "io.github.lordversa.v2mac"
@@ -39,11 +39,21 @@ enum Keychain {
         guard status == errSecItemNotFound else { return status == errSecSuccess }
         var add = base(item)
         add[kSecValueData as String] = data
-        add[kSecAttrLabel as String] = "V2Mac \(item == .proxyPassword ? "proxy password" : "administrator password")"
+        add[kSecAttrLabel as String] = "V2Mac \(item.label)"
         return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
     }
 
     private static func base(_ item: Item) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: item.rawValue]
+    }
+}
+
+private extension Keychain.Item {
+    var label: String {
+        switch self {
+        case .proxyPassword: "proxy password"
+        case .adminPassword: "administrator password"
+        case .warpAccount: "WARP device"
+        }
     }
 }

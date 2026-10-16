@@ -1,3 +1,3 @@
 enum SettingsTab: String, Hashable, Sendable {
-    case general, proxy, routing, connection, servers, notifications, core, about
+    case general, proxy, routing, connection, warp, servers, notifications, core, about
 }

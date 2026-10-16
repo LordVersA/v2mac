@@ -91,7 +91,7 @@ extension ConfigBuilder {
             "policy": statsPolicy,
             "metrics": metricsSection(port: options.metricsPort),
             "inbounds": inbounds(for: options),
-            "outbounds": .array([
+            "outbounds": .array((warpExitOutbound(options).map { [$0] } ?? []) + [
                 proxyOutbound(outbound, options: options),
                 direct,
                 ["tag": .string(blockTag), "protocol": "blackhole"],

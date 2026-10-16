@@ -114,10 +114,12 @@ public struct DNSSettings: Sendable, Hashable {
 extension ConfigBuilder {
     public static let dialerTag = "v2mac-dialer"
     public static let apiTag = "api"
+    /// The server's tag when WARP is the exit; `proxy` is then the WARP outbound.
+    public static let warpUpstreamTag = "warp-upstream"
 
     /// Protocols that dial a remote server through `streamSettings`. WireGuard has none, and
     /// the rest never leave this Mac or are the dialer's own kind.
-    private static let dialedProtocols: Set<String> = ["vless", "vmess", "trojan", "shadowsocks", "socks", "http", "hysteria"]
+    private static let dialedProtocols: Set<String> = ["vless", "vmess", "trojan", "shadowsocks", "socks", "http", "hysteria", "masque"]
 
     /// The `freedom` outbound that carries the fragment and noise settings, or nil when both are off.
     static func dialerOutbound(_ settings: DialerSettings) -> JSONValue? {
@@ -151,8 +153,21 @@ extension ConfigBuilder {
     /// A server's outbound as it runs: tagged `proxy`, dialled as the settings say, and in TUN
     /// mode bound to the physical interface. Also what a live switch puts in place of the old one.
     public static func proxyOutbound(_ outbound: JSONValue, options: RunOptions) -> JSONValue {
-        let proxy = dialing(InsecureTLS.stripping(outbound).setting("tag", to: .string(proxyTag)), through: options.dialer)
+        let proxy = dialing(InsecureTLS.stripping(outbound).setting("tag", to: .string(serverTag(options))), through: options.dialer)
         return options.tun.map { binding(proxy, to: $0.outboundInterface) } ?? proxy
+    }
+
+    /// The tag of the server's outbound, which a live switch replaces.
+    public static func serverTag(_ options: RunOptions) -> String {
+        options.warpExit == nil ? proxyTag : warpUpstreamTag
+    }
+
+    /// The WARP exit, tagged `proxy` and dialled through the server.
+    static func warpExitOutbound(_ options: RunOptions) -> JSONValue? {
+        guard let warp = options.warpExit else { return nil }
+        let stream = warp["streamSettings"] ?? [:]
+        let sockopt = (stream["sockopt"] ?? [:]).setting("dialerProxy", to: .string(warpUpstreamTag))
+        return warp.setting("tag", to: .string(proxyTag)).setting("streamSettings", to: stream.setting("sockopt", to: sockopt))
     }
 
     /// Loopback API used to swap the proxy outbound without restarting the core.

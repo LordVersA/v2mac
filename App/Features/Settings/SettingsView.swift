@@ -12,12 +12,13 @@ struct SettingsView: View {
             ProxySettings().tabItem { Label("Proxy", systemImage: "network") }.tag(SettingsTab.proxy)
             RoutingSettings().tabItem { Label("Routing", systemImage: "arrow.triangle.branch") }.tag(SettingsTab.routing)
             ConnectionSettings().tabItem { Label("Connection", systemImage: "bolt.horizontal") }.tag(SettingsTab.connection)
+            WarpSettings().tabItem { Label("WARP", systemImage: "cloud") }.tag(SettingsTab.warp)
             SubscriptionSettings().tabItem { Label("Servers", systemImage: "tray.and.arrow.down") }.tag(SettingsTab.servers)
             NotificationSettings().tabItem { Label("Notifications", systemImage: "bell") }.tag(SettingsTab.notifications)
             CoreSettings().tabItem { Label("Core", systemImage: "cpu") }.tag(SettingsTab.core)
             AboutSettings().tabItem { Label("About", systemImage: "info.circle") }.tag(SettingsTab.about)
         }
-        // Russian tab names need more room than the others; at 560 points some go to an overflow menu.
-        .frame(width: Bundle.main.preferredLocalizations.first == "ru" ? 700 : 560, height: 440)
+        // Narrower, some tabs go to an overflow menu; Russian tab names need more room than the others.
+        .frame(width: Bundle.main.preferredLocalizations.first == "ru" ? 780 : 630, height: 440)
     }
 }

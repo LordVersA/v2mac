@@ -37,6 +37,8 @@ public struct RunOptions: Sendable, Hashable {
     public var dns: DNSSettings?
     /// Loopback port for the outbound API, set when servers may be switched without a restart.
     public var apiPort: Int?
+    /// A WARP outbound that traffic leaves through after the server (spec 9.10).
+    public var warpExit: JSONValue?
 
     public init(
         inbound: InboundSettings = InboundSettings(),
@@ -46,7 +48,8 @@ public struct RunOptions: Sendable, Hashable {
         tun: TunLink? = nil,
         dialer: DialerSettings = DialerSettings(),
         dns: DNSSettings? = nil,
-        apiPort: Int? = nil
+        apiPort: Int? = nil,
+        warpExit: JSONValue? = nil
     ) {
         self.inbound = inbound
         self.logLevel = logLevel
@@ -56,6 +59,7 @@ public struct RunOptions: Sendable, Hashable {
         self.dialer = dialer
         self.dns = dns
         self.apiPort = apiPort
+        self.warpExit = warpExit
     }
 }
 
