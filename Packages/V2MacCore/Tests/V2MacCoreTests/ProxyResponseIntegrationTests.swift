@@ -8,6 +8,34 @@ struct ProxyResponseIntegrationTests {
     // URLSession must traverse SOCKS, and no Internet service is contacted.
     let url = URL(string: "http://example.com/probe")!
 
+    @Test(arguments: [false, true], [false, true])
+    func fullConfigAppliesUserIPRulesBeforeFallback(useAppRules: Bool, skip: Bool) async throws {
+        let http = try await TestHTTPServer.start { _ in .init(status: 204) }
+        defer { http.stop() }
+        let directory = try TestSupport.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let options = RunOptions(inbound: .init(port: try PortUtil.freePort()), metricsPort: try PortUtil.freePort())
+        let original: JSONValue = [
+            "outbounds": [["tag": "fallback", "protocol": "freedom", "settings": ["redirect": .string("127.0.0.1:\(http.port)")]]],
+            "dns": ["hosts": ["example.com": "93.184.216.34"], "servers": []],
+            "routing": ["rules": [["type": "field", "network": "tcp,udp", "outboundTag": "fallback"]]],
+        ]
+        let custom = CustomRules(rules: [CustomRule(name: "User block", action: .block, hosts: "93.184.216.0/24")], proxyClientsSkipRules: skip)
+        let config = try ConfigBuilder.buildCustom(config: original, options: options, routing: useAppRules ? .global : nil, custom: custom)
+        // Keep this fixture out of the latency suite's counts of the bundled executable.
+        let executable = directory.appendingPathComponent("xray-routing")
+        try FileManager.default.copyItem(at: TestSupport.xray, to: executable)
+        let core = CoreRunner(executable: executable, assetDirectory: TestSupport.vendorCore, runDirectory: directory)
+        try await core.start(config: config, readyPort: options.inbound.port)
+        let outcome = await ProxyHealthProbe.measure(route: .localProxy(port: options.inbound.port), url: url, timeout: 1)
+        await core.stop()
+        if useAppRules && !skip {
+            #expect(outcome == .timeout)
+        } else {
+            guard case .ok = outcome else { Issue.record("The config fallback must answer through the loopback fixture"); return }
+        }
+    }
+
     @Test func tcpSuccessWithoutAnHTTPResponseCannotBeSelected() async throws {
         let unresponsive = try await TestHTTPServer.start { _ in .init(withholdResponse: true) }
         let working = try await TestHTTPServer.start { _ in .init(status: 204) }

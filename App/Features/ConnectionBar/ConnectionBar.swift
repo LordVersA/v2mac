@@ -94,7 +94,7 @@ struct ConnectionBar: View {
     private func width(of tier: Tier) -> CGFloat {
         let gap = Self.spacing
         var width = Self.leadingPadding + Self.buttonWidth + gap + titleWidth + gap + Self.minimumGap + gap + proxyWidth + gap + tunWidth + Self.trailingPadding
-        if !connection.activeIsCustom { width += gap + routingWidth }
+        width += gap + routingWidth
         if let rates = tier.rates, connection.phase == .connected {
             width += gap + sparklineWidth(rates) + gap + (rates == .inline ? inlineRatesWidth : stackedRatesWidth)
         }
@@ -146,11 +146,8 @@ struct ConnectionBar: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { proxyWidth = $0 }
             TunToggle(connection: connection)
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { tunWidth = $0 }
-            // A custom config has no mode to pick; the status line says so instead.
-            if !connection.activeIsCustom {
-                RoutingModeMenu(connection: connection, packs: model.regionPacks) { model.showRegionsSheet = true }
-                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { routingWidth = $0 }
-            }
+            RoutingModeMenu(connection: connection, packs: model.regionPacks) { model.showRegionsSheet = true }
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { routingWidth = $0 }
             if showAddress {
                 addressMenu
                     .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { addressWidth = $0 }
@@ -193,7 +190,7 @@ struct ConnectionBar: View {
     }
 
     private var routingTitle: String {
-        connection.activeIsCustom ? String(localized: "Custom routing") : connection.routingMode.title
+        connection.routingMode.title
     }
 
     @ViewBuilder
@@ -235,7 +232,6 @@ struct ConnectionBar: View {
     private func status(_ text: String) -> some View {
         let note = connection.tun.isOn ? nil : connection.tun.statusNote
         Text(note.map { "\(text) · \($0)" } ?? text).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            .help(connection.activeIsCustom ? "Routing is managed by this config" : "")
         if let failure = connection.tun.failureMessage {
             Text(failure).font(.caption).foregroundStyle(.orange).lineLimit(2)
         }

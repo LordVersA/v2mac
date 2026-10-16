@@ -47,7 +47,7 @@ import Testing
         #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "proxy", "direct", "direct"])
         #expect(rules[0]["domain"]?[0]?.stringValue == "full:localhost")
         #expect(rules[1]["ip"]?[0]?.stringValue == "geoip:private")
-        #expect(c["routing"]?["domainStrategy"]?.stringValue == "IPIfNonMatch")
+        #expect(c["routing"]?["domainStrategy"]?.stringValue == "IPOnDemand")
         #expect(c["dns"] != nil)
     }
 
@@ -182,8 +182,10 @@ import Testing
     @Test func readsAccessLog() throws {
         let a = try #require(SeenConnection(line: "2026/10/17 00:34:27.238170 from tcp:127.0.0.1:51973 accepted tcp:Example.com:443 [mixed-in >> direct]"))
         #expect(a.sourcePort == 51973 && a.host == "example.com" && a.port == 443 && a.inbound == "mixed-in" && a.outbound == "direct")
+        #expect(a.isDefaultRoute)
         let b = try #require(SeenConnection(line: "2026/10/17 00:34:30.875797 from 127.0.0.1:51978 accepted http://blockme.example.org/x [mixed-in -> block]"))
         #expect(b.host == "blockme.example.org" && b.port == 80 && b.sourcePort == 51978 && b.outbound == "block")
+        #expect(!b.isDefaultRoute)
         let v6 = SeenConnection(line: "x from 1.2.3.4:5 accepted udp:[2001:db8::1]:53 [tun-in -> proxy]")
         #expect(v6?.host == "2001:db8::1" && v6?.port == 53)
         let flows = NetFlow.parse("""

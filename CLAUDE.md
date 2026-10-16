@@ -131,7 +131,8 @@ the JSON in `configJSON`; `SubscriptionStore` (a `@ModelActor`) reconciles a re-
 existing rows by fingerprint so identity, selection and the active server survive an update. On
 connect, `ConfigBuilder` wraps the outbound with the `mixed-in` inbound, routing (`Routing.swift`,
 region packs), metrics and, in TUN mode, the `tun-in` inbound (`XrayConfig/Tun.swift`); custom
-configs are patched rather than rebuilt. `CoreRunner` writes `run/config.json`, launches `xray` and
+configs are patched rather than rebuilt: app rules and the routing mode run first, with imported
+rules and the original default outbound as fallback. `CoreRunner` writes `run/config.json`, launches `xray` and
 publishes state and log lines as `AsyncStream`s.
 
 **Connection settings** (spec 8.4). `RunOptions` also carries `dialer` (TLS fragment and noise:

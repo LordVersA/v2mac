@@ -551,9 +551,15 @@ Take the stored config and:
 3. In `routing.rules`, rewrite any `inboundTag` that named a removed
    `socks` / `http` / `mixed` inbound to `mixed-in`; drop rules that referenced
    only other removed inbounds.
-4. Leave `outbounds`, the rest of `routing`, `dns` and everything else as
-   written, apart from what section 8.4 adds. There is no routing mode picker;
-   the status line reads "Custom routing".
+4. Apply the app's mode and custom rules before the rewritten imported rules.
+   Keep the imported outbounds in their original order, tagging the first proxy
+   outbound if needed so app Proxy rules can name it. Append separate, uniquely
+   tagged freedom and blackhole outbounds for app Direct and Block rules; never
+   reuse an imported Direct outbound that may itself chain through a proxy.
+   The imported rules and first outbound remain the fallback. Direct mode's
+   catch-all wins before that fallback. The mode picker is available for both
+   profile kinds. Preserve imported DNS; add mode DNS only when none is supplied.
+   Latency probes omit the app plan and test the imported config as written.
 
 ### 8.3 Output
 
@@ -675,9 +681,11 @@ chains are skipped and named, the default rule is left to the routing mode,
 Block QUIC. Imported rules are a draft until Apply.
 
 The rules come before the mode's own rules. In Global mode, IP
-entries switch `domainStrategy` to `IPIfNonMatch` with the DoH `dns` section of
-Bypass mode. Direct mode uses only Block rules. Full configs (8.2) keep their
-own routing. Apply restarts a running core; a live switch keeps the core only
+entries switch `domainStrategy` to `IPOnDemand` with the DoH `dns` section of
+Bypass mode, so later domain rules or a catch-all cannot preempt an IP rule.
+Direct mode uses only Block rules. Full configs (8.2) use app routing first,
+then their imported routing as fallback. IP-based app modes use `IPOnDemand`
+ahead of that fallback. Apply restarts a running core; a live switch keeps the core only
 when the rules are unchanged.
 
 With System Proxy off, the mixed proxy inbound goes to `proxy` before custom
@@ -686,7 +694,7 @@ names and private addresses still go direct first, and Block QUIC stays first
 when enabled. Direct mode keeps its Block rules and direct catch-all. With
 System Proxy on, the exception is disabled: manual and system proxy traffic
 share the inbound and cannot be distinguished. Changing System Proxy restarts
-the running core to apply this policy. Full configs keep their own routing.
+the running core to apply this policy. This also applies to full configs.
 
 **Rule Editor.** A window (`rule-editor`), opened from the glass button at the
 foot of the main window's sidebar (its name slides out on hover) or from
@@ -937,7 +945,7 @@ When enabled, connecting/reconnecting tests non-stale candidates in the active
 profile's group with `RealDelayTester`. Only fresh successful HTTP responses
 qualify; TCP ping and saved row delays never influence selection. An initial
 connection chooses the lowest real delay. Direct routing skips automation for
-ordinary outbound profiles; full custom configs retain their routing semantics.
+both outbound and full custom profiles.
 
 Every 30 seconds a request through the actual running SOCKS proxy (including its
 credentials) checks the configured latency URL. No direct retry is allowed.
@@ -1070,7 +1078,8 @@ the endpoint's public key (Xray pins it) and the tunnel addresses. It is used in
   active share-link server: `ConfigBuilder` tags the server `warp-upstream` and adds the WARP
   outbound as `proxy` with `sockopt.dialerProxy` set to it, so routing and custom rules are
   unchanged. A live switch replaces `warp-upstream` (`ConfigBuilder.serverTag`). Full Xray
-  configs are run as written. Changing the switch, or the device while it is on, restarts the core.
+  configs retain their own outbound chains (with app routing ahead of imported routing).
+  Changing the switch, or the device while it is on, restarts the core.
 
 Some servers refuse WARP: one checked on 2026-10-16 reset every TLS connection whose SNI was
 under `cloudflareclient.com`, so traffic through WARP never started.
@@ -1580,7 +1589,9 @@ sidebar (beside the Rule Editor's), lists every connection through the core,
 sorted by a click on any column (newest first until changed; the choice is kept across launches as `connectionsSort`): the app (icon and name), the target `host:port`, the time it has
 been open (a green dot) or how long it lasted, the outbound the core chose
 (tinted Proxy, Direct or Block) with the custom rule that most likely sent it
-there (else "No rule · <mode>" or "Custom routing"), and bytes sent and received.
+there (else "No rule · <mode>"), and bytes sent and received. Imported fallback
+routes show a purple "Config fallback" label. Outbound tags from full configs
+are classified by their protocol for the Proxy, Direct and Block badges.
 Connections that skip rules through the proxy-port exception show an orange
 "App's proxy setting" label. Each row keeps the mode and custom rules from its
 running configuration, so later edits do not relabel its history. Manually

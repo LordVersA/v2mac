@@ -26,7 +26,10 @@ final class ConnectionWatcher {
         var routingMode: RoutingMode?
         var rules: [CustomRule] = []
         var usesProxySetting = false
-        var skipsRules: Bool { usesProxySetting && routingMode != .direct && outbound == ConfigBuilder.proxyTag }
+        var action: CustomRule.Action?
+        var configFallback = false
+        var isDefaultRoute = false
+        var skipsRules: Bool { usesProxySetting && routingMode != .direct && action == .proxy }
         /// The `.app` folder, or the executable for command-line tools.
         var app: String?
         var process: String?
@@ -67,6 +70,9 @@ final class ConnectionWatcher {
     @ObservationIgnored var proxyPort: () -> Int = { Prefs.inbound.port }
     @ObservationIgnored var routingMode: RoutingMode?
     @ObservationIgnored var customRules = CustomRules()
+    @ObservationIgnored var hasConfigFallback = false
+    @ObservationIgnored var outboundActions: [String: CustomRule.Action] = [:]
+    @ObservationIgnored var modeOutbounds: Set<String> = []
     @ObservationIgnored private var watchers = 0
     @ObservationIgnored fileprivate var nextID = 0
     @ObservationIgnored private var pollTask: Task<Void, Never>?
@@ -109,6 +115,9 @@ final class ConnectionWatcher {
                                     inbound: seen.inbound, outbound: seen.outbound, start: .now)
         // Keep the running configuration with the row, even after settings change.
         connection.routingMode = routingMode
+        connection.action = outboundActions[seen.outbound] ?? CustomRule.Action(rawValue: seen.outbound)
+        connection.isDefaultRoute = seen.isDefaultRoute
+        connection.configFallback = hasConfigFallback && (seen.isDefaultRoute || !modeOutbounds.contains(seen.outbound))
         connection.rules = routingMode == nil ? [] : customRules.rules.filter { routingMode != .direct || $0.action == .block }
         connection.usesProxySetting = routingMode != nil && customRules.proxyClientsSkipRules && seen.inbound == ConfigBuilder.inboundTag
         pending.append(connection)
@@ -236,13 +245,18 @@ extension ConnectionWatcher {
             ("/System/Applications/Mail.app", "imap.example.org", "proxy", 993, 42, 22_000, 5_650, true),
             ("/Applications/Safari.app", "ads.example.net", "block", 443, 63, 0, 0, false),
             (nil, "updates.example.com", "direct", 80, 95, 3_260, 1_090, false),
+            ("/System/Applications/Mail.app", "mail.example.org", "imported-server", 993, 12, 2_000, 9_000, true),
         ]
         for (app, host, outbound, port, age, sent, received, open) in rows {
             nextID += 1
             var c = Connection(id: nextID, sourcePort: nil, host: host, port: port, inbound: ConfigBuilder.inboundTag,
                                outbound: outbound, start: .now.addingTimeInterval(-age))
             c.routingMode = .global
+            c.action = CustomRule.Action(rawValue: outbound) ?? .proxy
+            c.configFallback = outbound == "imported-server"
             c.usesProxySetting = outbound == ConfigBuilder.proxyTag
+            c.rules = [CustomRule(name: "Browsers direct", action: .direct, apps: "Safari.app"),
+                       CustomRule(name: "Block ads", action: .block, hosts: "ads.example.net")]
             c.app = app
             c.process = app == nil ? "curl" : nil
             c.sent = sent

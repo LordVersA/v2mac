@@ -11,33 +11,27 @@ struct RoutingModeMenu: View {
     var onManageRegions: () -> Void = {}
 
     var body: some View {
-        if connection.activeIsCustom {
-            Text("Managed by this config")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        } else {
-            Menu {
-                ForEach(RoutingMode.allCases) { mode in
-                    Button {
-                        connection.setRoutingMode(mode)
-                    } label: {
-                        if connection.routingMode == mode {
-                            Label(mode.title, systemImage: "checkmark")
-                        } else {
-                            Text(mode.title)
-                        }
+        Menu {
+            ForEach(RoutingMode.allCases) { mode in
+                Button {
+                    connection.setRoutingMode(mode)
+                } label: {
+                    if connection.routingMode == mode {
+                        Label(mode.title, systemImage: "checkmark")
+                    } else {
+                        Text(mode.title)
                     }
-                    .disabled(mode == .bypassRegions && !packs.hasUsablePack)
                 }
-                Divider()
-                Button("Manage Regions…") { onManageRegions() }
-            } label: {
-                Text(connection.routingMode.title)
+                .disabled(mode == .bypassRegions && !packs.hasUsablePack)
             }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            .help(packs.hasUsablePack ? "Routing mode" : "Enable a region pack to use Bypass Regions")
+            Divider()
+            Button("Manage Regions…") { onManageRegions() }
+        } label: {
+            Text(connection.routingMode.title)
         }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(packs.hasUsablePack ? "Routing mode" : "Enable a region pack to use Bypass Regions")
     }
 }
 

@@ -199,10 +199,11 @@ private struct RuleCell: View {
     let connection: ConnectionWatcher.Connection
 
     var body: some View {
-        let action = CustomRule.Action(rawValue: connection.outbound)
+        let action = connection.action
         let viaProxySetting = connection.skipsRules
-        let tint: Color = viaProxySetting ? .orange : action.map { RuleList($0).tint } ?? .secondary
         let rule = viaProxySetting ? nil : matchingRule(action)
+        let fromConfig = rule == nil && connection.configFallback
+        let tint: Color = viaProxySetting ? .orange : fromConfig ? .purple : action.map { RuleList($0).tint } ?? .secondary
         HStack(spacing: 6) {
             Text(action.map { RuleList($0).title } ?? connection.outbound)
                 .font(.caption.weight(.semibold))
@@ -216,6 +217,10 @@ private struct RuleCell: View {
                     .foregroundStyle(.orange)
                     .lineLimit(1)
                     .help("This app was set to use V2Mac's proxy port, so it goes to the server without any rule.")
+            } else if fromConfig {
+                Label("Config fallback", systemImage: "arrow.turn.down.right")
+                    .foregroundStyle(.purple)
+                    .lineLimit(1)
             } else {
                 Text(rule?.name ?? connection.routingMode.map { String(localized: "No rule · \($0.title)") } ?? String(localized: "Custom routing"))
                     .foregroundStyle(rule == nil ? .tertiary : .secondary)
@@ -236,6 +241,7 @@ private struct RuleCell: View {
 
     /// The first rule naming the app or the host whose action matches where the traffic went.
     private func matchingRule(_ action: CustomRule.Action?) -> CustomRule? {
+        guard !connection.isDefaultRoute else { return nil }
         let rules = connection.rules
         let byApp = connection.app.flatMap { app in
             SimpleRules.rule(forApp: app, bundleID: Self.bundleID(of: app), in: rules)
@@ -288,7 +294,7 @@ private struct EventRow: View {
 
     var body: some View {
         let c = event.connection
-        let action = CustomRule.Action(rawValue: c.outbound)
+        let action = c.action
         HStack(spacing: 8) {
             Text(event.date, format: .dateTime.hour().minute().second())
                 .foregroundStyle(.tertiary)

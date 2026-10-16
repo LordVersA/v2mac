@@ -77,7 +77,7 @@ extension ConfigBuilder {
         var hasIPRules = hasCustomIPs
         switch plan {
         case .direct:
-            let strategy: JSONValue = hasCustomIPs ? "IPIfNonMatch" : "AsIs"
+            let strategy: JSONValue = hasCustomIPs ? "IPOnDemand" : "AsIs"
             return (["domainStrategy": strategy, "rules": .array(customRules + [["type": "field", "network": "tcp,udp", "outboundTag": .string(directTag)]])], nil)
         case .bypass(let routes) where !routes.isEmpty:
             for route in routes { tail += rules(route.domainRules, route.ipRules, to: directTag) }
@@ -92,7 +92,7 @@ extension ConfigBuilder {
             "queryStrategy": "UseIP",
             "enableParallelQuery": true,
         ]
-        return (["domainStrategy": "IPIfNonMatch", "rules": .array(customRules + tail)], dns)
+        return (["domainStrategy": hasCustomIPs ? "IPOnDemand" : "IPIfNonMatch", "rules": .array(customRules + tail)], dns)
     }
 
     /// Full config for an `outbound` profile in any routing mode.
@@ -132,7 +132,9 @@ extension ConfigBuilder {
     /// In TUN mode its outbounds are also bound to the physical interface and its DNS is set up
     /// as `tunDNS` describes. Fragment and noise settings are added to proxy outbounds that have
     /// no dialer of their own, and the DNS setting applies only when the config brings no `dns` section.
-    public static func buildCustom(config: JSONValue, options: RunOptions) throws -> JSONValue {
+    /// When a plan is supplied, app routing precedes the imported rules; latency probes omit it.
+    public static func buildCustom(config: JSONValue, options: RunOptions, routing plan: RoutingPlan? = nil,
+                                   custom: CustomRules = CustomRules()) throws -> JSONValue {
         guard case .object = config else { throw ConfigBuilderError.outboundNotAnObject }
 
         var proxyInboundTags = Set<String>()
@@ -185,7 +187,52 @@ extension ConfigBuilder {
             }
             out = out.setting("routing", to: routing.setting("rules", to: .array(rewritten)))
         }
+        if let plan {
+            out = try applyingRouting(to: out, plan: plan, custom: custom, options: options)
+        }
         if let tun = options.tun { out = tunDNS(out, tun: tun) }
         return blockingLoopback(of: out, when: options.inbound.allowLAN)
+    }
+
+    /// App rules run first; imported rules and the original default outbound remain the fallback.
+    private static func applyingRouting(to config: JSONValue, plan: RoutingPlan, custom: CustomRules, options: RunOptions) throws -> JSONValue {
+        var outbounds = config["outbounds"]?.arrayValue ?? []
+        guard !outbounds.isEmpty else { throw CoreError.startFailed(String(localized: "This config has no outbound for routing.")) }
+        var used = Set(outbounds.compactMap { $0["tag"]?.stringValue })
+        func unused(_ base: String) -> String {
+            var tag = base
+            var suffix = 0
+            while used.contains(tag) { suffix += 1; tag = "\(base)-\(suffix)" }
+            used.insert(tag)
+            return tag
+        }
+        let proxyIndex = outbounds.firstIndex { !["freedom", "blackhole", "dns", "loopback"].contains($0["protocol"]?.stringValue ?? "") } ?? 0
+        let existing = outbounds[proxyIndex]["tag"]?.stringValue
+        let proxy = existing.flatMap { $0.isEmpty ? nil : $0 } ?? unused("v2mac-proxy")
+        outbounds[proxyIndex] = outbounds[proxyIndex].setting("tag", to: .string(proxy))
+        let direct = unused("v2mac-direct"), block = unused("v2mac-block")
+        var directOutbound: JSONValue = ["tag": .string(direct), "protocol": "freedom"]
+        if let dns = options.dns { directOutbound = directOutbound.setting("settings", to: ["domainStrategy": .string(dns.queryStrategy.rawValue)]) }
+        if let tun = options.tun { directOutbound = binding(directOutbound, to: tun.outboundInterface) }
+        outbounds += [directOutbound, ["tag": .string(block), "protocol": "blackhole"]]
+        let targets = [proxyTag: proxy, directTag: direct, blockTag: block]
+        let sections = routingSections(for: plan, custom: custom)
+        let prefix = (sections.routing["rules"]?.arrayValue ?? []).map { rule in
+            guard let target = targets[rule["outboundTag"]?.stringValue ?? ""] else { return rule }
+            return rule.setting("outboundTag", to: .string(target))
+        }
+        var routing = config["routing"] ?? [:]
+        let strategy = sections.routing["domainStrategy"]
+        // Preserve the imported resolver strategy unless app IP rules need resolution too.
+        if strategy == "IPIfNonMatch" || strategy == "IPOnDemand" {
+            // Resolve at the IP rule, before an imported catch-all can win the first pass.
+            routing = routing.setting("domainStrategy", to: "IPOnDemand")
+        } else if routing["domainStrategy"] == nil {
+            routing = routing.setting("domainStrategy", to: strategy ?? "AsIs")
+        }
+        routing = routing.setting("rules", to: .array(prefix + (routing["rules"]?.arrayValue ?? [])))
+        var out = config.setting("outbounds", to: .array(outbounds)).setting("routing", to: routing)
+        if out["dns"] == nil, let dns = sections.dns { out = out.setting("dns", to: dns) }
+        return out
     }
 }

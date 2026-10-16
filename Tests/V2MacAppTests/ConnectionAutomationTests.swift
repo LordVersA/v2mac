@@ -20,8 +20,8 @@ struct ConnectionAutomationTests {
         return condition()
     }
 
-    private func server(_ config: JSONValue = ["protocol": "freedom"], index: Int = 0) throws -> ActiveServer {
-        let parsed = ParsedProfile(name: "Demo \(index)", kind: .outbound, protocolName: "freedom",
+    private func server(_ config: JSONValue = ["protocol": "freedom"], index: Int = 0, kind: ProfileKind = .outbound) throws -> ActiveServer {
+        let parsed = ParsedProfile(name: "Demo \(index)", kind: kind, protocolName: "freedom",
                                    address: "example.com", port: 443, transport: "raw", security: "none", config: config)
         return try #require(ActiveServer(Profile(parsed: parsed, sortIndex: index, group: nil)))
     }
@@ -255,6 +255,24 @@ struct ConnectionAutomationTests {
             controller.connectActive()
             #expect(await wait { controller.isRunning })
             #expect(!queried)
+        }
+    }
+
+    @Test(arguments: [RoutingMode.global, .bypassRegions, .direct], [ProfileKind.outbound, .custom])
+    func connectionMonitorKeepsTheRunningRoutingMode(mode: RoutingMode, kind: ProfileKind) async throws {
+        try await withController { controller, _ in
+            controller.setRoutingMode(mode)
+            let config: JSONValue = kind == .custom ? ["outbounds": [["protocol": "freedom"]]] : ["protocol": "freedom"]
+            controller.setActive(try server(config, kind: kind))
+            controller.connectActive()
+            #expect(await wait { controller.isRunning })
+            #expect(controller.watcher.routingMode == mode)
+            #expect(controller.watcher.hasConfigFallback == (kind == .custom))
+            controller.watcher.watch()
+            defer { controller.watcher.unwatch() }
+            controller.watcher.record(try #require(SeenConnection(line: "x from 127.0.0.1:50000 accepted tcp:example.com:443 [tun-in -> proxy]")))
+            #expect(await wait { !controller.watcher.connections.isEmpty })
+            #expect(controller.watcher.connections.first?.routingMode == mode)
         }
     }
 

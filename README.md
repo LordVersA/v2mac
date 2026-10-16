@@ -113,7 +113,7 @@ Coming from Proxifier? **Import Proxifier Profile…** reads a `.ppx` file. Rule
 
 Apps can be written as `Spotify.app`, `com.spotify.client`, `*discord*`, a process name (`curl`) or a full path. App rules work for apps that use the system proxy; in TUN mode every app reaches V2Mac through the tunnel and app rules cannot tell them apart yet.
 
-With **System Proxy off**, apps pointed at V2Mac's proxy port skip custom and region rules and use the server. Connections marks these in orange as **App's proxy setting** and leaves them out of newly discovered rule-editor entries. Local traffic stays direct, Block QUIC still applies, and Direct mode still uses only Block rules before sending everything else direct. With **System Proxy on**, all traffic through that port follows the rules, since manual and system proxy connections share the same port. Full JSON configs keep their own routing.
+With **System Proxy off**, apps pointed at V2Mac's proxy port skip custom and region rules and use the server. Connections marks these in orange as **App's proxy setting** and leaves them out of newly discovered rule-editor entries. Local traffic stays direct, Block QUIC still applies, and Direct mode still uses only Block rules before sending everything else direct. With **System Proxy on**, all traffic through that port follows the rules, since manual and system proxy connections share the same port. Full JSON configs follow this policy too.
 
 <p align="center"><img src="docs/images/screenshots/custom-rules.png" alt="Custom rules section in Routing settings, showing a Proxy list with Telegram, AI services, a Clash rule and a wildcard domain" width="560"></p>
 
@@ -123,7 +123,7 @@ With **System Proxy off**, apps pointed at V2Mac's proxy port skip custom and re
 2. The app proxy exception described above, then your rules from the top down.
 3. Then the routing mode itself: the Bypass region packs, then everything else to the proxy (or direct in Direct mode).
 
-The first match wins, so a site in a Proxy rule goes through the proxy even when its country is bypassed, and a Direct rule above a broad Proxy rule wins over it. In **Direct** mode only Block rules are used, since nothing there should reach the proxy. Full Xray JSON configs bring their own routing and ignore custom rules.
+The first match wins, so a site in a Proxy rule goes through the proxy even when its country is bypassed, and a Direct rule above a broad Proxy rule wins over it. In **Direct** mode only Block rules are used, since nothing there should reach the proxy. Full Xray JSON configs use V2Mac's rules and mode first, then their imported routing as fallback. The mode picker works for them too. Connections marks imported fallback traffic in purple as **Config fallback**; manually proxied traffic stays orange. IP rules resolve names when reached, so a later catch-all cannot preempt them.
 
 **What you can write**
 

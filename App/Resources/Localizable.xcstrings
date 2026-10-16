@@ -1,6 +1,21 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "This config has no outbound for routing.": {
+      "extractionState": "manual",
+      "localizations": {
+        "fa": { "stringUnit": { "state": "translated", "value": "این کانفیگ هیچ خروجی برای مسیریابی ندارد." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "В этой конфигурации нет исходящего подключения для маршрутизации." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "此配置没有可用于路由的出站连接。" } }
+      }
+    },
+    "Config fallback": {
+      "localizations": {
+        "fa": { "stringUnit": { "state": "translated", "value": "مسیریابی جایگزین کانفیگ" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Резервная маршрутизация конфигурации" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "配置回退路由" } }
+      }
+    },
     "": {
       "shouldTranslate": false
     },

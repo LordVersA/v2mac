@@ -9,6 +9,7 @@ public struct SeenConnection: Sendable, Equatable {
     public var port: Int?
     public var inbound: String
     public var outbound: String
+    public var isDefaultRoute: Bool
 
     /// `… from tcp:127.0.0.1:51973 accepted tcp:example.com:443 [mixed-in >> direct]`, also with
     /// `from 127.0.0.1:…` and `accepted http://example.com/path`.
@@ -35,6 +36,7 @@ public struct SeenConnection: Sendable, Equatable {
         }
         guard !target.isEmpty else { return nil }
         host = target.lowercased()
+        isDefaultRoute = line[open.upperBound..<close.lowerBound].contains(" >> ")
         let route = line[open.upperBound..<close.lowerBound].replacingOccurrences(of: ">>", with: "->")
         let parts = route.components(separatedBy: " -> ")
         inbound = parts.first ?? ""

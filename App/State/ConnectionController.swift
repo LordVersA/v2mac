@@ -336,7 +336,7 @@ final class ConnectionController {
     /// Skipped in Direct mode, where the answer would be the user's own address.
     func checkExit() {
         exitTask?.cancel()
-        guard Prefs.checkExit, coreState == .running, activeIsCustom || routingMode != .direct else {
+        guard Prefs.checkExit, coreState == .running, routingMode != .direct else {
             exit = .unknown
             return
         }
@@ -366,7 +366,7 @@ final class ConnectionController {
 
     // MARK: Internals
 
-    private var automationAllowed: Bool { activeIsCustom || routingMode != .direct }
+    private var automationAllowed: Bool { routingMode != .direct }
 
     func autoSelectionChanged() {
         let wasConnecting = pendingConnectionGeneration != nil
@@ -656,11 +656,24 @@ final class ConnectionController {
                 config = try ConfigBuilder.build(outbound: outboundConfig, options: options, routing: plan, custom: custom)
                 started = options
             case .custom:
-                config = try ConfigBuilder.buildCustom(config: server.config, options: options(metrics: metrics, api: nil))
+                config = try ConfigBuilder.buildCustom(config: server.config, options: options(metrics: metrics, api: nil), routing: plan, custom: custom)
             }
             logs.append("[v2mac] Connecting to \(server.name)")
-            watcher.routingMode = server.kind == .outbound ? routingMode : nil
+            watcher.routingMode = routingMode
             watcher.customRules = custom
+            watcher.hasConfigFallback = server.kind == .custom
+            let outbounds = config["outbounds"]?.arrayValue ?? []
+            watcher.outboundActions = Dictionary(outbounds.compactMap { outbound -> (String, CustomRule.Action)? in
+                guard let tag = outbound["tag"]?.stringValue else { return nil }
+                let action: CustomRule.Action = switch outbound["protocol"]?.stringValue {
+                case "freedom": .direct
+                case "blackhole": .block
+                default: .proxy
+                }
+                return (tag, action)
+            }, uniquingKeysWith: { first, _ in first })
+            let importedTags = Set((server.config["outbounds"]?.arrayValue ?? []).compactMap { $0["tag"]?.stringValue })
+            watcher.modeOutbounds = Set(outbounds.compactMap { $0["tag"]?.stringValue }).subtracting(importedTags)
             try await runner.start(config: config, readyPort: port)
             guard commandGeneration == generation, userWantsRunning else { await runner.stop(); return }
             running = started.map { ($0, plan, custom) }

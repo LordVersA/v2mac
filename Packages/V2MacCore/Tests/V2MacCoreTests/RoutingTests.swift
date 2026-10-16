@@ -115,6 +115,60 @@ import Testing
         #expect(out["routing"] == nil)
         #expect(out["inbounds"]?.arrayValue?.count == 1)
     }
+
+    @Test(arguments: [RoutingPlan.global, .bypass([]), .direct])
+    func appRulesPrecedeImportedRules(plan: RoutingPlan) throws {
+        let custom = CustomRules(rules: [CustomRule(name: "Mine", action: .block, hosts: "priority.example")])
+        let out = try ConfigBuilder.buildCustom(config: config, options: options, routing: plan, custom: custom)
+        let rules = try #require(out["routing"]?["rules"]?.arrayValue)
+        #expect(rules[0]["domain"]?[0] == "full:localhost")
+        #expect(rules[1]["ip"] == ["geoip:private"])
+        #expect(rules[2]["domain"] == ["domain:priority.example"])
+        #expect(rules[2]["outboundTag"] == "v2mac-block")
+        #expect(out["outbounds"]?[0] == config["outbounds"]?[0])
+        #expect(rules.suffix(3) == (try ConfigBuilder.buildCustom(config: config, options: options))["routing"]?["rules"]?.arrayValue?[...])
+        if plan == .direct {
+            #expect(rules[3]["network"] == "tcp,udp")
+            #expect(rules[3]["outboundTag"] == "v2mac-direct")
+        }
+    }
+
+    @Test func proxyExceptionUsesTheImportedServerTag() throws {
+        let custom = CustomRules(rules: [CustomRule(name: "Blocked", action: .block, hosts: "priority.example")], proxyClientsSkipRules: true)
+        let out = try ConfigBuilder.buildCustom(config: config, options: options, routing: .global, custom: custom)
+        #expect(out["routing"]?["rules"]?[2] == ["type": "field", "inboundTag": ["mixed-in"], "outboundTag": "p"])
+    }
+
+    @Test func priorityIPRulesResolveBeforeTheImportedCatchAll() throws {
+        let custom = CustomRules(rules: [CustomRule(name: "Blocked", action: .block, hosts: "203.0.113.0/24")])
+        let full: JSONValue = ["outbounds": [["protocol": "freedom"]],
+                               "routing": ["rules": [["type": "field", "network": "tcp,udp", "outboundTag": "fallback"]]]]
+        let out = try ConfigBuilder.buildCustom(config: full, options: options, routing: .global, custom: custom)
+        #expect(out["routing"]?["domainStrategy"] == "IPOnDemand")
+        #expect(out["dns"] != nil)
+        let direct = try ConfigBuilder.build(outbound: ["protocol": "freedom"], options: options, routing: .direct, custom: custom)
+        #expect(direct["routing"]?["domainStrategy"] == "IPOnDemand")
+    }
+
+    @Test func appOutboundsDoNotReplaceImportedTagsOrTheirSettings() throws {
+        let original: JSONValue = ["outbounds": [
+            ["tag": "v2mac-direct", "protocol": "freedom", "proxySettings": ["tag": "upstream"]],
+            ["tag": "v2mac-block", "protocol": "blackhole"],
+            ["tag": "upstream", "protocol": "socks", "settings": ["servers": [["address": "127.0.0.1", "port": 9999]]]],
+        ]]
+        let out = try ConfigBuilder.buildCustom(config: original, options: options, routing: .global)
+        #expect(out["outbounds"]?.arrayValue?.prefix(3) == original["outbounds"]?.arrayValue?[...])
+        #expect(out["routing"]?["rules"]?[0]?["outboundTag"] == "v2mac-direct-1")
+        #expect(out["outbounds"]?[3]?["proxySettings"] == nil)
+        let untagged = try ConfigBuilder.buildCustom(config: ["outbounds": [["protocol": "freedom"]]], options: options, routing: .global)
+        #expect(untagged["outbounds"]?[0]?["tag"] == "v2mac-proxy")
+    }
+
+    @Test func missingOutboundCannotSilentlySkipAppRules() {
+        #expect(throws: CoreError.startFailed("This config has no outbound for routing.")) {
+            try ConfigBuilder.buildCustom(config: ["outbounds": []], options: options, routing: .global)
+        }
+    }
 }
 
 @Suite struct LatencySupportTests {

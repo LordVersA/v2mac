@@ -4,6 +4,26 @@ import V2MacCore
 
 @Suite @MainActor
 struct ConnectionWatcherTests {
+    @Test func fullConfigRecordsProxyOriginAndFallbackSeparately() async throws {
+        let watcher = ConnectionWatcher()
+        watcher.routingMode = .global
+        watcher.hasConfigFallback = true
+        watcher.outboundActions = ["server": .proxy, "v2mac-direct": .direct]
+        watcher.modeOutbounds = ["v2mac-direct"]
+        watcher.customRules = CustomRules(proxyClientsSkipRules: true)
+        watcher.watch()
+        defer { watcher.unwatch() }
+        for (inbound, outbound) in [("mixed-in", "server"), ("tun-in", "server"), ("tun-in", "v2mac-direct")] {
+            watcher.record(try #require(SeenConnection(line: "x from 127.0.0.1:50000 accepted tcp:example.com:443 [\(inbound) -> \(outbound)]")))
+        }
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(watcher.connections.count == 3)
+        #expect(watcher.connections[0].skipsRules)
+        #expect(!watcher.connections[1].skipsRules && watcher.connections[1].configFallback)
+        #expect(!watcher.connections[2].configFallback && watcher.connections[2].action == .direct)
+        #expect(watcher.connections.allSatisfy { $0.routingMode == .global })
+    }
+
     @Test func proxySettingKeepsItsOriginAndDoesNotDiscoverRules() async throws {
         let watcher = ConnectionWatcher()
         watcher.routingMode = .global
