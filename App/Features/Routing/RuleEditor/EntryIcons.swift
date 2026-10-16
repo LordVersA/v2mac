@@ -7,6 +7,9 @@ import V2MacCore
 /// Nothing is fetched, so the list of sites never leaves the Mac.
 @MainActor @Observable
 final class EntryIcons {
+    /// One set for every window: the app list is read once.
+    static let shared = EntryIcons()
+
     enum Icon {
         case image(NSImage)
         case symbol(String, Color)
@@ -18,6 +21,7 @@ final class EntryIcons {
     private static let appleBrands: Set<String> = ["apple", "icloud", "mzstatic", "aaplimg", "itunes", "appstore", "cdn-apple", "me", "mac"]
 
     func load() async {
+        guard apps.isEmpty else { return }
         apps = await InstalledApps.all()
         cache = [:]
     }

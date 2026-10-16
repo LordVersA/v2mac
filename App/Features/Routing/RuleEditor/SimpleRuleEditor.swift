@@ -24,7 +24,6 @@ struct SimpleRuleEditor: View {
     @State private var selection: Set<String> = []
     @State private var filter = Filter.all
     @State private var search = ""
-    @State private var icons = EntryIcons()
     @State private var applyTask: Task<Void, Never>?
 
     var body: some View {
@@ -52,8 +51,7 @@ struct SimpleRuleEditor: View {
             footer(hidden: SeenGroup.hiddenCount(rules))
         }
         .searchable(text: $search, placement: .toolbar, prompt: "Apps and sites")
-        .environment(icons)
-        .task { await icons.load() }
+        .task { await EntryIcons.shared.load() }
         .onAppear { model.connection.watcher.watch() }
         .onDisappear { model.connection.watcher.unwatch() }
     }
@@ -307,7 +305,7 @@ private struct RouteSwitch: View {
 }
 
 struct EntryIcon: View {
-    @Environment(EntryIcons.self) private var icons
+    private var icons: EntryIcons { .shared }
     let entry: RuleEntry
 
     var body: some View {

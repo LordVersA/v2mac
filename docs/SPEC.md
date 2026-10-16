@@ -1571,9 +1571,13 @@ mode is open (`watch()` / `unwatch()`). Access log lines from the `mixed-in` and
 second it runs `nettop` (`ProxyFlow`, no privileges needed) for every TCP
 connection to the proxy port: its source port links it to a row and gives the
 process, whose path (`proc_pidpath`) names the app, and the bytes each way. A
-row whose connection is gone is closed. A row never seen by `nettop` (TUN
-traffic arrives from the root forwarder, and very short connections close first)
-has no app or bytes. At most 1,000 rows and 2,000 log lines are kept.
+row whose connection is gone is closed. In TUN mode the core sees only the root
+forwarder, so a `tun-in` row is linked instead to the app's own connection
+through the tunnel (`NetFlow.tunClient`): same port, to an address the site
+resolves to (V2Mac looks the name up once, which in TUN mode asks the core's
+resolver, as the app did), not linked to another row, and not the core's own.
+A row never linked (very short connections close first; a TUN app may have used
+another address) has no app or bytes. At most 1,000 rows and 2,000 log lines are kept.
 
 ## 13. Settings
 

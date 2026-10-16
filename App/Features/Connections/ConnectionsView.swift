@@ -14,7 +14,6 @@ struct ConnectionsView: View {
 
     @Environment(AppModel.self) private var model
     @AppStorage("customRuleList") private var stored = "[]"
-    @State private var icons = EntryIcons()
     @State private var selection: Set<ConnectionWatcher.Connection.ID> = []
     @State private var filter = Filter.all
     @State private var search = ""
@@ -55,7 +54,6 @@ struct ConnectionsView: View {
             EventLog(events: watcher.events, search: search)
                 .frame(minHeight: 120, idealHeight: 220)
         }
-        .environment(icons)
         .searchable(text: $search, placement: .toolbar, prompt: "Apps and targets")
         .navigationSubtitle(summary)
         .toolbar {
@@ -71,7 +69,7 @@ struct ConnectionsView: View {
             }
         }
         .frame(minWidth: 760, minHeight: 440)
-        .task { await icons.load() }
+        .task { await EntryIcons.shared.load() }
         .onAppear { watcher.watch() }
         .onDisappear { watcher.unwatch() }
         #if DEBUG

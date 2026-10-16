@@ -29,7 +29,9 @@ final class ConnectionWatcher {
         var end: Date?
         var sent: Int64 = 0
         var received: Int64 = 0
-        /// No `nettop` row ever matched (TUN traffic, or closed before the first look).
+        /// The `nettop` connection this row follows, once found.
+        var flowKey: String?
+        /// No `nettop` connection ever matched (closed before the first look, or not found in TUN mode).
         var untracked = false
 
         var target: String { port.map { "\(host):\($0)" } ?? host }
@@ -55,6 +57,11 @@ final class ConnectionWatcher {
     @ObservationIgnored fileprivate var nextID = 0
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var paths: [Int32: String] = [:]
+    /// TUN mode: what each site resolves to, to find the app's own connection (`NetFlow.tunClient`).
+    @ObservationIgnored private var resolved: [String: Set<String>] = [:]
+    @ObservationIgnored private var resolving: Set<String> = []
+    /// The core's own connections are never an app's.
+    private static let coreProcesses: Set<String> = ["xray"]
     private let limit = 1000
 
     var isWatching: Bool { watchers > 0 }
@@ -105,30 +112,61 @@ final class ConnectionWatcher {
 
     private func poll() async {
         guard connections.contains(where: \.isOpen) else { return }
-        let flows = await ProxyFlow.read(proxyPort: proxyPort())
-        let byPort = Dictionary(flows.map { ($0.localPort, $0) }, uniquingKeysWith: { first, _ in first })
+        let flows = await NetFlow.read()
+        let proxyPort = proxyPort()
         var list = connections
-        for index in list.indices where list[index].isOpen && list[index].sourcePort != nil {
-            if let port = list[index].sourcePort, let flow = byPort[port] {
+        var claimed = Set(list.filter(\.isOpen).compactMap(\.flowKey))
+        for index in list.indices where list[index].isOpen {
+            let row = list[index]
+            let isTun = row.inbound == ConfigBuilder.tunInboundTag
+            let flow: NetFlow?
+            if let key = row.flowKey {
+                flow = flows.first { $0.key == key }
+            } else if isTun {
+                if let addresses = resolved[row.host] {
+                    flow = NetFlow.tunClient(flows, port: row.port, addresses: addresses, claimed: claimed, skipping: Self.coreProcesses)
+                } else {
+                    resolve(row.host)
+                    flow = nil
+                }
+            } else if let port = row.sourcePort {
+                flow = NetFlow.proxyClient(flows, proxyPort: proxyPort, sourcePort: port)
+            } else {
+                continue
+            }
+            if let flow {
                 list[index].sent = flow.sent
                 list[index].received = flow.received
-                if list[index].app == nil {
-                    list[index].process = flow.process
-                    list[index].app = app(of: flow.pid)
-                    if let app = list[index].app { apps[app, default: Seen(id: app)].note(list[index].outbound) }
-                    // The open line was logged before the app was known.
-                    if let event = events.lastIndex(where: { $0.connection.id == list[index].id }) { events[event].connection = list[index] }
-                }
-            } else if list[index].app != nil {
+                guard row.flowKey == nil else { continue }
+                list[index].flowKey = flow.key
+                claimed.insert(flow.key)
+                list[index].process = flow.process
+                list[index].app = app(of: flow.pid)
+                if let app = list[index].app { apps[app, default: Seen(id: app)].note(row.outbound) }
+                // The open line was logged before the app was known.
+                if let event = events.lastIndex(where: { $0.connection.id == row.id }) { events[event].connection = list[index] }
+            } else if row.flowKey != nil {
                 list[index].end = .now
                 log(.closed, list[index])
-            } else if Date.now.timeIntervalSince(list[index].start) > 3 {
-                // shortcut: a connection that closed before the first look has no app or bytes; fine for a monitor.
+            } else if Date.now.timeIntervalSince(row.start) > (isTun ? 6 : 3) {
+                // shortcut: a connection that closed before it was found has no app or bytes; fine for a monitor.
                 list[index].untracked = true
             }
         }
         connections = list
         if apps.count > limit { apps = Self.trimmed(apps, to: limit) }
+    }
+
+    /// Looks a site up as the app did: in TUN mode this asks the core's resolver, through the tunnel.
+    private func resolve(_ host: String) {
+        guard resolving.insert(host).inserted else { return }
+        Task { [weak self] in
+            let addresses = await Task.detached { HostAddresses.lookup(host) }.value
+            guard let self else { return }
+            resolving.remove(host)
+            if resolved.count > limit { resolved = [:] }
+            resolved[host] = addresses
+        }
     }
 
     private func app(of pid: Int32) -> String? {

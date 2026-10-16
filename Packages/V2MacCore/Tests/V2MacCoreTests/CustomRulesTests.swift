@@ -159,20 +159,27 @@ import Testing
         #expect(b.host == "blockme.example.org" && b.port == 80 && b.sourcePort == 51978 && b.outbound == "block")
         let v6 = SeenConnection(line: "x from 1.2.3.4:5 accepted udp:[2001:db8::1]:53 [tun-in -> proxy]")
         #expect(v6?.host == "2001:db8::1" && v6?.port == 53)
-        let flows = ProxyFlow.parse("""
+        let flows = NetFlow.parse("""
         ,bytes_in,bytes_out,
         launchd.1,,,
         tcp4 127.0.0.1:10808<->*:*,,,
         curl.17295,30758,1814,
         tcp4 127.0.0.1:56187<->127.0.0.1:10808,30758,1814,
-        tcp4 10.0.0.2:5000<->1.2.3.4:443,1,1,
+        tcp4 198.18.0.1:5000<->93.184.216.34:443,70,7,
         xray.900,1,1,
-        tcp4 127.0.0.1:10808<->127.0.0.1:56187,1814,30758,
+        tcp4 192.168.1.5:6000<->93.184.216.34:443,1,1,
         Google Chrome H.4410,9,9,
         tcp6 ::1:61000<->::1:10808,100,200,
-        """, proxyPort: 10808)
-        #expect(flows == [ProxyFlow(localPort: 56187, pid: 17295, process: "curl", sent: 1814, received: 30758),
-                          ProxyFlow(localPort: 61000, pid: 4410, process: "Google Chrome H", sent: 200, received: 100)])
+        """)
+        #expect(flows.map(\.process) == ["curl", "curl", "xray", "Google Chrome H"])
+        #expect(NetFlow.proxyClient(flows, proxyPort: 10808, sourcePort: 56187)?.received == 30758)
+        #expect(NetFlow.proxyClient(flows, proxyPort: 10808, sourcePort: 61000)?.pid == 4410)
+        #expect(NetFlow.proxyClient(flows, proxyPort: 10808, sourcePort: 5000) == nil)
+        let tun = NetFlow.tunClient(flows, port: 443, addresses: ["93.184.216.34"], claimed: [], skipping: ["xray"])
+        #expect(tun?.localPort == 5000 && tun?.sent == 7)
+        #expect(NetFlow.tunClient(flows, port: 443, addresses: ["93.184.216.34"], claimed: [tun!.key], skipping: ["xray"]) == nil)
+        #expect(HostAddresses.lookup("10.1.2.3") == ["10.1.2.3"] && HostAddresses.lookup("localhost").contains("127.0.0.1"))
+        #expect(NetFlow.tunClient(flows, port: 80, addresses: ["93.184.216.34"], claimed: [], skipping: ["xray"]) == nil)
         #expect(SeenConnection(line: "2026/10/17 [Warning] core: Xray started") == nil)
         #expect(SocketOwners.appBundle(of: "/Applications/A.app/Contents/Frameworks/H.app/Contents/MacOS/H") == "/Applications/A.app")
         #expect(SocketOwners.appBundle(of: "/usr/bin/curl") == nil)
