@@ -21,9 +21,7 @@ VLESS، REALITY، VMess، Trojan، Shadowsocks، Hysteria2 و WireGuard در ی�
 <p align="center" dir="rtl">
   <a href="#نصب">نصب</a> ·
   <a href="#امکانات">امکانات</a> ·
-  <a href="#تصاویر-برنامه">تصاویر</a> ·
-  <a href="docs/routing-rules.fa.md">قوانین مسیریابی</a> ·
-  <a href="#پرسش‌های-رایج">پرسش‌های رایج</a> ·
+  <a href="https://github.com/LordVersA/v2mac/wiki/fa-Home"><b>مستندات</b></a> ·
   <a href="#ساخت-از-سورس">ساخت</a>
 </p>
 
@@ -35,110 +33,32 @@ VLESS، REALITY، VMess، Trojan، Shadowsocks، Hysteria2 و WireGuard در ی�
 
 ## نصب
 
-نیازمند **macOS 26 یا جدیدتر** روی **Apple Silicon** (M1 به بعد).
+به **macOS 26 یا جدیدتر** روی **Apple Silicon** نیاز دارد.
 
-**Homebrew** (پیشنهادی، بدون هشدار Gatekeeper):
+</div>
 
 ```sh
 brew install --cask lordversa/tap/v2mac
 ```
 
-برای به‌روزرسانی بعدی: `brew upgrade --cask v2mac`.
+<div dir="rtl">
 
-**دانلود دستی:**
+یا DMG را از [آخرین نسخه](https://github.com/LordVersA/v2mac/releases/latest) دانلود کنید. برنامه notarize نشده: در اولین اجرا از **Open Anyway** در System Settings → Privacy & Security استفاده کنید. جزئیات در [راهنمای نصب](https://github.com/LordVersA/v2mac/wiki/fa-Installation).
 
-1. فایل `V2Mac-<version>.dmg` را از [آخرین نسخه](https://github.com/LordVersA/v2mac/releases/latest) دانلود کنید و **V2Mac** را به **Applications** بکشید.
-2. برنامه notarize نشده، پس macOS اولین اجرا را مسدود می‌کند. یک بار بازش کنید، سپس در **System Settings → Privacy & Security** روی **Open Anyway** بزنید، یا اجرا کنید:
-   ```sh
-   xattr -dr com.apple.quarantine /Applications/V2Mac.app
-   ```
-
-**اولین اتصال:**
-
-1. روی **Add Subscription** بزنید و لینک خود را وارد کنید (یا یک لینک `vless://`، `vmess://`، `trojan://`، `ss://`، `hy2://`).
-2. روی یک سرور دوبار کلیک کنید تا وصل شوید.
-3. برنامه‌ها را روی `socks5://127.0.0.1:10808` یا `http://127.0.0.1:10808` تنظیم کنید، یا **System Proxy** یا **TUN** را روشن کنید.
-
-بستن پنجره پروکسی را قطع نمی‌کند. برای توقف با ⌘Q خارج شوید.
+**شروع سریع:** روی **Add Subscription** بزنید و لینک را بچسبانید، روی یک سرور دوبار کلیک کنید، سپس از `127.0.0.1:10808` (SOCKS5 / HTTP) استفاده کنید یا **System Proxy** یا **TUN** را روشن کنید.
 
 ## امکانات
 
-### پروتکل‌ها و وارد کردن
-
-| | |
-|---|---|
-| **پروتکل‌ها** | VLESS (همراه REALITY و XTLS Vision)، VMess، Trojan، Shadowsocks، Hysteria2، WireGuard، SOCKS، HTTP و کانفیگ‌های کامل JSON ایکس‌ری |
-| **اشتراک‌ها** | به‌روزرسانی خودکار، با نمایش حجم مصرفی و تاریخ انقضا اگر سرویس‌دهنده بفرستد |
-| **وارد کردن سریع** | کلیک روی لینک اشتراک‌گذاری در هر جا، دکمهٔ `v2mac://install-config?url=…` سرویس‌دهنده، چسباندن عکس QR، یا رها کردن فایل کانفیگ و تصویر QR روی پنجره |
-| **ویرایشگر سرور** | همهٔ گزینه‌ها به‌صورت دستی: transport، TLS یا REALITY، Mux. ویرایش سرورهای واردشده بدون تغییر نسخهٔ اصلی |
-| **علاقه‌مندی‌ها** | به سرورها ستاره بدهید؛ به‌روزرسانی اشتراک هرگز بدون پرسیدن حذفشان نمی‌کند |
-
-### اتصال
-
-- **تست تأخیر:** real-delay و TCP ping برای کل یک گروه، مرتب بر اساس سرعت، همراه سرعت دانلود.
-- **انتخاب خودکار سرور** (اختیاری): بر اساس تأخیر واقعی HTTP یک سرور سالم انتخاب می‌کند، زیر نظرش دارد و اگر قطع یا کند شد به ترتیب گروه سراغ بعدی می‌رود.
-- **حالت TUN:** با یک کلید همهٔ برنامه‌ها و همهٔ درخواست‌های DNS از پروکسی عبور می‌کنند. بدون نیاز به اکانت پولی توسعه‌دهنده یا system extension؛ `Scripts/check-tun.sh` نبودِ نشتی را بررسی می‌کند.
-- **پروکسی سیستم:** یک کلید پروکسی سیستم macOS را روی V2Mac می‌گذارد، با یک نقطهٔ رنگی که نشان می‌دهد پروکسی دست کیست.
-- **Kill switch** (اختیاری): در زمان اتصال همه‌چیز جز سرور و شبکهٔ محلی را مسدود می‌کند، حتی اگر اتصال قطع شود؛ با فایروال macOS (pf).
-- **Cloudflare WARP:** ثبت دستگاه رایگان WARP (MASQUE)، استفاده از کلید WARP+، و افزودن WARP به‌عنوان سرور یا زنجیر کردنش پشت سرور خودتان.
-- **پایدار:** پس از کرش، خواب یا تغییر شبکه هسته را دوباره راه می‌اندازد و هنگام اجرا دوباره وصل می‌شود.
-- **تعویض زنده:** انتخاب سرور دیگر، آن را داخل هستهٔ در حال اجرا عوض می‌کند بدون ری‌استارت.
-
-### مسیریابی
-
-- **حالت‌ها:** Global، Rules Only، Direct، یا **Bypass** مناطق (ایران، چین، روسیه) تا سایت‌های داخلی مستقیم بروند.
-- **قوانین سفارشی، مثل Proxifier:** قوانین مرتب Proxy / Direct / Block بر اساس سایت و برنامه. وارد کردن پروفایل‌های `.ppx` پروکسیفایر، قوانین Clash، فایل hosts، لیست‌های Adblock و تگ‌های geosite و geoip.
-- **Rule Builder:** انتخاب کشورها روی نقشهٔ جهان و سرویس‌ها (Google، Telegram، OpenAI، Netflix، تبلیغات…) از یک لیست.
-- **نمای Connections:** همهٔ اتصال‌ها، گروه‌بندی‌شده بر اساس میزبان یا برنامه، همراه قانونی که مسیرشان را تعیین کرده.
-
-← راهنمای کامل: **[قوانین مسیریابی سفارشی](docs/routing-rules.fa.md)**
-
-### یکپارچگی با macOS
-
-- **کنترل از منوبار:** اتصال، تعویض سرور، سرعت زندهٔ آپلود و دانلود، IP و کشور خروجی.
-- **Control Center، Shortcuts، Spotlight و Siri:** اتصال، قطع، و روشن و خاموش کردن TUN، حالت مسیریابی، پروکسی سیستم یا kill switch.
-- **Helper دسترسی مدیر:** نسخه‌های امضاشده توسط اپل از یک helper ‏`SMAppService` استفاده می‌کنند که یک بار تأییدش می‌کنید؛ V2Mac هرگز رمز مدیر شما را نمی‌بیند یا ذخیره نمی‌کند.
-- **پشتیبان‌گیری:** خروجی گرفتن از اشتراک‌ها، سرورها، علاقه‌مندی‌ها و تنظیمات در یک فایل `.v2m` و بازگردانی روی مک دیگر.
-- **و همچنین:** اشتراک‌گذاری روی LAN با رمز، کد QR، نمایشگر لاگ، اعلان‌ها، اجرا هنگام ورود، و به‌روزرسانی یک‌کلیکی برنامه و هستهٔ Xray.
-- **زبان‌ها:** انگلیسی، فارسی (راست‌به‌چپ)، چینی ساده و روسی.
-- **حریم خصوصی:** بدون آمارگیری و بدون ارسال داده. اطلاعات محرمانه در یک فایل محلی رمزنگاری‌شده یا، اگر بخواهید، در Keychain می‌ماند.
-
-## مسیریابی برای هر برنامه: جایگزین Proxifier در macOS
-
-V2Mac برای هر اتصال تصمیم می‌گیرد که کدام برنامه و کدام سایت **از پراکسی** برود، **مستقیم** برود یا **مسدود** شود؛ درست مثل Proxifier، اما با پروتکل‌های Xray در خود برنامه، پس دیگر به دو برنامه نیاز ندارید.
-
-- **قانون بر اساس برنامه و میزبان.** برنامه را می‌توان به شکل `Telegram.app`، شناسهٔ بسته (`com.example.chat`)، الگو (`*code*`)، نام پردازه (`curl`) یا مسیر کامل نوشت. میزبان‌ها دامنه، wildcard (`*google*`)، بازهٔ IP، تگ‌های geosite/geoip، قوانین Clash، فایل hosts و فهرست‌های Adblock را می‌پذیرند. قانونی که هر دو را دارد، باید هر دو را تطبیق دهد.
-- **اولین تطبیق برنده است.** قوانین از بالا بررسی می‌شوند؛ با کشیدن ترتیبشان را عوض کنید. نام‌های محلی (`localhost`، `*.local`) و شبکهٔ محلی همیشه مستقیم می‌روند.
-- **ویرایشگر ساده.** برای هر برنامه یا میزبان یک ردیف با منوی Proxy / Direct / Block، گروه‌های ذخیره‌شده، تغییر گروهی، و صندوق **Discovered** از برنامه‌ها و میزبان‌های تازه‌ای که در ترافیک دیده شده‌اند، آمادهٔ مسیریابی با یک کلیک.
-- **وارد کردن پروفایل Proxifier.** **Import…** فایل `.ppx` را می‌خواند و پیش از افزودن، همهٔ قوانین را نشان می‌دهد. قوانینی که از پورت V2Mac استفاده می‌کنند قانون Proxy می‌شوند، قوانین Direct و Block همان‌طور می‌مانند، و قوانین مربوط به پراکسی‌ها یا زنجیره‌های دیگر کنار گذاشته و فهرست می‌شوند. **Block QUIC (UDP 443)** مثل گزینهٔ Proxifier کار می‌کند تا مرورگرها به TCP برگردند و نام میزبان‌ها به قوانین برسد.
-- **پروفایل‌های قانون.** چند مجموعه قانون با نام (خانه، کار، سفر) نگه دارید و از نوار ابزار بینشان جابه‌جا شوید.
-
-<p align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="ویرایشگر قوانین، نمای ساده: برنامه‌هایی مثل Telegram، Discord، Xcode و Safari، هر کدام با مسیر Proxy یا Direct" width="720"></p>
-
-<p align="center"><img src="docs/images/screenshots/rule-editor-advanced.png" alt="ویرایشگر قوانین، نمای پیشرفته: قوانین مرتب با دکمه‌های Add Rule، Rule Builder و Import Proxifier Profile و کلید Block QUIC" width="720"></p>
-
-قوانین برنامه روی برنامه‌هایی اعمال می‌شوند که از پراکسی سیستم استفاده می‌کنند یا به پورت V2Mac وصل می‌شوند. در حالت TUN نام برنامه معلوم نیست، پس قوانین میزبان و IP اعمال می‌شوند. بیشتر در **[راهنمای قوانین مسیریابی](docs/routing-rules.fa.md)**.
-
-## اتصال‌ها: ببینید هر درخواست کجا می‌رود
-
-پنجرهٔ **Connections** همهٔ درخواست‌ها را زنده فهرست می‌کند: برنامه‌ای که آن را ساخته، میزبان و پورت مقصد، مدت باز بودن، بایت‌های ارسالی و دریافتی، و **قانونی** که آن را مسیریابی کرده (Proxy، Direct یا Block، به‌همراه نام قانون).
-
-- **گروه‌بندی** بر اساس برنامه یا میزبان، تا ببینید کدام برنامه‌ها بیشتر و با کجا حرف می‌زنند، یا نمایش هر اتصال جداگانه.
-- **فیلتر** بر اساس All / Open و مسیر، و جست‌وجو در برنامه‌ها و مقصدها.
-- **دلیل‌های رنگی:** نارنجی برای برنامه‌هایی که با تنظیم خودشان از پورت پراکسی استفاده می‌کنند، بنفش برای ترافیکی که به مسیریابی خودِ کانفیگ واردشده برگشته است.
-- **گزارش رویدادها** در پایین، باز و بسته شدن هر اتصال را نشان می‌دهد.
-- نمای **Map** درخواست‌ها و برنامه‌های پرکار را روی کرهٔ زمین نشان می‌دهد.
-- با کلیک راست روی یک اتصال مستقیم به قانون (یا کانفیگ سرور) پشت آن بروید، یا برای آن برنامه یا میزبان قانون تازه بسازید.
-
-<p align="center"><img src="docs/images/screenshots/connections.png" alt="پنجرهٔ Connections: درخواست‌های Mail، Safari، curl و Music با مقصد، مدت، مسیرهای Proxy، Direct و Block، نام قانون و ترافیک" width="720"></p>
-
-</div>
-
-<div dir="rtl">
+- **پروتکل‌ها:** VLESS (REALITY، XTLS Vision)، VMess، Trojan، Shadowsocks، Hysteria2، WireGuard، SOCKS، HTTP و کانفیگ کامل JSON ایکس‌ری.
+- **اشتراک‌ها:** به‌روزرسانی خودکار، حجم و تاریخ انقضا، علاقه‌مندی‌ها، وارد کردن با QR و یک کلیک، ویرایشگر کامل سرور.
+- **اتصال:** تست تأخیر واقعی و سرعت، انتخاب خودکار سرور، تعویض زنده بدون ری‌استارت، کشور خروجی در نوار منو.
+- **کل مک:** TUN، پراکسی سیستم و کیل‌سوییچ مبتنی بر pf.
+- **مسیریابی:** Global، Bypass regions (ایران، چین، روسیه)، Rules Only و Direct، به‌همراه قوانین Proxy / Direct / Block بر اساس سایت و برنامه.
+- **جایگزین Proxifier:** قانون برای هر برنامه، وارد کردن پروفایل `.ppx`، Rule Builder تصویری و نمای زندهٔ Connections.
+- **Cloudflare WARP:** به‌عنوان سرور مستقل یا زنجیرشده پشت سرور شما.
+- **macOS:** پنل نوار منو، Shortcuts، Siri، Control Center، اعلان‌ها، پشتیبان‌گیری و بازگردانی. انگلیسی، فارسی، چینی و روسی.
 
 ## تصاویر برنامه
-
-همهٔ تصاویر با سرورهای ساختگی گرفته شده‌اند.
 
 </div>
 
@@ -146,70 +66,33 @@ V2Mac برای هر اتصال تصمیم می‌گیرد که کدام برنا
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/add-subscription.png" alt="پنجرهٔ افزودن اشتراک" width="380"><br><sub>افزودن اشتراک</sub></td>
-    <td align="center"><img src="docs/images/screenshots/server-editor.png" alt="ویرایشگر سرور VLESS" width="380"><br><sub>ویرایش هر سرور</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="ویرایشگر قوانین، نمای ساده" width="380"><br><sub>قانون برای هر برنامه و سایت</sub></td>
+    <td align="center"><img src="docs/images/screenshots/connections.png" alt="پنجرهٔ Connections" width="380"><br><sub>هر اتصال و قانون پشت آن</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="نقشهٔ جهان در Rule Builder با کشورهای انتخاب‌شده" width="380"><br><sub>Rule Builder: انتخاب کشور روی نقشه</sub></td>
-    <td align="center"><img src="docs/images/screenshots/custom-rules.png" alt="قوانین مسیریابی سفارشی در تنظیمات" width="380"><br><sub>قوانین مسیریابی سفارشی</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="نقشهٔ جهان در Rule Builder" width="380"><br><sub>Rule Builder</sub></td>
+    <td align="center"><img src="docs/images/screenshots/proxifier-import.png" alt="وارد کردن پروفایل Proxifier" width="380"><br><sub>وارد کردن از Proxifier</sub></td>
   </tr>
 </table>
 
-<details>
-<summary><b>تصاویر بیشتر</b></summary>
-
-<p align="center"><img src="docs/images/screenshots/settings-tour.gif" alt="گشتی در همهٔ تب‌های تنظیمات V2Mac" width="560"></p>
-<p align="center"><img src="docs/images/screenshots/connection-settings.png" alt="تنظیمات اتصال: انتخاب خودکار سرور و رفتار هنگام خطای TUN" width="560"></p>
-<p align="center"><img src="docs/images/screenshots/routing-settings.png" alt="تنظیمات مسیریابی با Bypass ایران" width="560"></p>
-<p align="center"><img src="docs/images/screenshots/sharing.png" alt="کد QR سرور برای اشتراک‌گذاری" width="328"></p>
-
-</details>
-
 <div dir="rtl">
 
-## جلوگیری از نشت اطلاعات در کروم: noleaker
+## مستندات
 
-پروکسی به‌تنهایی جلوی نشت مرورگر را نمی‌گیرد: WebRTC می‌تواند IP واقعی شما را لو بدهد، DNS و QUIC می‌توانند پروکسی را دور بزنند، و منطقهٔ زمانی و زبان محل شما را نشان می‌دهند. [**noleaker**](https://github.com/LordVersA/noleaker)، افزونهٔ رایگانی از همین سازنده، کنار V2Mac برای کروم و مرورگرهای Chromium کار می‌کند: ترافیک و DNS را از پروکسی SOCKS5 برنامه عبور می‌دهد، نشت WebRTC و QUIC را می‌بندد، منطقهٔ زمانی، زبان و موقعیت را با کشور سرور هماهنگ می‌کند، و اگر پروکسی قطع شود درخواست‌ها را مسدود می‌کند.
+**[ویکی V2Mac](https://github.com/LordVersA/v2mac/wiki/fa-Home)** همه چیز را با جزئیات توضیح می‌دهد:
 
-راه‌اندازی: [آخرین نسخه](https://github.com/LordVersA/noleaker/releases/latest) را نصب کنید، پروکسی `127.0.0.1:10808` را اضافه کنید و **Protection** را روشن کنید. نام کاربری و رمز پروکسی V2Mac را خالی بگذارید.
+| | |
+|---|---|
+| [نصب](https://github.com/LordVersA/v2mac/wiki/fa-Installation) | Homebrew، DMG، اولین اجرا، به‌روزرسانی |
+| [سرورها و اشتراک‌ها](https://github.com/LordVersA/v2mac/wiki/fa-Servers-and-Subscriptions) | افزودن، به‌روزرسانی، ویرایش، تست تأخیر |
+| [اتصال](https://github.com/LordVersA/v2mac/wiki/fa-Connecting) | TUN، پراکسی سیستم، کیل‌سوییچ، بررسی خروجی، WARP |
+| [مسیریابی](https://github.com/LordVersA/v2mac/wiki/fa-Routing) | حالت‌ها، قوانین سفارشی، وارد کردن از Proxifier، Rule Builder |
+| [اتصال‌ها](https://github.com/LordVersA/v2mac/wiki/fa-Connections) | فهرست زندهٔ اتصال‌ها و نقشه |
+| [نوار منو و میان‌برها](https://github.com/LordVersA/v2mac/wiki/fa-Menu-Bar-and-Shortcuts) | پنل، صفحه‌کلید، Shortcuts، اعلان‌ها |
+| [مرجع تنظیمات](https://github.com/LordVersA/v2mac/wiki/fa-Settings-Reference) | همهٔ تنظیمات، پشتیبان‌گیری، حریم خصوصی |
+| [عیب‌یابی و پرسش‌های رایج](https://github.com/LordVersA/v2mac/wiki/fa-Troubleshooting-and-FAQ) | مشکلات و پرسش‌های رایج |
 
-## پرسش‌های رایج
-
-<details>
-<summary><b>آیا V2Mac یک کلاینت V2Ray برای مک است؟</b></summary>
-
-بله. V2Mac از [Xray-core](https://github.com/XTLS/Xray-core)، جانشین فعال هستهٔ V2Ray، استفاده می‌کند؛ پس لینک‌ها و اشتراک‌های V2Ray و Xray (VLESS، VMess، Trojan، Shadowsocks) و همچنین Hysteria2 و WireGuard را می‌خواند.
-</details>
-
-<details>
-<summary><b>آیا از VLESS REALITY و XTLS Vision پشتیبانی می‌کند؟</b></summary>
-
-بله، هم از لینک‌ها و هم در ویرایشگر سرور، همراه transportهای TCP، WebSocket، gRPC، HTTPUpgrade، XHTTP (SplitHTTP) و mKCP.
-</details>
-
-<details>
-<summary><b>چطور همهٔ برنامه‌ها را، حتی آن‌هایی که تنظیم پروکسی ندارند، از پروکسی رد کنم؟</b></summary>
-
-کلید **TUN** کنار منوی مسیریابی را روشن کنید. همهٔ برنامه‌ها و درخواست‌های DNS از سرور عبور می‌کنند. helper را یک بار تأیید کنید (نسخه‌های امضاشده) یا در هر نشست یک بار رمز مدیر را وارد کنید (نسخه‌های ad-hoc).
-</details>
-
-<details>
-<summary><b>روی مک‌های اینتل یا macOS قدیمی‌تر کار می‌کند؟</b></summary>
-
-خیر. V2Mac به macOS 26 یا جدیدتر روی Apple Silicon نیاز دارد.
-</details>
-
-<details>
-<summary><b>چرا macOS می‌گوید برنامه باز نمی‌شود؟</b></summary>
-
-فایل DMG ‏notarize نشده. از **Open Anyway** در Privacy & Security، دستور `xattr` بالا یا نصب با Homebrew استفاده کنید.
-</details>
-
-<details>
-<summary><b>آیا V2Mac داده‌ای جمع می‌کند؟</b></summary>
-
-خیر. هیچ آمارگیری یا ارسال داده‌ای ندارد. جز ترافیک خودتان، V2Mac فقط به آدرس اشتراک‌هایتان، به گیت‌هاب برای به‌روزرسانی و فایل‌های قوانین، و به یک سرویس IP عمومی برای بررسی خروجی پس از اتصال وصل می‌شود.
-</details>
+برای جلوگیری از نشت اطلاعات در کروم، V2Mac را همراه [**noleaker**](https://github.com/LordVersA/noleaker)، افزونهٔ رایگان همین سازنده، استفاده کنید.
 
 ## ساخت از سورس
 
@@ -223,13 +106,11 @@ xcodebuild -project v2mac.xcodeproj -scheme v2mac -configuration Debug build
 
 <div dir="rtl">
 
-نیازمند Xcode 26 به بالا و [XcodeGen](https://github.com/yonaskolb/XcodeGen). طراحی در [docs/SPEC.md](docs/SPEC.md) است. تست‌های پکیج: `cd Packages/V2MacCore && swift test`.
-
-گزارش باگ و pull request در [Issues](https://github.com/LordVersA/v2mac/issues) پذیرفته می‌شود.
+به Xcode 26 به بعد و [XcodeGen](https://github.com/yonaskolb/XcodeGen) نیاز دارد. طراحی: [docs/SPEC.md](docs/SPEC.md). تست‌ها: `cd Packages/V2MacCore && swift test`. گزارش مشکل و pull request در [Issues](https://github.com/LordVersA/v2mac/issues).
 
 ## مجوز
 
-[GPL-3.0](LICENSE). شامل [Xray-core](https://github.com/XTLS/Xray-core) ‏(MPL-2.0)؛ [THIRD_PARTY.md](THIRD_PARTY.md) را ببینید.
+[GPL-3.0](LICENSE). شامل [Xray-core](https://github.com/XTLS/Xray-core) (MPL-2.0)؛ [THIRD_PARTY.md](THIRD_PARTY.md) را ببینید.
 
 </div>
 
