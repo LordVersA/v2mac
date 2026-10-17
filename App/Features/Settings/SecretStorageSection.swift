@@ -7,7 +7,7 @@ struct SecretStorageSection: View {
 
     var body: some View {
         Section {
-            Toggle("Store secrets in Apple Keychain", isOn: Binding(get: { secrets.usesKeychain }, set: setKeychain))
+            Toggle("Store secrets in Apple Keychain", isOn: Binding(get: { secrets.usesKeychain }, set: { setKeychain($0) }))
             if secrets.hasLegacyAdministratorPassword {
                 Text("An older version saved an administrator password. V2Mac no longer reads or uses it. Remove the old Keychain entry; macOS may ask for permission.")
                     .font(.caption).foregroundStyle(.secondary)
