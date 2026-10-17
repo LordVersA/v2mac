@@ -29,6 +29,46 @@ import Testing
         #expect(c["outbounds"]?[1]?["streamSettings"] == nil)
     }
 
+    @Test func tunSkipsAppRulesButKeepsHostRules() throws {
+        let custom = CustomRules(rules: [
+            CustomRule(name: "App", action: .block, apps: "curl"),
+            CustomRule(name: "Both", action: .direct, apps: "curl", hosts: "example.com"),
+            CustomRule(name: "Host", action: .block, hosts: "example.org"),
+        ])
+        for tun in [nil, link] {
+            let config = try ConfigBuilder.build(outbound: ["protocol": "vless"], options: options(tun: tun), routing: .global, custom: custom)
+            let rules = try #require(config["routing"]?["rules"]?.arrayValue)
+            let appRules = rules.filter { $0["process"] != nil }
+            #expect(appRules.count == 2)
+            for rule in appRules {
+                #expect(rule["process"] == ["curl"])
+                #expect(rule["inboundTag"] == (tun == nil ? nil : ["mixed-in"]))
+            }
+            #expect(appRules[1]["domain"] == ["domain:example.com"])
+            #expect(rules.contains { $0["domain"] == ["domain:example.org"] && $0["inboundTag"] == nil })
+        }
+    }
+
+    @Test func tunExcludesItselfFromImportedProcessRules() throws {
+        let imported: JSONValue = [
+            "inbounds": [["tag": "socks", "protocol": "socks"]],
+            "outbounds": [["tag": "direct", "protocol": "freedom"]],
+            "routing": ["rules": [
+                ["type": "field", "process": ["curl"], "outboundTag": "direct"],
+                ["type": "field", "process": ["git"], "inboundTag": ["socks"], "outboundTag": "direct"],
+                ["type": "field", "process": ["xray"], "inboundTag": ["tun-in"], "outboundTag": "direct"],
+                ["type": "field", "domain": ["domain:example.org"], "inboundTag": ["socks"], "outboundTag": "direct"],
+            ]],
+        ]
+        let config = try ConfigBuilder.buildCustom(config: imported, options: options(tun: link))
+        let rules = try #require(config["routing"]?["rules"]?.arrayValue)
+        let appRules = rules.filter { $0["process"] != nil }
+        #expect(appRules.count == 2)
+        #expect(appRules.map { $0["process"] } == [["curl"], ["git"]])
+        #expect(appRules.allSatisfy { $0["inboundTag"] == ["mixed-in"] })
+        #expect(rules.contains { $0["domain"] == ["domain:example.org"] && $0["inboundTag"] == ["mixed-in", "tun-in"] })
+    }
+
     @Test func bindingKeepsExistingStreamSettings() {
         let outbound: JSONValue = ["protocol": "vless", "streamSettings": ["network": "ws", "sockopt": ["mark": 5]]]
         let bound = ConfigBuilder.binding(outbound, to: "en7")

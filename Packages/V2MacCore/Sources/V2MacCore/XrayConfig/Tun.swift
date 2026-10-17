@@ -144,10 +144,18 @@ extension ConfigBuilder {
         dns = dns.setting("servers", to: .array(servers))
 
         let routing = config["routing"] ?? [:]
+        let userRules = (routing["rules"]?.arrayValue ?? []).compactMap { rule -> JSONValue? in
+            guard !(rule["process"]?.arrayValue ?? []).isEmpty else { return rule }
+            // The SOCKS forwarder loses app identity; reject its inbound before Xray's process lookup.
+            let tags = (rule["inboundTag"]?.arrayValue).flatMap { $0.isEmpty ? nil : $0 } ?? [.string(inboundTag)]
+            let directTags = tags.filter { $0 != .string(tunInboundTag) }
+            guard !directTags.isEmpty else { return nil }
+            return rule.setting("inboundTag", to: .array(directTags))
+        }
         return config
             .setting("outbounds", to: .array(wired))
             .setting("dns", to: dns)
-            .setting("routing", to: routing.setting("rules", to: .array(rules + (routing["rules"]?.arrayValue ?? []))))
+            .setting("routing", to: routing.setting("rules", to: .array(rules + userRules)))
     }
 
     /// Server names an outbound dials, IP addresses and this Mac's own names left out.

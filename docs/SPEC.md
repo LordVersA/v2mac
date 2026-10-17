@@ -668,7 +668,10 @@ in `/Applications`, `/System/Applications`, `/System/Library/CoreServices`,
 installed app is kept as a process name; a rule whose apps all match nothing is
 left out. App rules see the app only for connections that reach the core
 directly (system proxy or app settings); in TUN mode the core sees the root
-forwarder (9.5).
+forwarder (9.5). TUN config generation excludes `tun-in` from process rules,
+including imported JSON rules, before Xray attempts process lookup. Rules without
+inbound tags (or with an empty tag list) are restricted to `mixed-in`; rules
+targeting only `tun-in` are omitted. Host/IP-only rules remain available to TUN.
 
 Local names (`localhost`, `.local`, `.test`, `.internal`, `.lan`, `.home.arpa`,
 dotless names) always go direct, ahead of the rules. **Block QUIC (UDP 443)**
@@ -703,27 +706,33 @@ foot of the main window's sidebar (its name slides out on hover) or from
 Settings → Routing. The toolbar switches between Simple and Advanced and holds
 the rule profile menu.
 
-- Simple: one list of the apps and sites the rules name and those that connected
-  while the window is open and no rule covers yet (marked New, listed first), with
-  a filter (All, New, Proxy, Direct), a search field and the exit's flag and
-  country. Each row has a Proxy | Direct | Block switch; choosing the lit side again hands
-  the row back to the routing mode. Selected rows move together from the bar at
-  the bottom. IP addresses and ranges are left to Advanced (the bar counts them).
-  The core writes an access log all the time; its lines reach the Logs window only
-  with "Log connections" on. `ConnectionWatcher` (recording only while Simple mode
-  is shown) parses them (`SeenConnection`) and finds each connection's app by its
-  source port among this user's sockets to the proxy port (`SocketOwners`, libproc);
-  TUN connections have no app. Rows are grouped by name (`EntryGroups`: a domain's
+- Simple: a routing library with separate Apps and Hosts views, and a Discovered
+  inbox for connections no rule covers yet. Discoveries never fill the saved lists.
+  Search and an All/Proxy/Direct/Block route filter narrow the saved groups; the inbox
+  separates apps from hosts. Rows are grouped by name (`EntryGroups`: a domain's
   registered name, a bundle id's vendor, a longer name folded under a shorter one
-  it contains) and open to show their members. A new group's switch adds
-  `*name*`; a ruled group's switch moves its members. A change (`SimpleRules.move`)
-  takes the entries out of every rule with only apps or only
-  hosts and puts them into one of six fixed rules at the top of the list (sites,
-  then apps, for Proxy, Direct and Block). A run of changes restarts a running core once,
-  1.5 s after the last.
-  The list has New, Apps and Sites sections and a search field in the toolbar.
-  Each ruled row carries a badge with its rule's name; a click opens Advanced,
-  scrolled to that rule, which glows for a moment (`AppModel.focusedRule`).
+  it contains), initially collapsed. Expand a group to adjust individual members.
+  Each row has a compact route menu with Proxy, Direct, Block and Use Routing Mode.
+  Multi-selection and Select All apply the footer's action to the selected rows.
+  Changing the view, search or route filter clears selection.
+  Add opens a sheet with a searchable, alphabetized installed-app checklist or a
+  domain-per-line field, and a route choice. Invalid domains, IP addresses and
+  technical matchers cannot be saved through that field; Advanced handles those.
+  App rules' TUN limitation is stated beside the Apps list and in the add sheet.
+  Import opens a `.ppx`/XML chooser and reviews `ProxifierProfile`'s rules, skipped
+  names and Block QUIC setting before appending to the active profile. Existing
+  rules keep priority; cancellation leaves the list untouched, errors show an alert.
+  Combined app-and-host rules, disabled rules and addresses remain in Advanced.
+  Each saved row carries its source rule badge; clicking it opens Advanced at that
+  rule (`AppModel.focusedRule`). The sidebar links to Advanced and counts address entries.
+  A new group's route adds `*name*`; a saved group's route moves its members.
+  `SimpleRules.move` removes those entries from rules with only apps or hosts and
+  adds them to one of six fixed rules at the top (hosts, then apps, for Proxy,
+  Direct and Block). Changes save immediately and restart a running core once,
+  1.5 s after the last edit. Import applies once after review.
+  The core always writes access logs; they reach Logs only with Log connections
+  enabled. `ConnectionWatcher` records discoveries while this window is open;
+  process and traffic attribution follow the Connections monitor (section 12.10).
   Icons come from this Mac only (`EntryIcons`): an app entry's own icon (by path,
   `Name.app`, bundle id or `*word*`), a gear for daemons and tools, the Apple logo
   for Apple's domains, a site's icon from an installed app of the same name or
