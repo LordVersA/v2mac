@@ -80,7 +80,8 @@ final class TunController {
          authorize: (@MainActor (String) async -> LaunchResult)? = nil,
          helperIsAlive: @escaping @MainActor (URL) -> Bool = { TunHelper.isAlive(rootDirectory: $0) },
          interfaceExists: @escaping @MainActor (String) -> Bool = { NetworkInterfaces.exists($0) },
-         core: @escaping @MainActor () -> URL = { AppPaths.coreExecutable }) {
+         // The bundled core, never an in-app update: Xray 26.10.17 lost all UDP in the TUN inbound.
+         core: @escaping @MainActor () -> URL = { AppPaths.bundledCore }) {
         self.logs = logs
         self.stateDirectory = stateDirectory
         self.rootDirectory = rootDirectory
