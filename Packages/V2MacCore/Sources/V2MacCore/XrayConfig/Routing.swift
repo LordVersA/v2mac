@@ -70,8 +70,9 @@ extension ConfigBuilder {
         // send its localhost traffic to the server's own localhost.
         let localNames: JSONValue = ["type": "field", "domain": .array(CustomRules.localNames.map { .string($0) }), "outboundTag": .string(directTag)]
         // Direct mode keeps everything off the server, the proxy port included.
-        if custom.proxyClientsSkipRules, plan != .direct {
-            customRules.insert(["type": "field", "inboundTag": [.string(inboundTag)], "outboundTag": .string(proxyTag)], at: 0)
+        if let route = custom.proxyClientsRoute, plan != .direct {
+            let tag = switch route { case .proxy: proxyTag; case .direct: directTag; case .block: blockTag }
+            customRules.insert(["type": "field", "inboundTag": [.string(inboundTag)], "outboundTag": .string(tag)], at: 0)
         }
         if plan != .direct || !customRules.isEmpty { customRules.insert(contentsOf: [localNames, privateRule], at: 0) }
         if custom.blockQUIC { customRules.insert(["type": "field", "network": "udp", "port": "443", "outboundTag": .string(blockTag)], at: 0) }

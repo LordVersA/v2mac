@@ -68,12 +68,19 @@ import Testing
         #expect(rules.last?["network"]?.stringValue == "tcp,udp")
     }
 
+    @Test func proxyClientsCanGoDirect() throws {
+        var custom = lists(proxy: "a.com")
+        custom.proxyClientsRoute = .direct
+        let rules = try #require(try build(.global, custom)["routing"]?["rules"]?.arrayValue)
+        #expect(rules[2] == ["type": "field", "inboundTag": ["mixed-in"], "outboundTag": "direct"])
+    }
+
     @Test(arguments: [RoutingPlan.global, .bypass([]), .bypass([
         RegionRoute(geositeFile: "sites.dat", geositeTags: ["ir"], geoipFile: "ips.dat", geoipTags: ["ir"]),
     ])], [false, true])
     func proxyClientsSkipRulesAfterLocalTraffic(plan: RoutingPlan, skip: Bool) throws {
         var custom = lists(direct: "a.com", block: "b.com")
-        custom.proxyClientsSkipRules = skip
+        custom.proxyClientsRoute = skip ? .proxy : nil
         let rules = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue)
         #expect(rules[0]["domain"]?[0]?.stringValue == "full:localhost")
         #expect(rules[1]["ip"]?[0]?.stringValue == "geoip:private")

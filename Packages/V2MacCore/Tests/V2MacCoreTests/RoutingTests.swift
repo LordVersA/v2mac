@@ -134,7 +134,7 @@ import Testing
     }
 
     @Test func proxyExceptionUsesTheImportedServerTag() throws {
-        let custom = CustomRules(rules: [CustomRule(name: "Blocked", action: .block, hosts: "priority.example")], proxyClientsSkipRules: true)
+        let custom = CustomRules(rules: [CustomRule(name: "Blocked", action: .block, hosts: "priority.example")], proxyClientsRoute: .proxy)
         let out = try ConfigBuilder.buildCustom(config: config, options: options, routing: .global, custom: custom)
         #expect(out["routing"]?["rules"]?[2] == ["type": "field", "inboundTag": ["mixed-in"], "outboundTag": "p"])
     }

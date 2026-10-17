@@ -25,11 +25,13 @@ final class ConnectionWatcher {
         let start: Date
         var routingMode: RoutingMode?
         var rules: [CustomRule] = []
-        var usesProxySetting = false
+        /// Where the app's proxy setting sent it, when it came through the proxy port with that setting on.
+        var proxySettingRoute: CustomRule.Action?
+        var usesProxySetting: Bool { proxySettingRoute != nil }
         var action: CustomRule.Action?
         var configFallback = false
         var isDefaultRoute = false
-        var skipsRules: Bool { usesProxySetting && routingMode != .direct && action == .proxy }
+        var skipsRules: Bool { usesProxySetting && routingMode != .direct && action == proxySettingRoute }
         /// The `.app` folder, or the executable for command-line tools.
         var app: String?
         var process: String?
@@ -124,7 +126,7 @@ final class ConnectionWatcher {
         connection.isDefaultRoute = seen.isDefaultRoute
         connection.configFallback = hasConfigFallback && (seen.isDefaultRoute || !modeOutbounds.contains(seen.outbound))
         connection.rules = routingMode == nil ? [] : customRules.rules.filter { routingMode != .direct || $0.action == .block }
-        connection.usesProxySetting = routingMode != nil && customRules.proxyClientsSkipRules && seen.inbound == ConfigBuilder.inboundTag
+        connection.proxySettingRoute = routingMode != nil && seen.inbound == ConfigBuilder.inboundTag ? customRules.proxyClientsRoute : nil
         pending.append(connection)
         guard pending.count == 1 else { return }
         Task { [weak self] in
@@ -259,7 +261,7 @@ extension ConnectionWatcher {
             c.routingMode = .global
             c.action = CustomRule.Action(rawValue: outbound) ?? .proxy
             c.configFallback = outbound == "imported-server"
-            c.usesProxySetting = outbound == ConfigBuilder.proxyTag
+            c.proxySettingRoute = outbound == ConfigBuilder.proxyTag ? .proxy : nil
             c.rules = [CustomRule(name: "Browsers direct", action: .direct, apps: "Safari.app"),
                        CustomRule(name: "Block ads", action: .block, hosts: "ads.example.net")]
             c.app = app

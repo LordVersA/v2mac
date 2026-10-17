@@ -1,6 +1,41 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Go to Configuration": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "رفتن به پیکربندی"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Перейти к настройке"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "转到配置"}}
+      }
+    },
+    "Apps using the proxy port": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "برنامه‌هایی که از پورت پروکسی استفاده می‌کنند"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Приложения через порт прокси"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "使用代理端口的应用"}}
+      }
+    },
+    "Follow rules": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "پیروی از قوانین"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "По правилам"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "遵循规则"}}
+      }
+    },
+    "Where apps that were set to use V2Mac's proxy port themselves go, before any rule. Not used while the system proxy is on, since then every app comes through that port.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "برنامه‌هایی که خودشان برای استفاده از پورت پروکسی V2Mac تنظیم شده‌اند، پیش از هر قانونی به کجا بروند. وقتی پروکسی سیستم روشن است استفاده نمی‌شود، چون آن‌وقت همهٔ برنامه‌ها از این پورت می‌آیند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Куда идут приложения, сами настроенные на порт прокси V2Mac, до любых правил. Не действует при включённом системном прокси: тогда через этот порт идут все приложения."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "自行设置为使用 V2Mac 代理端口的应用在任何规则之前的去向。系统代理开启时不使用，因为那时所有应用都经过该端口。"}}
+      }
+    },
+    "This app was set to use V2Mac's proxy port, so it skips the rules. Change this in Settings → Proxy.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "این برنامه برای استفاده از پورت پروکسی V2Mac تنظیم شده است، پس از قوانین رد می‌شود. این را در تنظیمات → پروکسی تغییر دهید."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Это приложение настроено на порт прокси V2Mac, поэтому правила к нему не применяются. Изменить: Настройки → Прокси."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "此应用设置为使用 V2Mac 的代理端口，因此跳过规则。可在“设置 → 代理”中更改。"}}
+      }
+    },
     "Enable the privileged helper?": {
       "localizations": {
         "fa": {"stringUnit": {"state": "translated", "value": "کمک‌برنامه دارای دسترسی مدیر فعال شود؟"}},
@@ -425,28 +460,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "无规则 · %@"
-          }
-        }
-      }
-    },
-    "This app was set to use V2Mac's proxy port, so it goes to the server without any rule.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "این برنامه برای استفاده از پورت پروکسی V2Mac تنظیم شده است، پس بدون هیچ قانونی به سرور می‌رود."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Это приложение настроено на порт прокси V2Mac, поэтому идёт на сервер без правил."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此应用已设置为使用 V2Mac 的代理端口，因此不经任何规则直接发往服务器。"
           }
         }
       }

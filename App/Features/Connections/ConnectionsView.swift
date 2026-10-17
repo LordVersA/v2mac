@@ -27,6 +27,8 @@ struct ConnectionsView: View {
     }
 
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     @State private var selection: Set<ConnectionGroup.Row.ID> = []
     @State private var expanded: Set<ConnectionGroup.Row.ID> = []
     @State private var filter = Filter.all
@@ -214,6 +216,25 @@ struct ConnectionsView: View {
             }
         }
         .alternatingRowBackgrounds()
+        .contextMenu(forSelectionType: Row.ID.self) { ids in
+            if ids.count == 1, let connection = rows.first(where: { $0.id == ids.first })?.connection {
+                Button("Go to Configuration", systemImage: "arrow.right.circle") { goToConfiguration(connection) }
+            }
+        }
+    }
+
+    /// The rule that routed the row in Advanced, or the setting that did: the app's proxy setting
+    /// or, with no rule, the routing mode.
+    private func goToConfiguration(_ connection: ConnectionWatcher.Connection) {
+        if connection.skipsRules {
+            model.openSettings(openSettings, tab: .proxy)
+        } else if let rule = connection.matchedRule {
+            UserDefaults.standard.set(RuleEditorView.Mode.advanced.rawValue, forKey: "ruleEditorMode")
+            model.focusedRule = rule.id
+            model.openRuleEditor(openWindow)
+        } else {
+            model.openSettings(openSettings, tab: .routing)
+        }
     }
 
     private var summary: String {
@@ -286,7 +307,7 @@ private struct RuleCell: View {
     var body: some View {
         let action = connection.action
         let viaProxySetting = connection.skipsRules
-        let rule = viaProxySetting ? nil : matchingRule(action)
+        let rule = viaProxySetting ? nil : connection.matchedRule
         let fromConfig = rule == nil && connection.configFallback
         let tint: Color = viaProxySetting ? .orange : fromConfig ? .purple : action.map { RuleList($0).tint } ?? .secondary
         HStack(spacing: 6) {
@@ -301,7 +322,7 @@ private struct RuleCell: View {
                 Label("App's proxy setting", systemImage: "arrow.triangle.branch")
                     .foregroundStyle(.orange)
                     .lineLimit(1)
-                    .help("This app was set to use V2Mac's proxy port, so it goes to the server without any rule.")
+                    .help("This app was set to use V2Mac's proxy port, so it skips the rules. Change this in Settings → Proxy.")
             } else if fromConfig {
                 Label("Config fallback", systemImage: "arrow.turn.down.right")
                     .foregroundStyle(.purple)
@@ -313,15 +334,16 @@ private struct RuleCell: View {
             }
         }
     }
+}
 
+extension ConnectionWatcher.Connection {
     /// The first rule naming the app or the host whose action matches where the traffic went.
-    private func matchingRule(_ action: CustomRule.Action?) -> CustomRule? {
-        guard !connection.isDefaultRoute else { return nil }
-        let rules = connection.rules
-        let byApp = connection.app.flatMap { app in
+    @MainActor var matchedRule: CustomRule? {
+        guard !isDefaultRoute else { return nil }
+        let byApp = app.flatMap { app in
             SimpleRules.rule(forApp: app, bundleID: ConnectionGroup.bundleID(of: app), in: rules)
         }
-        return [byApp, SimpleRules.rule(forHost: connection.host, in: rules)].compactMap { $0 }.first { $0.action == action }
+        return [byApp, SimpleRules.rule(forHost: host, in: rules)].compactMap { $0 }.first { $0.action == action }
     }
 }
 

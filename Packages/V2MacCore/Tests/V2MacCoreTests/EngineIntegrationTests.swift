@@ -30,7 +30,7 @@ struct EngineIntegrationTests {
     func generatedConfigPassesXrayTest(plan: RoutingPlan, skip: Bool) throws {
         let (_, options) = try makeConfig()
         let custom = CustomRules(rules: [CustomRule(name: "Demo", action: .block, hosts: "example.com")],
-                                 blockQUIC: true, proxyClientsSkipRules: skip)
+                                 blockQUIC: true, proxyClientsRoute: skip ? .proxy : nil)
         let config = try ConfigBuilder.build(outbound: ["protocol": "freedom"], options: options, routing: plan, custom: custom)
         let dir = try TestSupport.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }

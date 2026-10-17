@@ -121,6 +121,7 @@ enum Prefs {
             "allowLAN": false,
             "proxyUsername": "",
             "systemProxy": false,
+            "proxyClientsRoute": "proxy",
             "killSwitch": false,
             "autoUpdateSubscriptions": true,
             "subscriptionUpdateViaProxy": false,
@@ -358,7 +359,7 @@ enum Prefs {
     /// Spec 8.6. Keys match `RoutingSettings`.
     static var customRules: CustomRules {
         CustomRules(rules: customRuleList, blockQUIC: defaults.bool(forKey: "blockQUIC"),
-                    proxyClientsSkipRules: !systemProxy)
+                    proxyClientsRoute: systemProxy ? nil : CustomRule.Action(rawValue: defaults.string(forKey: "proxyClientsRoute") ?? ""))
     }
 
     static var customRuleList: [CustomRule] {

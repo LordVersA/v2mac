@@ -20,7 +20,7 @@ struct ProxyResponseIntegrationTests {
             "dns": ["hosts": ["example.com": "93.184.216.34"], "servers": []],
             "routing": ["rules": [["type": "field", "network": "tcp,udp", "outboundTag": "fallback"]]],
         ]
-        let custom = CustomRules(rules: [CustomRule(name: "User block", action: .block, hosts: "93.184.216.0/24")], proxyClientsSkipRules: skip)
+        let custom = CustomRules(rules: [CustomRule(name: "User block", action: .block, hosts: "93.184.216.0/24")], proxyClientsRoute: skip ? .proxy : nil)
         let config = try ConfigBuilder.buildCustom(config: original, options: options, routing: useAppRules ? .global : nil, custom: custom)
         // Keep this fixture out of the latency suite's counts of the bundled executable.
         let executable = directory.appendingPathComponent("xray-routing")

@@ -695,8 +695,9 @@ then their imported routing as fallback. IP-based app modes use `IPOnDemand`
 ahead of that fallback. Apply restarts a running core; a live switch keeps the core only
 when the rules are unchanged.
 
-With System Proxy off, the mixed proxy inbound goes to `proxy` before custom
-and region rules in Global and Bypass modes (`proxyClientsSkipRules`). Local
+With System Proxy off, the mixed proxy inbound goes to `proxy` (or `direct`,
+per Settings → Proxy → Apps using the proxy port; "Follow rules" turns this off)
+before custom and region rules in Global and Bypass modes (`proxyClientsRoute`). Local
 names and private addresses still go direct first, and Block QUIC stays first
 when enabled. Direct mode keeps its Block rules and direct catch-all. With
 System Proxy on, the exception is disabled: manual and system proxy traffic

@@ -6,6 +6,7 @@ struct ProxySettings: View {
     @AppStorage("proxyPort") private var port = Prefs.defaultPort
     @AppStorage("allowLAN") private var allowLAN = false
     @AppStorage("proxyUsername") private var username = ""
+    @AppStorage("proxyClientsRoute") private var proxyClientsRoute = "proxy"
     @State private var password = Prefs.proxyPassword
     @State private var passwordError: String?
     @State private var portText = ""
@@ -41,6 +42,17 @@ struct ProxySettings: View {
                 Text("System proxy")
             } footer: {
                 note("While V2Mac is connected, the web, secure web and SOCKS proxies of every network service point at 127.0.0.1:\(String(port)), and they are turned off again when you disconnect or quit. Apps that follow the system settings, such as Safari, then use the connection. Changing them needs administrator access once each time V2Mac opens.")
+            }
+            Section {
+                Picker("Apps using the proxy port", selection: $proxyClientsRoute) {
+                    Text("Proxy").tag("proxy")
+                    Text("Direct").tag("direct")
+                    Text("Follow rules").tag("rules")
+                }
+                .disabled(model.connection.systemProxy.isEnabled)
+                .onChange(of: proxyClientsRoute) { model.connection.reconnectIfRunning() }
+            } footer: {
+                note("Where apps that were set to use V2Mac's proxy port themselves go, before any rule. Not used while the system proxy is on, since then every app comes through that port.")
             }
             Section {
                 TextField("Username", text: $username)

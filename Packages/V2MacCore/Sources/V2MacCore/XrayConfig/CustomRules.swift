@@ -69,16 +69,16 @@ public struct CustomRules: Sendable, Equatable, Hashable {
     public var installedApps: [InstalledApp]
     /// Refuse QUIC, so browsers fall back to TCP and their host names reach the rules.
     public var blockQUIC: Bool
-    /// Apps that were set to use the proxy port themselves go to the server without any rule.
-    /// Off while the system proxy is on, since then every app comes through that port.
-    public var proxyClientsSkipRules: Bool
+    /// Where apps that were set to use the proxy port themselves go, without any rule; nil follows
+    /// the rules. Off while the system proxy is on, since then every app comes through that port.
+    public var proxyClientsRoute: CustomRule.Action?
 
     public init(rules: [CustomRule] = [], installedApps: [InstalledApp] = [], blockQUIC: Bool = false,
-                proxyClientsSkipRules: Bool = false) {
+                proxyClientsRoute: CustomRule.Action? = nil) {
         self.rules = rules
         self.installedApps = installedApps
         self.blockQUIC = blockQUIC
-        self.proxyClientsSkipRules = proxyClientsSkipRules
+        self.proxyClientsRoute = proxyClientsRoute
     }
 
     public var needsApps: Bool { rules.contains { $0.enabled && !$0.apps.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
