@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import V2MacCore
 
 struct ServerListView: View {
     @Environment(AppModel.self) private var model
@@ -442,6 +443,9 @@ private struct ServerTable: View {
         let selected = profiles.filter { ids.contains($0.id) }
         if let only = selected.first, selected.count == 1 {
             Button(only.group?.isManual == true ? "Edit…" : "Edit a Copy…") { model.editServer(only.id) }
+            if only.kind == .outbound, let config = only.config, CleanIPScanner.hostName(of: config) != nil {
+                Button("Find Clean IP…") { model.cleanIPScan = CleanIPRequest(id: only.id) }
+            }
         }
         if !selected.isEmpty {
             // With a mixed selection the rest are added first.

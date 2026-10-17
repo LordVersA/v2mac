@@ -74,6 +74,7 @@ struct MainView: View {
         } content: {
             AddSubscriptionSheet()
         }
+        .sheet(item: $model.cleanIPScan) { CleanIPSheet(profileID: $0.id) }
         .sheet(item: $model.serverEditor) { request in
             ServerEditorSheet(request: request, profile: profile(for: request))
         }

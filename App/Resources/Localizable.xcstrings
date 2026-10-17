@@ -1,6 +1,69 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Find Clean IP": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "یافتن IP تمیز"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Поиск чистого IP"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "查找优选 IP"}}
+      }
+    },
+    "Find Clean IP…": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "یافتن IP تمیز…"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Найти чистый IP…"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "查找优选 IP…"}}
+      }
+    },
+    "Pings %lld random Cloudflare addresses on port %@, then tries the fastest %lld as %@. The server's name stays as SNI and Host.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "%1$lld آدرس تصادفی Cloudflare روی پورت %2$@ پینگ می‌شوند، سپس %3$lld آدرس سریع‌تر به‌جای %4$@ امتحان می‌شوند. نام سرور به‌عنوان SNI و Host باقی می‌ماند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Пингуются %1$lld случайных адресов Cloudflare на порту %2$@, затем %3$lld самых быстрых проверяются как %4$@. Имя сервера остаётся в SNI и Host."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "对 %1$lld 个随机 Cloudflare 地址的 %2$@ 端口进行 ping，然后把最快的 %3$lld 个作为 %4$@ 测试。服务器名称仍用作 SNI 和 Host。"}}
+      }
+    },
+    "No address answered. Your network may block Cloudflare, or the server is not behind it.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "هیچ آدرسی پاسخ نداد. ممکن است شبکه‌ی شما Cloudflare را مسدود کند، یا سرور پشت آن نباشد."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Ни один адрес не ответил. Ваша сеть может блокировать Cloudflare, или сервер не за ним."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "没有地址响应。你的网络可能封锁了 Cloudflare，或者该服务器不在其后。"}}
+      }
+    },
+    "Pinging addresses… %lld of %lld": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "در حال پینگ آدرس‌ها… %1$lld از %2$lld"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Пинг адресов… %1$lld из %2$lld"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "正在 ping 地址… %1$lld / %2$lld"}}
+      }
+    },
+    "Trying the fastest through the server… %lld of %lld": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "در حال امتحان سریع‌ترین‌ها از طریق سرور… %1$lld از %2$lld"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Проверка самых быстрых через сервер… %1$lld из %2$lld"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "正在通过服务器测试最快的地址… %1$lld / %2$lld"}}
+      }
+    },
+    "Add as New Server": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "افزودن به‌عنوان سرور جدید"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Добавить как новый сервер"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "添加为新服务器"}}
+      }
+    },
+    "None got through the server. It may be down, or its name may be blocked: Find Settings under TLS fragment can help with that.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "هیچ‌کدام از طریق سرور رد نشد. ممکن است سرور از کار افتاده باشد یا نامش مسدود شده باشد: «یافتن تنظیمات» زیر فرگمنت TLS می‌تواند کمک کند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Ни один не прошёл через сервер. Он может быть недоступен, или его имя заблокировано: здесь может помочь «Подобрать…» в разделе фрагментации TLS."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "没有一个能通过服务器。服务器可能已宕机，或其名称被封锁：TLS 分片下的“查找设置”可能有帮助。"}}
+      }
+    },
+    "Ping": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "پینگ"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Пинг"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "Ping"}}
+      }
+    },
     "Find Fragment Settings": {
       "localizations": {
         "fa": {"stringUnit": {"state": "translated", "value": "یافتن تنظیمات فرگمنت"}},

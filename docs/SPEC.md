@@ -1209,6 +1209,25 @@ animation, until the top stable speed replaces it.
 
 ---
 
+### 10.4 Clean IP scan
+
+**Find Clean IP…** in a server's context menu, for share-link servers that the CDN can
+carry: VLESS, VMess or Trojan over `ws`, `grpc`, `xhttp` or `httpupgrade`, not
+REALITY, with a host name in the TLS `serverName`, the transport's host or the
+address (`CleanIPScanner.hostName`). The scan:
+
+1. samples 200 addresses from Cloudflare's published IPv4 ranges, at most one per
+   /24, weighted by range size, and lets them past the kill switch;
+2. TCP-pings them on the server's port (2 s, 48 at a time, on the physical
+   interface in TUN mode) and keeps the 16 fastest;
+3. tests each as the server (`pointing`: the address replaced, the host name written
+   as SNI and as the transport's host where those were empty) with `RealDelayTester`.
+
+Results list address, ping and delay, best delay first. "Add as New Server" adds the
+server at the chosen address to Custom Configs, named "<server> · <address>"; the
+original server is left alone, so a subscription update cannot undo the choice.
+shortcut: IPv4 and Cloudflare only.
+
 ## 11. Updates and downloads
 
 All downloads try the local proxy first when the core is running, then fall

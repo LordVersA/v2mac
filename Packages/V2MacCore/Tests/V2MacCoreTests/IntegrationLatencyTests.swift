@@ -44,6 +44,33 @@ struct LatencyIntegrationTests {
         #expect(xrayCount() == 0)
     }
 
+    /// A local VMess-over-WebSocket server that only accepts Host `localhost`, scanned at 127.0.0.1.
+    @Test func cleanIPScanReachesTheServerAtAnotherAddress() async throws {
+        let port = try PortUtil.freePort()
+        let server: JSONValue = [
+            "log": ["loglevel": "none"],
+            "inbounds": [["listen": "127.0.0.1", "port": .number(Double(port)), "protocol": "vmess",
+                          "settings": ["clients": [["id": .string(Fixtures.uuid)]]],
+                          "streamSettings": ["network": "ws", "wsSettings": ["path": "/ws", "host": "localhost"]]]],
+            "outbounds": [["protocol": "freedom"]],
+        ]
+        let dir = try TestSupport.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let runner = CoreRunner(executable: Self.xray, assetDirectory: TestSupport.vendorCore, runDirectory: dir)
+        try await runner.start(config: server, readyPort: port)
+        defer { Task { await runner.stop() } }
+
+        let outbound = try ShareLinkParser.parse("vmess://\(Fixtures.uuid)@localhost:\(port)?type=ws&path=%2Fws#local").config
+        #expect(CleanIPScanner.hostName(of: outbound) == "localhost")
+        let found = await CleanIPScanner.scan(outbound, port: port, addresses: ["127.0.0.1", "127.0.0.2"], tester: tester(LatencyOptions(timeout: 5))) { _ in }
+        #expect(found.first?.ip == "127.0.0.1")
+        #expect(found.first?.realMs != nil)
+        // Without the name as Host the server turns the request away.
+        let wrongHost = outbound.setting("streamSettings", to: (outbound["streamSettings"] ?? [:]).setting("wsSettings", to: ["path": "/ws", "host": "other.example.com"]))
+        let refused = await CleanIPScanner.scan(wrongHost, port: port, addresses: ["127.0.0.1"], tester: tester(LatencyOptions(timeout: 3))) { _ in }
+        #expect(refused.first?.realMs == nil)
+    }
+
     @Test func hundredServersWithBadOnesAmongThemWhileLiveConnectionRuns() async throws {
         // Live connection that must not be disturbed.
         let options = RunOptions(inbound: InboundSettings(port: try PortUtil.freePort()), metricsPort: try PortUtil.freePort())

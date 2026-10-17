@@ -41,6 +41,7 @@ final class AppModel {
     var focusedRule: UUID?
     /// The server editor's sheet (spec 12.7).
     var serverEditor: ServerEditorRequest?
+    var cleanIPScan: CleanIPRequest?
     /// The Add sheet's "Enter Details Manually": the editor opens once that sheet has closed.
     var opensEditorAfterAddSheet = false
     /// A server the table should scroll to; `ServerTable` clears it once it has.
@@ -852,6 +853,14 @@ final class AppModel {
         setvbuf(stdout, nil, _IOLBF, 0)
         let defaults = UserDefaults.standard
         snapshotHook()
+        // `-debugCleanIP YES|<transport>` opens Find Clean IP on the first server it applies to.
+        if let wanted = defaults.string(forKey: "debugCleanIP") {
+            let all = (try? context.fetch(FetchDescriptor<Profile>(sortBy: [SortDescriptor(\.sortIndex)]))) ?? []
+            if let first = all.first(where: { $0.kind == .outbound && $0.config.flatMap(CleanIPScanner.hostName(of:)) != nil && (wanted == "YES" || $0.transport == wanted) }) {
+                windowRequest = .main
+                cleanIPScan = CleanIPRequest(id: first.id)
+            }
+        }
         if let packID = defaults.string(forKey: "debugEnablePack"), let pack = regionPacks.packs.first(where: { $0.id == packID }) {
             Task {
                 await regionPacks.enable(pack)
