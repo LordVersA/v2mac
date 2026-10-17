@@ -125,6 +125,7 @@ import Testing
         #expect(c["outbounds"]?[0]?["protocol"]?.stringValue == "socks")
         #expect(c["outbounds"]?[0]?["settings"]?["address"]?.stringValue == "127.0.0.1")
         #expect(c["outbounds"]?[0]?["settings"]?["port"]?.intValue == 10891)
+        #expect(c["outbounds"]?[0]?["streamSettings"]?["sockopt"]?["interface"]?.stringValue == "lo0")
         // Nothing, DNS included, may leave the forwarder any other way than through the core.
         #expect(c["outbounds"]?.arrayValue?.count == 1)
         #expect(c["routing"] == nil)

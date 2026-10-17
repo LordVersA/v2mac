@@ -874,7 +874,8 @@ restarts the core.
 *forwarder*, runs as root with a fixed config: one `tun` inbound
 (`autoSystemRoutingTable` for `0.0.0.0/0` and `::/0`, `autoOutboundsInterface:
 auto`, sniffing that overrides the destination) and a SOCKS outbound to a
-loopback port of the core. Server and subscription configs never run as root.
+loopback port of the core, bound to `lo0`: left to `autoOutboundsInterface` it is bound
+to the physical interface, where UDP to loopback is dropped. Server and subscription configs never run as root.
 
 **Core side.** While TUN mode is on the core config gets a second inbound,
 `tun-in` (SOCKS, `127.0.0.1`, no auth, UDP on, port fixed for the session), and

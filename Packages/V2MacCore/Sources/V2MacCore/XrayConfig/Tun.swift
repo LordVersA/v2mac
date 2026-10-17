@@ -103,6 +103,9 @@ extension ConfigBuilder {
                 "tag": "core",
                 "protocol": "socks",
                 "settings": ["address": "127.0.0.1", "port": .number(Double(corePort))],
+                // `autoOutboundsInterface` would bind this to the physical interface, and UDP
+                // to loopback bound there is dropped: DNS and every other UDP flow got lost.
+                "streamSettings": ["sockopt": ["interface": "lo0"]],
             ]],
         ]
     }
