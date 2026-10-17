@@ -101,6 +101,35 @@ brew install --cask lordversa/tap/v2mac
 - **语言：** 英语、波斯语（从右到左）、简体中文和俄语。
 - **隐私：** 无统计、无遥测。密钥保存在加密的本地文件中，也可选择保存在钥匙串。
 
+## 按应用分流：macOS 上的 Proxifier 替代品
+
+V2Mac 逐个连接决定哪个应用、哪个网站**走代理**、**直连**或**被阻止**，就像 Proxifier 一样，但内置了 Xray 的协议，因此不再需要两个应用。
+
+- **按应用和主机设置规则。** 应用可以写成 `Telegram.app`、Bundle ID（`com.example.chat`）、通配模式（`*code*`）、进程名（`curl`）或完整路径。主机支持域名、通配符（`*google*`）、IP 范围、geosite/geoip 标签、Clash 规则、hosts 文件和 Adblock 列表。同时包含两者的规则需要两者都匹配。
+- **首个匹配生效。** 规则从上往下检查，拖动即可调整顺序。本地名称（`localhost`、`*.local`）和局域网始终直连。
+- **简单编辑器。** 每个应用或主机一行，带 Proxy / Direct / Block 菜单，支持保存的分组、批量修改，以及 **Discovered** 收件箱：列出流量中新出现的应用和主机，一键即可设置路由。
+- **导入 Proxifier 配置。** **Import…** 读取 `.ppx` 文件，添加前展示每条规则。使用 V2Mac 端口的规则变为 Proxy 规则，Direct 和 Block 规则保持不变，指向其他代理或代理链的规则会被跳过并列出。**Block QUIC (UDP 443)** 与 Proxifier 的同名选项相同，让浏览器回退到 TCP，使主机名能被规则匹配。
+- **规则配置集。** 保存多套命名规则（家、公司、旅行），在工具栏中切换。
+
+<p align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="规则编辑器简单视图：Telegram、Discord、Xcode、Safari 等应用，各自走 Proxy 或 Direct" width="720"></p>
+
+<p align="center"><img src="docs/images/screenshots/rule-editor-advanced.png" alt="规则编辑器高级视图：有序规则，带 Add Rule、Rule Builder 和 Import Proxifier Profile 按钮及 Block QUIC 开关" width="720"></p>
+
+应用规则适用于使用系统代理或连接 V2Mac 端口的应用。在 TUN 模式下无法得知应用名称，因此改用主机和 IP 规则。详见 **[路由规则指南](docs/routing-rules.zh.md)**。
+
+## 连接：查看每个请求的去向
+
+**Connections** 窗口实时列出每个请求：发起的应用、目标主机和端口、已打开时长、发送和接收的字节数，以及路由它的**规则**（Proxy、Direct 或 Block，以及规则名称）。
+
+- 按应用或按主机**分组**，查看哪些应用通信最多、连向哪里，或逐条显示每个连接。
+- 按 All / Open 和路由**筛选**，并搜索应用和目标。
+- **颜色标示原因：** 橙色表示应用自行设置使用代理端口，紫色表示流量回退到导入配置自身的路由。
+- 底部的**事件日志**显示每个连接的打开和关闭。
+- **Map** 视图在地球上显示请求和最活跃的应用。
+- 右键单击连接可直接跳转到其背后的规则（或服务器配置），或为该应用或主机添加新规则。
+
+<p align="center"><img src="docs/images/screenshots/connections.png" alt="Connections 窗口：Mail、Safari、curl 和 Music 的请求，含目标、时长、Proxy/Direct/Block 路由、规则名称和流量" width="720"></p>
+
 ## 截图
 
 所有截图均使用虚构的演示服务器。

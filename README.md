@@ -130,7 +130,7 @@ The **Connections** window lists every request live: the app that made it, the t
 
 <p align="center"><img src="docs/images/screenshots/connections.png" alt="Connections window: Mail, Safari, curl and Music requests with their targets, durations, Proxy, Direct and Block routes, rule names and traffic" width="720"></p>
 
-
+## Screenshots
 
 All screenshots use made-up demo servers.
 
