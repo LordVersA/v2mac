@@ -16,10 +16,12 @@ public enum RoutingPlan: Sendable, Equatable {
     /// Private and region traffic goes direct. An empty list behaves like `.global`.
     case bypass([RegionRoute])
     case direct
+    /// Only traffic matching a Proxy rule goes through the proxy; the rest goes direct.
+    case rulesOnly
 }
 
 public enum RoutingMode: String, Sendable, CaseIterable, Identifiable {
-    case global, bypassRegions, direct
+    case global, bypassRegions, direct, rulesOnly
     public var id: String { rawValue }
 
     public var title: String {
@@ -27,6 +29,7 @@ public enum RoutingMode: String, Sendable, CaseIterable, Identifiable {
         case .global: String(localized: "Global")
         case .bypassRegions: String(localized: "Bypass Regions")
         case .direct: String(localized: "Direct")
+        case .rulesOnly: String(localized: "Rules Only")
         }
     }
 }
@@ -82,6 +85,8 @@ extension ConfigBuilder {
         case .bypass(let routes) where !routes.isEmpty:
             for route in routes { tail += rules(route.domainRules, route.ipRules, to: directTag) }
             hasIPRules = true
+        case .rulesOnly:
+            tail = [["type": "field", "network": "tcp,udp", "outboundTag": .string(directTag)]]
         case .bypass, .global: break
         }
         guard hasIPRules else { return (["domainStrategy": "AsIs", "rules": .array(customRules + tail)], nil) }

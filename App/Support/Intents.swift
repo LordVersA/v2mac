@@ -80,11 +80,11 @@ struct SetKillSwitchIntent: AppIntent {
 }
 
 enum RoutingModeOption: String, AppEnum {
-    case global, bypassRegions, direct
+    case global, bypassRegions, direct, rulesOnly
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Routing Mode"
     static let caseDisplayRepresentations: [RoutingModeOption: DisplayRepresentation] = [
-        .global: "Global", .bypassRegions: "Bypass Regions", .direct: "Direct",
+        .global: "Global", .bypassRegions: "Bypass Regions", .direct: "Direct", .rulesOnly: "Rules Only",
     ]
 }
 

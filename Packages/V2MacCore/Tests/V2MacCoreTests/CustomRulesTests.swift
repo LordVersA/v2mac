@@ -62,6 +62,12 @@ import Testing
         #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "direct"])
     }
 
+    @Test func rulesOnlyProxiesMatchesAndDefaultsDirect() throws {
+        let rules = try #require(try build(.rulesOnly, lists(proxy: "a.com", block: "c.com"))["routing"]?["rules"]?.arrayValue)
+        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "proxy", "direct"])
+        #expect(rules.last?["network"]?.stringValue == "tcp,udp")
+    }
+
     @Test(arguments: [RoutingPlan.global, .bypass([]), .bypass([
         RegionRoute(geositeFile: "sites.dat", geositeTags: ["ir"], geoipFile: "ips.dat", geoipTags: ["ir"]),
     ])], [false, true])

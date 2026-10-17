@@ -540,6 +540,8 @@ With credentials: `"auth": "password", "accounts": [{"user": "...",
   that poison DNS with private addresses, would wrongly match `geoip:private`.
   If no pack is usable, the builder produces the Global routing.
 - **Direct** — one catch-all rule `network: "tcp,udp"` → `direct`.
+- **Rules only** — the user's rules as in Global, then a catch-all `network: "tcp,udp"`
+  → `direct`: only traffic matching a Proxy rule reaches the server. No exit check.
 
 ### 8.2 Custom profiles
 
@@ -1690,7 +1692,7 @@ another address) has no app or bytes. At most 1,000 rows and 2,000 log lines are
 | | Set as system proxy, with its dot (section 9.9) | Off |
 | | Username / Password, optional; the password uses the selected secret store (an older plaintext preference moves there on launch, and is removed only after a successful save) | Empty |
 | | Allow connections from LAN (shows the Mac's LAN address; warning when it is on and there are no credentials) | Off |
-| Routing | Mode: Global / Bypass regions / Direct | Global |
+| Routing | Mode: Global / Bypass regions / Direct / Rules only | Global |
 | | Bypass regions list: enable, status, Update Now, auto-update interval | None enabled |
 | | Custom rules: Proxy / Direct / Block lists, applied with a button, and the Rule Builder (section 8.6) | Empty |
 | Subscriptions | Auto-update subscriptions | On |

@@ -333,10 +333,10 @@ final class ConnectionController {
     }
 
     /// Asks through the local proxy, a few times: the first request to a server can be slow.
-    /// Skipped in Direct mode, where the answer would be the user's own address.
+    /// Skipped in Direct and Rules Only modes, where the answer would be the user's own address.
     func checkExit() {
         exitTask?.cancel()
-        guard Prefs.checkExit, coreState == .running, routingMode != .direct else {
+        guard Prefs.checkExit, coreState == .running, routingMode != .direct, routingMode != .rulesOnly else {
             exit = .unknown
             return
         }
@@ -564,6 +564,7 @@ final class ConnectionController {
         case .global: .global
         case .bypassRegions: .bypass(regionRoutes())
         case .direct: .direct
+        case .rulesOnly: .rulesOnly
         }
     }
 

@@ -6243,6 +6243,29 @@
         }
       }
     },
+    "Rules Only": {
+      "extractionState": "manual",
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فقط قوانین"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Только правила"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅规则"
+          }
+        }
+      }
+    },
     "Global": {
       "localizations": {
         "fa": {
