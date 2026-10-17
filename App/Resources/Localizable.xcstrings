@@ -1,6 +1,97 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Find Fragment Settings": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "یافتن تنظیمات فرگمنت"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Подбор настроек фрагментации"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "查找分片设置"}}
+      }
+    },
+    "Each setting is tried twice against %@, each through its own test core. Your connection is not touched.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "هر تنظیم دو بار روی %@ امتحان می‌شود، هر کدام با هسته‌ی آزمایشی خودش. به اتصال شما دست زده نمی‌شود."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Каждая настройка проверяется дважды на %@, каждая через своё тестовое ядро. Ваше подключение не затрагивается."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "每种设置都会针对 %@ 测试两次，各自使用独立的测试核心。不会影响你当前的连接。"}}
+      }
+    },
+    "No answer": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "بدون پاسخ"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Нет ответа"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "无响应"}}
+      }
+    },
+    "This server works without a fragment.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "این سرور بدون فرگمنت کار می‌کند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Этот сервер работает без фрагментации."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "此服务器无需分片即可使用。"}}
+      }
+    },
+    "Best: %@.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "بهترین: %@."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Лучшая: %@."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "最佳：%@。"}}
+      }
+    },
+    "No setting got an answer. The server may be down or blocked another way.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "هیچ تنظیمی پاسخ نگرفت. ممکن است سرور از کار افتاده باشد یا به روش دیگری مسدود شده باشد."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Ни одна настройка не получила ответа. Сервер может быть недоступен или заблокирован другим способом."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "所有设置都没有得到响应。服务器可能已宕机，或以其他方式被封锁。"}}
+      }
+    },
+    "Choose a server first: the settings are tried against the server you connect with.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "اول یک سرور انتخاب کنید: تنظیمات روی سروری امتحان می‌شوند که با آن وصل می‌شوید."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Сначала выберите сервер: настройки проверяются на сервере, к которому вы подключаетесь."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "请先选择一台服务器：设置会针对你连接所用的服务器进行测试。"}}
+      }
+    },
+    "Close": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "بستن"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Закрыть"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "关闭"}}
+      }
+    },
+    "Use These Settings": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "استفاده از این تنظیمات"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Использовать эти настройки"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "使用这些设置"}}
+      }
+    },
+    "No fragment": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "بدون فرگمنت"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Без фрагментации"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "不分片"}}
+      }
+    },
+    "%@, %@ bytes, %@ ms": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "%1$@، %2$@ بایت، %3$@ میلی‌ثانیه"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "%1$@, %2$@ байт, %3$@ мс"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "%1$@，%2$@ 字节，%3$@ 毫秒"}}
+      }
+    },
+    "Not sure which values work here?": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "مطمئن نیستید چه مقادیری اینجا کار می‌کند؟"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Не знаете, какие значения здесь работают?"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "不确定哪些值在这里有效？"}}
+      }
+    },
+    "Find Settings…": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "یافتن تنظیمات…"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Подобрать…"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "查找设置…"}}
+      }
+    },
     "Import %@ rules": {
       "localizations": {
         "fa": {"stringUnit": {"state": "translated", "value": "وارد کردن قوانین %@"}},

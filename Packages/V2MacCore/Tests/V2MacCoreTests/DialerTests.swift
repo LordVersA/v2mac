@@ -198,3 +198,23 @@ struct LiveSwitchIntegrationTests {
         }
     }
 }
+
+@Suite struct FragmentTunerTests {
+    let hello = FragmentSettings(packets: .tlsHello, length: "10-20", interval: "10-20")
+
+    @Test func picksFastestWorkingCandidate() {
+        let trials = [FragmentTuner.Trial(fragment: nil, ms: nil), .init(fragment: hello, ms: 300), .init(fragment: FragmentSettings(), ms: 200)]
+        #expect(FragmentTuner.pick(trials)?.fragment == FragmentSettings())
+        #expect(FragmentTuner.pick([.init(fragment: nil, ms: nil)]) == nil)
+    }
+
+    @Test func prefersNoFragmentWhenClose() {
+        #expect(FragmentTuner.pick([.init(fragment: hello, ms: 200), .init(fragment: nil, ms: 230)])?.fragment == nil)
+        #expect(FragmentTuner.pick([.init(fragment: hello, ms: 200), .init(fragment: nil, ms: 400)])?.fragment == hello)
+    }
+
+    @Test func candidatesAreDistinctAndValid() {
+        #expect(Set(FragmentTuner.candidates.map { FragmentTuner.Trial(fragment: $0, ms: nil).id }).count == FragmentTuner.candidates.count)
+        for case let f? in FragmentTuner.candidates { #expect(RangeText.isValid(f.length) && RangeText.isValid(f.interval)) }
+    }
+}

@@ -30,6 +30,20 @@ struct LatencyIntegrationTests {
         return out.split(separator: "\n").count
     }
 
+    @Test func fragmentTunerTriesEveryCandidate() async {
+        let options = LatencyOptions(timeout: 5)
+        let make: @Sendable (FragmentSettings?) -> RealDelayTester = { fragment in
+            RealDelayTester(executable: Self.xray, assetDirectory: TestSupport.vendorCore, options: options, dialer: DialerSettings(fragment: fragment))
+        }
+        let reached = OSLockedBox<[FragmentTuner.Trial]>([])
+        let open = await FragmentTuner.run(LatencyTarget(id: UUID(), config: ["protocol": "freedom"], kind: .outbound), tester: make) { trial in reached.mutate { $0.append(trial) } }
+        #expect(open.allSatisfy { $0.ms != nil } && reached.value.count == FragmentTuner.candidates.count)
+        #expect(FragmentTuner.pick(open) != nil)
+        let closed = await FragmentTuner.run(LatencyTarget(id: UUID(), config: ["protocol": "blackhole"], kind: .outbound), rounds: 1, tester: make) { _ in }
+        #expect(closed.allSatisfy { $0.ms == nil } && FragmentTuner.pick(closed) == nil)
+        #expect(xrayCount() == 0)
+    }
+
     @Test func hundredServersWithBadOnesAmongThemWhileLiveConnectionRuns() async throws {
         // Live connection that must not be disturbed.
         let options = RunOptions(inbound: InboundSettings(port: try PortUtil.freePort()), metricsPort: try PortUtil.freePort())

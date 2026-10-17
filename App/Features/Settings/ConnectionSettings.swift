@@ -28,6 +28,7 @@ struct ConnectionSettings: View {
     @AppStorage("dnsServers") private var dnsServers = DNSSettings.defaultServers.joined(separator: ", ")
     @AppStorage("dnsQueryStrategy") private var dnsQueryStrategy = DNSQueryStrategy.useIP.rawValue
     @State private var pending: Task<Void, Never>?
+    @State private var isTuning = false
 
     /// Everything here that needs a new core config.
     private var coreSettings: [String] {
@@ -108,6 +109,9 @@ struct ConnectionSettings: View {
                     rangeField("Piece size (bytes)", text: $fragmentLength, example: FragmentSettings.defaultLength)
                     rangeField("Pause (ms)", text: $fragmentInterval, example: FragmentSettings.defaultInterval)
                 }
+                LabeledContent("Not sure which values work here?") {
+                    Button("Find Settings…") { isTuning = true }
+                }
                 Toggle("Noise packets", isOn: $noiseEnabled)
                 if noiseEnabled {
                     rangeField("Packet size (bytes)", text: $noisePacket, example: NoiseSettings.defaultPacket)
@@ -144,6 +148,11 @@ struct ConnectionSettings: View {
         .animation(.default, value: noiseEnabled)
         .animation(.default, value: dnsEnabled)
         .onChange(of: coreSettings) { restartSoon() }
+        .sheet(isPresented: $isTuning) { FragmentTunerSheet() }
+        #if DEBUG
+        // `-debugFragmentTuner YES` opens the tuner, for `-debugWindowRequest connection`.
+        .task { if UserDefaults.standard.bool(forKey: "debugFragmentTuner") { isTuning = true } }
+        #endif
     }
 
     @ViewBuilder

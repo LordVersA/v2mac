@@ -78,7 +78,8 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     data), so a snapshot can show a settings tab: `-debugWindowRequest about`.
     With `rule-editor`, `-debugFocusRule <part of a rule name>` shows Advanced lit up at that rule.
     With `rule-builder`, `-debugRuleBuilder <step>[:<source>]` (`targets:countries`, `review`) shows a step.
-    With `rule-editor`, `-debugProxifierImport <path to a .ppx>` opens the import review on that file.
+    With `rule-editor`, `-debugProxifierImport <path>` opens the import review on that file (any format `RuleImport` reads).
+    With `connection`, `-debugFragmentTuner YES` opens Find Settings and prints the result.
   - `-debugBackupRoundTrip <path>` (with demo data) writes a backup there, removes the servers, restores
     the file twice and prints what came back.
   - `-debugAddCustom YES` adds four made-up servers (VLESS, Trojan, Shadowsocks) to Custom Configs

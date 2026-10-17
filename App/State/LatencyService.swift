@@ -108,13 +108,14 @@ final class LatencyService {
         targets.flatMap { KillSwitch.hosts(in: $0.config, kind: $0.kind) }
     }
 
-    private func tester(options: LatencyOptions) -> RealDelayTester {
+    /// Also used by one-off probes (fragment tuner, clean IP scan), with their own dialer.
+    func tester(options: LatencyOptions, dialer: DialerSettings = Prefs.dialer) -> RealDelayTester {
         RealDelayTester(
             executable: AppPaths.coreExecutable,
             assetDirectory: AppPaths.assetsDirectory,
             options: options,
             outboundInterface: physicalInterface(),
-            dialer: Prefs.dialer,
+            dialer: dialer,
             allowInsecure: Prefs.allowInsecure
         )
     }

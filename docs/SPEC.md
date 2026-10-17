@@ -596,6 +596,15 @@ helper is bound to the physical interface, because it is the one that dials. Lat
 tests use the same settings. A range that is not `N` or `N-M` falls back to the default.
 Fragmenting helps on some networks and stops TLS handshakes on others, hence off by default.
 
+**Find Settings…** (`FragmentTuner`, under the fragment switch) tries eight
+candidates against the active server: no fragment, four `tlshello` and three `1-3`
+settings, each through its own throwaway core (`RealDelayTester` with that dialer,
+the user's noise and timeout), two at a time and twice; a candidate that fails a
+round is dropped. The fastest that answered both rounds is offered, or no fragment
+when that answered within 20% of it. "Use These Settings" writes the fragment
+switch and values, which restarts a running core like any change here.
+shortcut: one result for all networks; a per-network memory would need the Wi-Fi's identity.
+
 **DNS.** When on, the config's `dns` is `{"servers": [...], "queryStrategy": "UseIP" | "UseIPv4" |
 "UseIPv6", "enableParallelQuery": true}` with the user's servers (default: the two DoH servers of
 the bypass mode, which it then replaces), and the `direct` outbound gets
