@@ -2,17 +2,41 @@
 
 路由模式决定大部分流量怎么走，自定义规则决定例外：哪些网站、国家或地址始终**走代理**、始终**直连**，或被**拦截**。它们在所有模式下都生效，也能和绕过地区一起使用。例如：绕过伊朗，但仍让某个伊朗网站走代理；或者无论用哪种模式都拦截广告。
 
-打开 **Settings → Routing → Custom rules**。这里是一个规则列表，每条规则有名称、开关、动作（Proxy、Direct 或 Block）、适用的应用和匹配的主机。点击 **Add Rule** 或 **Edit…**，拖动规则调整顺序，然后点击 **Apply**；如果已连接，连接会重启以使用新规则。同时写了应用和主机的规则需两者都匹配；留空表示全部。
+### 规则编辑器
 
-从 Proxifier 迁移？**Import Proxifier Profile…** 可读取 `.ppx` 文件。指向 V2Mac 端口的规则变为 Proxy 规则，Direct 和 Block 规则保持不变，指向其他代理或代理链的规则会被跳过并列出。**Block QUIC (UDP 443)** 与 Proxifier 的同名选项作用相同：浏览器改用 TCP，主机名就能交给规则处理。
+点击侧边栏底部的玻璃按钮，或在 **Settings → Routing** 中点击 **Open Rule Editor…**，即可打开 **Rule Editor**。顶部可在两个视图间切换，右侧是规则配置集菜单（可保存多套命名规则，如家和公司，并随时切换）。
 
-应用可以写成 `Spotify.app`、`com.spotify.client`、`*discord*`、进程名（`curl`）或完整路径。应用规则适用于使用系统代理的应用；在 TUN 模式下，所有应用都经隧道到达 V2Mac，应用规则暂时无法区分它们。
+**Simple** 适合日常使用。**Apps** 和 **Hosts** 列出规则所路由的每个应用或网站，每行一个，带 Proxy / Direct / Block 菜单，标签显示它属于哪条规则。相关应用（多个 Xcode 或 VS Code 辅助进程）会合并为可展开的一组。**Discovered** 收集流量中出现但尚无规则覆盖的应用和主机，一键即可设置路由。可多选批量修改、按路由筛选，并用 **Add…** 选择已安装应用或输入域名。修改会自动保存并生效。
 
-**关闭系统代理时**，手动设置为使用 V2Mac 代理端口的应用会跳过自定义规则和地区规则，直接使用服务器。连接窗口以橙色的**应用的代理设置**标签标记这些连接，并且不会将它们添加到规则编辑器的新发现条目中。本地流量仍然直连，启用的 QUIC 阻断仍然生效；Direct 模式仍然只检查 Block 规则，其余流量直连。**开启系统代理时**，该端口的所有流量都遵循规则，因为手动代理和系统代理使用同一个端口。完整 JSON 配置也遵循这一策略。
+<p align="center"><img src="images/screenshots/rule-editor-simple.png" alt="规则编辑器简单视图：Telegram、Discord、Spotify、curl 等应用，各带规则标签和 Proxy 菜单" width="720"></p>
 
-在**连接**窗口中，选择**按主机分组**或**按应用分组**，即可像规则编辑器一样展开和折叠分组。分组显示连接数、活动连接数和总流量；展开后可查看每条连接及其路由标签。搜索、All/Open 和 All/Proxy/Direct/Block 路由筛选在分组前生效。所有模式都保留相同的可排序表格和单行布局，分组默认折叠。选择**不分组**可单独查看每条连接。
+**Advanced** 显示完整的有序列表。每条规则有开关、动作、应用和主机。**Add Rule** 或 **Edit…** 打开规则，拖动调整顺序，**Apply** 保存（运行中的连接会重启）。这里还可以打开 **Rule Builder** 和 **Import Proxifier Profile…**，以及开启 **Block QUIC (UDP 443)**。地址范围和同时包含应用与主机的规则在这里编辑。
 
-<p align="center"><img src="images/screenshots/custom-rules.png" alt="路由设置中的自定义规则部分，Proxy 列表包含 Telegram、AI 服务、一条 Clash 规则和一个通配符域名" width="560"></p>
+<p align="center"><img src="images/screenshots/rule-editor-advanced.png" alt="规则编辑器高级视图：八条有序规则，带 Add Rule、Rule Builder、Import Proxifier Profile 按钮和 Block QUIC 开关" width="720"></p>
+
+同时包含应用和主机的规则需两者都匹配；空字段匹配一切。规则在所有模式下都生效：在 **Rules Only** 模式下只有 Proxy 规则会走服务器，**Settings → Routing → Traffic that matches no rule** 决定其余流量去向（跟随模式、Proxy、Direct 或 Block）。
+
+### 从 Proxifier 导入
+
+从 Proxifier 迁移？在 Simple 视图点击 **Import…**（或 Advanced 中的 **Import Proxifier Profile…**），选择 `.ppx` 文件。确认前不会添加任何内容：预览会列出每条规则的应用、主机和动作。
+
+<p align="center"><img src="images/screenshots/proxifier-import.png" alt="导入 Proxifier 配置预览：五条待添加规则、一条因使用其他代理而跳过的规则，以及将开启 Block QUIC" width="720"></p>
+
+- 发往本机代理（V2Mac 端口）的规则变为 **Proxy** 规则。
+- **Direct** 和 **Block** 规则保持不变；已禁用的规则导入后仍为禁用。
+- 使用其他代理或代理链的规则会被跳过，并以橙色列出名称。
+- Proxifier 的 **Block UDP 443** 选项会开启 **Block QUIC**。
+- 导入的规则排在现有规则之后，你自己的规则保持优先。
+
+### 应用
+
+应用可以写成 `Spotify.app`、`com.spotify.client`、`*discord*`、进程名（`curl`）或完整路径。应用规则适用于使用系统代理或直接连接 V2Mac 代理端口的应用。TUN 连接会跳过应用规则，因为转发进程无法得知应用身份；主机/IP 规则和默认路由仍然生效。导入的 JSON 配置中的进程规则同样如此。
+
+**关闭系统代理时**，手动设置为使用 V2Mac 代理端口的应用会跳过自定义规则和地区规则，直接使用服务器。连接窗口以橙色的 **App's proxy setting** 标记这些连接，且不会将其加入 Discovered。本地流量仍然直连，Block QUIC 仍然生效，Direct 模式仍只使用 Block 规则后将其余流量直连。**开启系统代理时**，经该端口的所有流量都遵循规则，因为手动代理和系统代理共用同一端口。完整 JSON 配置也遵循此策略。
+
+在 **Connections** 中，每行显示路由它的规则，右键可跳转到该规则。**By Host** 和 **By Application** 可像规则编辑器一样把流量折叠为可展开的分组。
+
+<p align="center"><img src="images/screenshots/routing-settings.png" alt="路由设置：Rules Only 模式、未匹配规则的流量直连、Bypass regions 和 Open Rule Editor" width="560"></p>
 
 **规则的检查顺序**
 
@@ -44,7 +68,7 @@
 
 ### Rule Builder
 
-不想手写规则？点击规则下方的 **Rule Builder…**，它会分三步帮你生成规则。
+不想手写规则？点击规则编辑器 Advanced 视图中的 **Rule Builder…**，它会分三步帮你生成规则。
 
 **1. 动作（Action）。** 选择要怎么处理：Proxy、Direct 或 Block。也可以从常用方案开始，例如让本国流量直连、拦截广告和跟踪器，或让 AI 服务、Telegram、流媒体走代理。
 
@@ -66,7 +90,7 @@
 
 **3. 确认（Review）。** 查看将要写入的每个条目及其类型。相同动作的规则中已有的条目会被标出，不会重复添加。点击 **Add Rules**，它们会保存为一条以日期命名的新规则：Block 规则放在列表顶部，其他放在底部。之后可以在设置中重命名、修改或移动它。
 
-<p align="center"><img src="images/screenshots/rule-builder-review.png" alt="Rule Builder 确认步骤，列出 Direct 列表的十三条规则" width="720"></p>
+<p align="center"><img src="images/screenshots/rule-builder-review.png" alt="Rule Builder 确认步骤，列出新 Direct 规则的九个条目，三个已存在的条目显示为灰色" width="720"></p>
 
 **示例**
 

@@ -2,19 +2,41 @@
 
 The routing mode decides what happens to most traffic. Custom rules decide the exceptions: which sites, countries or addresses always go **through the proxy**, always go **direct**, or are **blocked**. They work in every mode and next to Bypass regions, so you can, for example, bypass Iran but still send one Iranian site through the proxy, or block ads whichever mode you use.
 
-Open **Settings → Routing → Custom rules**. It is one list of rules, each with a name, an on/off switch, an action (Proxy, Direct or Block), the apps it applies to and the hosts it matches. Click **Add Rule** or **Edit…**, drag rules to reorder them, and click **Apply**; a running connection restarts to use them. A rule with both apps and hosts needs both to match; an empty field matches everything.
+### The Rule Editor
 
-In **Rule Editor → Simple**, use **Apps** and **Hosts** to manage saved groups. **Discovered** keeps new connections in a separate inbox. Expand a group to adjust its members, use each row's route menu, or select several rows for a bulk change. **Add…** lets you pick installed apps or enter domains without waiting for a connection. Changes save automatically.
+Open the **Rule Editor** from the glass button at the foot of the sidebar, or with **Open Rule Editor…** in **Settings → Routing**. It has two views, switched at the top, and a rule profile menu on the right (keep several named rule sets, such as home and work, and switch between them).
 
-Coming from Proxifier? **Import…** in the Simple editor reads a `.ppx` file and lets you review it before adding rules after the existing ones. **Import Proxifier Profile…** is also available in Advanced/settings. Rules to V2Mac's port become Proxy rules, Direct and Block rules stay as they are, and rules to other proxies or chains are skipped and named. **Block QUIC (UDP 443)** does what Proxifier's option does: browsers fall back to TCP, so their host names reach the rules.
+**Simple** is for everyday use. **Apps** and **Hosts** list everything your rules route, one row per app or site, each with a Proxy / Direct / Block menu; a tag shows which rule it belongs to. Related apps (several Xcode or VS Code helpers) are folded into one group that you can expand. **Discovered** collects apps and hosts seen in your traffic that no rule covers yet, so you can route them with one click. Select several rows to change them together, filter by route, and use **Add…** to pick installed apps or type domains. Changes save and apply on their own.
+
+<p align="center"><img src="images/screenshots/rule-editor-simple.png" alt="Rule Editor, Simple view: apps such as Telegram, Discord, Spotify and curl, each with its rule tag and a Proxy menu" width="720"></p>
+
+**Advanced** shows the whole ordered list. Each rule has a switch, an action, its apps and its hosts. **Add Rule** or **Edit…** opens a rule, drag to reorder, and **Apply** saves (a running connection restarts). From here you also open the **Rule Builder** and **Import Proxifier Profile…**, and turn on **Block QUIC (UDP 443)**. Address ranges and rules that combine apps and hosts are edited here.
+
+<p align="center"><img src="images/screenshots/rule-editor-advanced.png" alt="Rule Editor, Advanced view: eight ordered rules with Add Rule, Rule Builder and Import Proxifier Profile buttons and the Block QUIC switch" width="720"></p>
+
+A rule with both apps and hosts needs both to match; an empty field matches everything. Rules work in every mode: in **Rules Only** mode only Proxy rules reach the server, and **Settings → Routing → Traffic that matches no rule** decides where everything else goes (follow the mode, Proxy, Direct or Block).
+
+### Import from Proxifier
+
+Coming from Proxifier? Click **Import…** in the Simple view (or **Import Proxifier Profile…** in Advanced) and pick your `.ppx` file. Nothing is added until you confirm: the review lists every rule with its apps, hosts and action.
+
+<p align="center"><img src="images/screenshots/proxifier-import.png" alt="Import Proxifier profile review: five rules to add, one skipped rule that uses another proxy, and Block QUIC to be enabled" width="720"></p>
+
+- Rules that send to a proxy on this Mac (V2Mac's port) become **Proxy** rules.
+- **Direct** and **Block** rules stay as they are; disabled rules come in disabled.
+- Rules that use another proxy or a chain are skipped and named in orange.
+- Proxifier's **Block UDP 443** option turns on **Block QUIC**.
+- Imported rules go after your existing ones, so your own rules keep priority.
+
+### Apps
 
 Apps can be written as `Spotify.app`, `com.spotify.client`, `*discord*`, a process name (`curl`) or a full path. App rules work for apps that use the system proxy or connect directly to V2Mac's proxy port. TUN connections skip app rules because the forwarder loses app identity; host/IP rules and the default route still apply. This also applies to process rules in imported JSON configs.
 
 With **System Proxy off**, apps pointed at V2Mac's proxy port skip custom and region rules and use the server. Connections marks these in orange as **App's proxy setting** and leaves them out of newly discovered rule-editor entries. Local traffic stays direct, Block QUIC still applies, and Direct mode still uses only Block rules before sending everything else direct. With **System Proxy on**, all traffic through that port follows the rules, since manual and system proxy connections share the same port. Full JSON configs follow this policy too.
 
-In **Connections**, use **By Host** or **By Application** to fold traffic into expandable groups like the rule editor. Groups show connection counts, open connections and total traffic; expand them to inspect individual connections and their routing labels. Search, All/Open and the All/Proxy/Direct/Block route filter apply before grouping. All modes keep the same sortable table and single-line rows; groups start collapsed. **No grouping** shows individual connections.
+In **Connections**, every row shows the rule that routed it, and a right-click jumps to that rule. **By Host** and **By Application** fold traffic into expandable groups like the rule editor.
 
-<p align="center"><img src="images/screenshots/custom-rules.png" alt="Custom rules section in Routing settings, showing a Proxy list with Telegram, AI services, a Clash rule and a wildcard domain" width="560"></p>
+<p align="center"><img src="images/screenshots/routing-settings.png" alt="Routing settings: mode Rules Only, traffic that matches no rule goes Direct, Bypass regions and Open Rule Editor" width="560"></p>
 
 **How rules are checked**
 
@@ -46,7 +68,7 @@ Anything that is not a rule is skipped and named under the editor, so a typo nev
 
 ### Rule Builder
 
-Rather not type rules? Click **Rule Builder…** under the rules. It writes them for you in three steps.
+Rather not type rules? Click **Rule Builder…** in the Advanced view of the Rule Editor. It writes them for you in three steps.
 
 **1. Action.** Choose what should happen: Proxy, Direct or Block. Or start from a common setup, such as keeping your own country direct, blocking ads and trackers, or sending AI services, Telegram or streaming through the proxy.
 
@@ -68,7 +90,7 @@ Rather not type rules? Click **Rule Builder…** under the rules. It writes them
 
 **3. Review.** See every entry that will be written and what kind it is. Entries your rules with the same action already have are marked and not added twice. Click **Add Rules** to save them as one new rule named after the date: a Block rule goes to the top of the list, the others to the bottom. You can rename, edit or move it later in Settings.
 
-<p align="center"><img src="images/screenshots/rule-builder-review.png" alt="Rule Builder review step listing thirteen rules for the Direct list" width="720"></p>
+<p align="center"><img src="images/screenshots/rule-builder-review.png" alt="Rule Builder review step listing nine entries for a new Direct rule, with three already in the list greyed out" width="720"></p>
 
 **Examples**
 
