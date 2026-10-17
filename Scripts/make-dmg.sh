@@ -34,7 +34,9 @@ APP="$BUILD_DIR/Build/Products/Release/V2Mac.app"
 # them. WidgetKit loads the extension only with its sandbox entitlement.
 CODESIGN_ARGS=(--force --sign "$SIGN_IDENTITY")
 [[ "$SIGN_IDENTITY" != "-" ]] && CODESIGN_ARGS+=(--options runtime --timestamp)
-/usr/bin/codesign "${CODESIGN_ARGS[@]}" "$APP/Contents/Helpers/xray"
+/usr/bin/codesign "${CODESIGN_ARGS[@]}" --identifier io.github.lordversa.v2mac.xray "$APP/Contents/Helpers/xray"
+/usr/bin/codesign "${CODESIGN_ARGS[@]}" --identifier io.github.lordversa.v2mac.privileged \
+  "$APP/Contents/Library/HelperTools/V2MacPrivilegedHelper"
 /usr/bin/codesign "${CODESIGN_ARGS[@]}" --entitlements "$ROOT/Extensions/Control/V2MacControl.entitlements" \
   "$APP/Contents/PlugIns/V2MacControl.appex"
 /usr/bin/codesign "${CODESIGN_ARGS[@]}" --entitlements "$ENTITLEMENTS" "$APP"

@@ -20,7 +20,7 @@ struct BackupSection: View {
         } header: {
             Text("Backup")
         } footer: {
-            Text("A .v2m file with your subscriptions and their servers, pasted configs, favorites and settings. It holds subscription links and server passwords, so keep it private. The proxy and administrator passwords are not in it. Restoring adds what is missing here and takes the backup's settings.")
+            Text("A .v2m file with your subscriptions and their servers, pasted configs, favorites and settings. It holds subscription links and server passwords, so keep it private. The local proxy password and registered WARP credentials are not in it. Restoring adds what is missing here and takes the backup's settings.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

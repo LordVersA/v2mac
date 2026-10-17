@@ -237,8 +237,8 @@ import Testing
     @Test func appleScriptEscapesQuotesAndBackslashes() {
         let script = TunHelper.appleScript(command: #"echo "a\b""#, prompt: "Allow?")
         #expect(script == #"do shell script "echo \"a\\b\"" with prompt "Allow?" with administrator privileges"#)
-        let saved = TunHelper.appleScript(command: "true", prompt: "Allow?", user: "me", password: #"p"w"#)
-        #expect(saved == #"do shell script "true" user name "me" password "p\"w" with administrator privileges"#)
+        #expect(!script.contains("user name"))
+        #expect(!script.contains("password"))
     }
 
     @Test func rootDirectoryIsPerUserAndPerApp() {

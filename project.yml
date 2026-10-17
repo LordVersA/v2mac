@@ -26,12 +26,19 @@ targets:
     platform: macOS
     sources:
       - App
+      - Shared
     dependencies:
       - package: V2MacCore
       - target: V2MacControl
+      - target: V2MacPrivilegedHelper
+        link: false
     preBuildScripts:
       - name: Embed Xray core
         script: '"$SRCROOT/Scripts/embed-core.sh"'
+        basedOnDependencyAnalysis: false
+    postBuildScripts:
+      - name: Embed privileged helper
+        script: '/bin/bash "$SRCROOT/Scripts/embed-privileged-helper.sh"'
         basedOnDependencyAnalysis: false
     settings:
       base:
@@ -41,7 +48,7 @@ targets:
         INFOPLIST_FILE: App/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/Resources/v2mac.entitlements
         CODE_SIGN_STYLE: Automatic
-        ENABLE_HARDENED_RUNTIME: NO
+        ENABLE_HARDENED_RUNTIME: YES
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       configs:
@@ -51,6 +58,28 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac.dev
           PRODUCT_NAME: V2MacDev
           PRODUCT_MODULE_NAME: V2Mac
+  V2MacPrivilegedHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - PrivilegedHelper/HelperDaemon.swift
+      - Shared
+    dependencies:
+      - package: V2MacCore
+    settings:
+      base:
+        PRODUCT_NAME: V2MacPrivilegedHelper
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac.privileged
+        INFOPLIST_FILE: PrivilegedHelper/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_EMIT_LOC_STRINGS: NO
+        SKIP_INSTALL: YES
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac.dev.privileged
   # The Control Center switch (spec 12.4). WidgetKit needs the extension sandboxed.
   V2MacControl:
     type: app-extension
@@ -76,11 +105,13 @@ targets:
     platform: macOS
     sources:
       - Tests/V2MacAppTests
+      - Shared
       - App/State/ConnectionController.swift
       - App/State/ConnectionWatcher.swift
       - App/Features/Connections/ConnectionGroup.swift
       - App/State/AutomaticLatencyResults.swift
       - App/State/TunController.swift
+      - App/State/PrivilegedHelperService.swift
       - App/State/LifecycleMonitor.swift
       - App/State/LogStore.swift
       - App/State/NotificationService.swift

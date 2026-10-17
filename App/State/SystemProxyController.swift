@@ -28,6 +28,7 @@ final class SystemProxyController {
     /// Points the system proxy at `port`.
     func apply(port: Int) async {
         guard isEnabled else { return }
+        session.requestSystemProxy(port: port)
         try? "\(port)\n".write(to: flag, atomically: true, encoding: .utf8)
         switch await session.startSession() {
         case .started:
@@ -43,6 +44,7 @@ final class SystemProxyController {
 
     /// The helper turns the proxies off within a moment.
     func clear() {
+        session.requestSystemProxy(port: nil)
         try? FileManager.default.removeItem(at: flag)
     }
 

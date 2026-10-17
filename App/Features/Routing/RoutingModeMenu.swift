@@ -50,7 +50,7 @@ struct TunToggle: View {
         .toggleStyle(.switch)
         .controlSize(.mini)
         .fixedSize()
-        .help("TUN mode: route all traffic on this Mac through the proxy. Asks for an administrator password once each time V2Mac is opened.")
+        .help("TUN mode: route all traffic on this Mac through the proxy. Requires the privileged helper or macOS administrator access.")
         .accessibilityLabel("TUN mode")
     }
 }

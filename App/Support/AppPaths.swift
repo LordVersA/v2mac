@@ -231,19 +231,6 @@ enum Prefs {
         try SecretStore.shared.set(password, for: .proxyPassword)
     }
 
-    /// An administrator account the user chose to save, so the root helper starts without the
-    /// system's prompt (spec 9.5). The password is in the selected secret store.
-    @MainActor static var adminAccount: (user: String, password: String)? {
-        guard let user = defaults.string(forKey: "adminUser"), !user.isEmpty,
-              let password = try? SecretStore.shared.string(.adminPassword) else { return nil }
-        return (user, password)
-    }
-
-    @MainActor static func setAdminAccount(_ account: (user: String, password: String)?) throws {
-        try SecretStore.shared.set(account?.password, for: .adminPassword)
-        defaults.set(account?.user, forKey: "adminUser")
-    }
-
     /// Spec 9.9: point the system proxy at the local port while connected.
     static var systemProxy: Bool {
         get { defaults.bool(forKey: "systemProxy") }

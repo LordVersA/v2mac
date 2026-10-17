@@ -49,6 +49,7 @@ final class KillSwitchController {
         // A block left from before is replaced; the new one shows as a new marker.
         let before = markerDate
         FileManager.default.createFile(atPath: flag.path, contents: nil)
+        session.requestKillSwitch(true)
         switch await session.startSession() {
         case .started: break
         case .cancelled: return fail(String(localized: "Administrator access was cancelled."), current)
@@ -85,6 +86,8 @@ final class KillSwitchController {
         try? FileManager.default.removeItem(at: flag)
         try? FileManager.default.removeItem(at: allowFile)
         allowed = []
+        session.requestKillSwitch(false)
+        session.requestAllowedAddresses([])
         guard FileManager.default.fileExists(atPath: marker.path) else {
             state = .off
             return
@@ -107,12 +110,14 @@ final class KillSwitchController {
         let new = Set(await KillSwitch.addresses(of: hosts)).subtracting(allowed)
         guard !new.isEmpty else { return }
         allowed.formUnion(new)
+        session.requestAllowedAddresses(allowed.sorted())
         try? (allowed.sorted().joined(separator: "\n") + "\n").write(to: allowFile, atomically: true, encoding: .utf8)
     }
 
     private func fail(_ message: String, _ current: Int) -> Bool {
         guard current == generation else { return false }
         try? FileManager.default.removeItem(at: flag)
+        session.requestKillSwitch(false)
         state = .failed(message)
         return false
     }

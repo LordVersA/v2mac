@@ -84,7 +84,7 @@ Answers given during the design interview.
 | 30 | Licence | GPL-3.0. |
 | 31 | Release | Ad-hoc signed DMG on GitHub Releases; update check via GitHub; notarization later. |
 | 32 | Project layout | Thin app target + local Swift package `V2MacCore`; XcodeGen; Swift Testing. |
-| 33 | TUN mode | Added after v1. Root helper started through the administrator prompt once per app session, no Network Extension, no paid developer account. Off by default. |
+| 33 | TUN mode | Off by default. Apple-signed builds use an approved SMAppService daemon; ad-hoc builds use the macOS administrator dialog each session. No Network Extension. |
 
 ### 2.1 Defaults chosen by the author (not asked; change freely)
 
@@ -110,7 +110,7 @@ change without affecting the rest.
    disk. "Copy All" in the panel.
 6. **Subscription User-Agent.** `v2mac/<version>`, editable in Settings.
 7. **Secrets.** Server and subscription secrets stay with the app data (owner-only
-   directory). Proxy and administrator passwords and WARP credentials use a local
+   directory). The local proxy password and WARP credentials use a local
    AES-GCM encrypted file by default; its random 256-bit key is stored beside it.
    Keychain storage is optional and off by default (section 13), because ad-hoc
    builds can trigger new access prompts after updates.
@@ -817,11 +817,12 @@ Every failed state offers "Show Logs", which opens the log panel.
 (`tunEnabled`). The active server and previous running state are restored too;
 with Reconnect on launch enabled, a previously running connection resumes with
 the saved TUN setting. The system proxy starts off (`Prefs.registerDefaults`
-clears `systemProxy`); the kill switch keeps its setting. Before macOS's
-own administrator prompt (not with a saved administrator account, which needs
-none), `AdminConsent` explains what the helper changes, that nothing is saved or
-sent, and links to the source on GitHub. Not Now cancels as if the prompt was
-cancelled; "Don't show this again" (`adminConsentShown`) skips it afterwards.
+clears `systemProxy`); the kill switch keeps its setting. Apple-signed builds use
+`SMAppService.daemon`: a cancellable notice precedes registration, followed by
+approval in System Settings → General → Login Items & Extensions. Approval is
+retained across launches. Ad-hoc builds retain the macOS administrator dialog;
+`AdminConsent` explains it first, links to the source, and offers Not Now and
+"Don't show this again" (`adminConsentShown`). Neither path collects a password.
 
 Off by default. A switch in the connection bar and in the menu bar panel turns
 it on; the choice is remembered (`tunEnabled`). Changing it while connected
@@ -842,22 +843,51 @@ Mac, or that never dial (`blackhole`, `dns`, `loopback`) are left alone. Rules
 of a custom profile that named its proxy inbounds also apply to `tun-in`.
 Traffic counters are the sum of `mixed-in` and `tun-in`.
 
-**Root helper.** No Network Extension, so no paid developer account. On the
-first connect with TUN mode on, the app runs a shell script as root through
-`osascript` ("with administrator privileges"): one password prompt per app
-session. The helper:
+**Managed root helper.** `V2MacPrivilegedHelper` is embedded at
+`Contents/Library/HelperTools/`, with its launchd plist in
+`Contents/Library/LaunchDaemons/`. The Mach service and plist label are the app's
+bundle identifier plus `.privileged`; Debug has its own identifier and files.
+`SMAppService` launches it on demand after macOS approval. Its XPC listener and
+the app's XPC connection enforce the exact peer identifier and the same Apple
+certificate Team ID on every message; Release also rejects debugging entitlements.
+No caller-supplied command, executable path, configuration JSON, UID or PID is accepted.
+The UID and PID come from the authenticated connection; the PID is used only for
+session lifetime, never for code-signing authorization.
 
-- is passed inline (`sh -c`), together with the forwarder config's JSON, so no
+The daemon accepts only validated ports, `utun100`–`utun65535` names, booleans,
+and at most 4096 literal IP addresses in a bounded message. It builds the fixed
+forwarder and firewall configuration itself. It copies the bundled Xray into a
+root-owned 0700 staging directory, rejects symlinks, enforces root ownership and
+checks the copy's signature against the same publisher and the app's `.xray`
+identifier before hashing or executing it. In-app downloaded cores remain
+unprivileged; managed root sessions always use the signed bundled core.
+
+The app sends snapshots of controller state held in memory over authenticated XPC;
+it never imports privilege requests from user-writable files in the managed path.
+The daemon writes them to its own root-owned request directory; root never
+reads or writes the app's mutable run directory. A heartbeat propagates changes
+and detects transport or firewall failures. Only one managed session per app flavor
+may run at a time, avoiding conflicting system proxy or firewall updates between users.
+
+**Shared session implementation.** Both the daemon and ad-hoc fallback run the existing
+shell helper. The fallback uses `osascript` ("with administrator privileges") and one
+macOS password dialog per app session, preserving support for unsigned releases.
+The shell helper:
+
+- is passed inline (`sh -c`), together with the fixed forwarder config's JSON, so no
   script or config file that a process without root could change is run;
 - copies the core binary to `/var/run/v2mac-tun-<uid>/` (root-owned), checks
-  its SHA-256 against the one the app took before the prompt, writes the
+  its SHA-256 against the daemon's verified root copy (the app's pre-prompt hash in the fallback), writes the
   config next to it, and only ever runs those copies;
-- takes its orders from two flag files in `run/`: `tun.session` (stay alive) and
+- takes its orders from two flag files: `tun.session` (stay alive) and
   `tun.on` (forwarder up). They carry no data, so a process without root can
   only switch the TUN on or off, not change what runs as root;
 - stops the forwarder and exits when the app's process is gone or `tun.session`
   is removed. Routes belong to the `utun` interface and vanish with it, also
-  after a crash. Nothing is installed and nothing survives a reboot.
+  after a crash. Managed-helper approval survives a reboot; live network requests do not.
+  Explicit stop and unregister clear the TUN, proxy and firewall requests before shutdown.
+  Loss of the XPC client stops its session while preserving an armed kill switch;
+  an idle daemon exits and is relaunched on demand for the next signed app session.
 
 **Lifecycle.** The TUN is up while the core is connecting, switching or
 connected, and comes down on disconnect, on a core that stays failed, and on
@@ -906,12 +936,11 @@ app/helper crashes. "Stop connection" prevents the app from continuing with only
 proxy, but cannot block other apps' direct traffic. The kill switch (section 9.8) does.
 
 **One session, three uses.** The same root helper also sets the system proxy (9.9) and
-holds the kill switch (9.8); whichever needs it first starts it, with one administrator
-prompt per app session. Settings → General → "Administrator access" can save an
-administrator account: the password is kept in the selected secret store, checked before it is saved,
-and handed to `osascript` on standard input (`do shell script … user name … password …`),
-so no prompt appears and the password is never in the process list. A saved password the
-system refuses (`-60007`) is forgotten and the prompt is shown instead. The helper's
+holds the kill switch (9.8); whichever needs it first starts it. Signed builds reuse
+managed-helper approval; ad-hoc builds use one administrator prompt per app session.
+macOS handles all approval and password dialogs;
+V2Mac never receives, stores or supplies it. There is no administrator-account form
+in Settings. The helper's
 folder is named after the data folder (`/var/run/v2mac-dev-tun-<uid>` for the
 development build), so the two apps never share one.
 
@@ -1561,7 +1590,7 @@ too) is base64 text, 76 characters a line, of one JSON object (`Backup`, package
 - `settings`: every setting that has a default (section 13), the notification switches,
   routing mode, TUN switch, pack intervals, User-Agent and the enabled region packs.
 
-Not in it: the proxy and administrator passwords, the registered WARP credentials,
+Not in it: the local proxy password, the registered WARP credentials,
 the Keychain storage choice, the active and recent servers, traffic totals, delays.
 
 A restore asks first, saying when and with which version the file was made and how many
@@ -1645,8 +1674,8 @@ another address) has no app or bytes. At most 1,000 rows and 2,000 log lines are
 | | Restart core after sleep or network change | On |
 | | Count traffic usage (section 12.8) | On |
 | | Check for app updates | On |
+| | Privileged helper: status, Enable Helper…, Open Login Items, Remove Helper. Removal stops the current connection; ad-hoc builds explain the per-session fallback | Not registered |
 | | Store secrets in Apple Keychain: opt in after a notice about the macOS password prompt; otherwise use the encrypted local file | Off |
-| | Administrator access: account and password, kept in the selected secret store (section 9.5) | Not saved |
 | | Backup: Export Backup…, Restore Backup… (section 12.9) | — |
 | Proxy | Port | 10808 |
 | | Set as system proxy, with its dot (section 9.9) | Off |
@@ -1689,8 +1718,8 @@ or DNS while connected restarts the core.
 ### Secret storage
 
 `useKeychain` is a device-local preference, false when absent and excluded from backups.
-With it off, startup and all secret operations avoid Keychain entirely. `SecretStore`
-encrypts the proxy password, saved administrator password and WARP JSON with CryptoKit
+With it off, startup and secret reads/writes avoid Keychain entirely. `SecretStore`
+encrypts the local proxy password and WARP JSON with CryptoKit
 AES-GCM, using a random 256-bit key stored in the same 0700 directory; both files are
 0600. No built-in/shared password is used. This hides plaintext at rest but does not
 protect against software running as the same user, since it can read the key too.
@@ -1712,6 +1741,14 @@ repeated prompts. Settings exposes read/write errors and an explicit retry. A co
 encrypted file or a missing key is never silently replaced, and connection startup
 refuses to run with unreadable secrets rather than dropping proxy authentication.
 Successful storage changes refresh the WARP account and reconnect a running core.
+
+Administrator-password storage is retired. Local encrypted files are scrubbed of the
+old `adminPassword` field when opened, preserving the other secrets. Keychain reads
+and migrations never read or copy that item. For accounts saved by an older version,
+Secret storage offers an explicit cleanup button that deletes only the old Keychain
+item and removes the old `adminUser` preference after success. This can require macOS
+permission; it is never run automatically at launch. Failed cleanup stays visible
+and can be retried. These legacy credentials are never reused to authorize the helper.
 
 ## 14. Files on disk
 
@@ -1740,11 +1777,18 @@ Successful storage changes refresh the WARP account and reconnect a running core
 
 /var/run/v2mac-killswitch-<uid>  pf's enable token while the kill switch is up
 
-Keychain (login, opt-in only): service = bundle id; accounts proxyPassword,
-adminPassword and warpAccount. Debug uses its own bundle id and data directory.
+/var/run/v2mac-privileged-<uid>/  0700, managed-session staging
+├─ xray                          root-owned, signature verified before execution
+└─ requests/                     0700, validated XPC state only
+
+Keychain (login, opt-in only): service = bundle id; accounts proxyPassword and
+warpAccount. The retired adminPassword item is only deleted on explicit request.
+Debug uses its own bundle id and data directory.
 
 v2mac.app/Contents/
 ├─ MacOS/v2mac
+├─ Library/HelperTools/V2MacPrivilegedHelper
+├─ Library/LaunchDaemons/io.github.lordversa.v2mac.privileged.plist
 ├─ Helpers/xray
 └─ Resources/geoip.dat, geosite.dat, RegionPacks.json
 ```
@@ -1805,6 +1849,12 @@ v2mac/
   that fail Gatekeeper.
 - Keep signing identity and notarization as script parameters so Developer ID
   can be added later without restructuring.
+- Build the managed daemon as a separate tool, embed its Info.plist, and sign it
+  and the bundled core before the outer app, using the same Apple identity.
+  `Scripts/embed-privileged-helper.sh` emits the matching per-flavor launchd plist.
+  `Scripts/make-dmg.sh` also signs the daemon and assigns the core its app-specific
+  `.xray` identifier. The existing ad-hoc release pipeline remains supported via
+  the system-dialog fallback. No signing identity or trust setting is created by the app.
 
 ### 15.2 Licensing
 
@@ -1837,16 +1887,16 @@ v2mac/
 - The app only ever terminates a process whose PID it recorded and whose
   executable path matches its own core.
 - The root helper (TUN mode, system proxy, kill switch) is the only part that
-  runs as root, and only after the system's administrator prompt or with an
-  administrator account the user saved. What runs as root is a fixed forwarder
+  runs as root, and only after managed-helper approval or the system's administrator
+  prompt. What runs as root is a fixed forwarder
   config, fixed firewall rules and a copy of the core in a root-owned directory;
   see section 9.5. From the app it takes only flags, a port and a list of
   addresses, each checked. The helper also changes the system's DNS servers to
   fixed public addresses while the tunnel is up, in memory only, and the system
   proxy while asked to.
-- A saved administrator password lets software that can read the selected secret
-  store act as administrator through it; the setting says so. Default local encryption
-  keeps its key on disk and does not isolate secrets from other apps run by the same user.
+- Administrator passwords are handled only by macOS, never by V2Mac. Default local
+  encryption of proxy and WARP credentials keeps its key on disk and does not isolate
+  those secrets from other apps run by the same user.
 
 ---
 

@@ -20,8 +20,8 @@
 - **Kill switch:** optional, off by default. While V2Mac is connected or reconnecting, only the server, the local network and name servers can be reached; everything else is blocked, also when the connection drops or V2Mac stops unexpectedly, until you disconnect. It uses the macOS firewall (pf).
 - **Cloudflare WARP:** register a free WARP device over MASQUE in Settings, enter a WARP+ license key to use its plan, and either add WARP as a server or send traffic out through WARP behind your own server, so sites see a Cloudflare address.
 - **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel.
-- **Administrator access once:** TUN mode, the system proxy and the kill switch share one administrator prompt per launch, or none if you save the password.
-- **Optional Keychain:** passwords and WARP credentials use an encrypted local file by default, without a Keychain prompt. Settings → General can enable Apple Keychain after explaining the macOS password prompt. The local encryption key stays beside the file, so apps running as your user can decrypt it. Older Keychain secrets remain there until you enable the option or re-enter them locally.
+- **Managed administrator access:** Apple-signed builds use an `SMAppService` helper for TUN, DNS, the system proxy and the kill switch. Approve it once in macOS; manage or remove it in Settings → General → Privileged helper. Ad-hoc builds keep one macOS administrator prompt per app session. V2Mac never collects or saves your administrator password.
+- **Optional Keychain:** the local proxy password and WARP credentials use an encrypted local file by default, without a Keychain prompt. Settings → General can enable Apple Keychain after explaining the macOS password prompt. The local encryption key stays beside the file, so apps running as your user can decrypt it. Older proxy and WARP Keychain secrets remain there until you enable the option or re-enter them locally. Administrator-password storage has been removed; old local copies are scrubbed and Settings offers cleanup of the old Keychain entry.
 - **Menu bar control:** connect, switch server, live speed, and a local address you can copy.
 - **Reliable:** restarts the core after a crash, sleep or network change. Reconnect on launch restores the active server and TUN choice when the previous session was connected.
 - **Quick import:** click a `vless://`, `vmess://`, `trojan://`, `ss://` or `hy2://` link anywhere, or a provider's "add to app" button (`v2mac://install-config?url=…`), paste a screenshot of a QR code, or drop config files and QR pictures on the window.
@@ -100,7 +100,7 @@ Update later with `brew upgrade --cask v2mac`. Or install by hand:
 3. Click **Add Subscription**, paste your link, and double-click a server to connect.
 4. Point your apps at `socks5://127.0.0.1:10808` or `http://127.0.0.1:10808`.
 
-To proxy the whole Mac instead, turn on the **TUN** switch next to the routing menu. macOS asks for an administrator password once each time V2Mac is opened; nothing is installed.
+To proxy the whole Mac instead, turn on the **TUN** switch next to the routing menu. Apple-signed builds ask you to approve the managed helper in System Settings → General → Login Items & Extensions; approval persists across app restarts. Ad-hoc builds instead use the macOS administrator dialog each app session. V2Mac never receives your administrator password.
 
 Closing the window keeps the proxy running. Quit with ⌘Q to stop it.
 

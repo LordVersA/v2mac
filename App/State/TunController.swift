@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import V2MacCore
 
-/// TUN mode: a root helper, started once per app session after the administrator prompt,
+/// TUN mode: a root session, started through the managed daemon or the macOS prompt,
 /// runs a second Xray that captures all system traffic and feeds it to the core. The same
 /// session sets the system proxy and holds the kill switch (`startSession`).
 @MainActor @Observable
@@ -31,12 +31,19 @@ final class TunController {
     let rootDirectory: URL
     @ObservationIgnored private var starting: Task<LaunchResult, Never>?
     private let primaryInterface: @MainActor (String?) -> String?
-    private let authorize: @MainActor (String) async -> LaunchResult
+    private let authorize: (@MainActor (String) async -> LaunchResult)?
     private let helperIsAlive: @MainActor (URL) -> Bool
     private let interfaceExists: @MainActor (String) -> Bool
     /// The core the helper copies and runs as the forwarder.
     private let core: @MainActor () -> URL
     private var preparationGeneration = 0
+    @ObservationIgnored private(set) var privilegedState = PrivilegedSessionState(
+        tunEnabled: false, proxyPort: nil, killSwitchEnabled: false, allowedAddresses: []
+    )
+
+    func requestSystemProxy(port: Int?) { privilegedState.proxyPort = port }
+    func requestKillSwitch(_ enabled: Bool) { privilegedState.killSwitchEnabled = enabled }
+    func requestAllowedAddresses(_ addresses: [String]) { privilegedState.allowedAddresses = addresses }
 
     private var sessionFlag: URL { stateDirectory.appendingPathComponent(TunHelper.sessionFlag) }
     private var onFlag: URL { stateDirectory.appendingPathComponent(TunHelper.onFlag) }
@@ -70,7 +77,7 @@ final class TunController {
 
     init(logs: LogStore, stateDirectory: URL = AppPaths.runDirectory, rootDirectory: URL = TunHelper.rootDirectory(name: AppPaths.dataFolderName),
          primaryInterface: @escaping @MainActor (String?) -> String? = { NetworkInterfaces.primary(excluding: $0) },
-         authorize: @escaping @MainActor (String) async -> LaunchResult = { await runAsRoot($0) },
+         authorize: (@MainActor (String) async -> LaunchResult)? = nil,
          helperIsAlive: @escaping @MainActor (URL) -> Bool = { TunHelper.isAlive(rootDirectory: $0) },
          interfaceExists: @escaping @MainActor (String) -> Bool = { NetworkInterfaces.exists($0) },
          core: @escaping @MainActor () -> URL = { AppPaths.coreExecutable }) {
@@ -124,9 +131,8 @@ final class TunController {
 
     var isSessionAlive: Bool { port != nil && helperIsAlive(rootDirectory) }
 
-    /// Starts the root helper for this app session unless it already runs: one administrator
-    /// prompt, or none with a saved administrator password, covers TUN mode, the system proxy and
-    /// the kill switch. Callers that ask at the same time share one start.
+    /// One root session serves TUN, proxy and firewall. Signed builds use SMAppService;
+    /// ad-hoc builds use the system dialog. Concurrent callers share one start.
     func startSession() async -> LaunchResult {
         if isSessionAlive { return .started }
         if let starting { return await starting.value }
@@ -143,9 +149,24 @@ final class TunController {
         do {
             let newPort = Self.pickPort()
             let name = NetworkInterfaces.freeUtunName()
-            let command = try await sessionCommand(port: newPort, interface: name)
-            logs.append("[v2mac] Asking for administrator access")
-            let authorization = await authorize(command)
+            let authorization: LaunchResult
+            if authorize == nil, PrivilegedHelperService.shared.isSupported {
+                try prepareSessionFlags()
+                logs.append("[v2mac] Starting the managed privileged helper")
+                authorization = await PrivilegedHelperService.shared.startSession(port: newPort, interfaceName: name, snapshot: { [weak self] in
+                    self?.privilegedState ?? PrivilegedSessionState(tunEnabled: false, proxyPort: nil, killSwitchEnabled: false, allowedAddresses: [])
+                }) { [weak self] message in
+                    self?.port = nil
+                    self?.interfaceName = nil
+                    if let self { try? FileManager.default.removeItem(at: stateDirectory.appendingPathComponent(KillSwitch.flag)) }
+                    self?.fail(message)
+                }
+            } else {
+                let command = try await sessionCommand(port: newPort, interface: name)
+                logs.append("[v2mac] Asking macOS for administrator access")
+                if let authorize { authorization = await authorize(command) }
+                else { authorization = await Self.runAsRoot(command) }
+            }
             guard case .started = authorization else {
                 try? FileManager.default.removeItem(at: sessionFlag)
                 return authorization
@@ -170,6 +191,7 @@ final class TunController {
             fail(String(localized: "TUN mode could not start: its request file could not be written."))
             return
         }
+        privilegedState.tunEnabled = true
         if state != .on { state = .starting }
         watcher?.cancel()
         watcher = Task { [weak self] in await self?.watch(name) }
@@ -177,6 +199,7 @@ final class TunController {
 
     /// Takes the TUN down; the helper stays for the next connect.
     func down(clearingError: Bool = false) {
+        privilegedState.tunEnabled = false
         preparationGeneration += 1
         watcher?.cancel()
         watcher = nil
@@ -187,9 +210,10 @@ final class TunController {
     }
 
     /// Ends the helper too; used on quit.
-    func endSession() {
+    func endSession() async {
         down()
         removeFlags()
+        if authorize == nil { await PrivilegedHelperService.shared.endSession() }
         port = nil
         interfaceName = nil
     }
@@ -238,6 +262,7 @@ final class TunController {
     }
 
     private func removeFlags() {
+        privilegedState = PrivilegedSessionState(tunEnabled: false, proxyPort: nil, killSwitchEnabled: false, allowedAddresses: [])
         for name in [TunHelper.onFlag, TunHelper.sessionFlag, SystemProxy.flag, KillSwitch.flag, KillSwitch.allowFile] {
             try? FileManager.default.removeItem(at: stateDirectory.appendingPathComponent(name))
         }
@@ -254,16 +279,20 @@ final class TunController {
         let core = core()
         let coreSHA256 = try await TunHelper.sha256(of: core)
         let config = try ConfigBuilder.tunForwarder(interfaceName: interface, corePort: port, logLevel: .warning).data()
-        try FileManager.default.createDirectory(at: stateDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        // A helper that is gone left its TUN flag; the proxy and kill switch requests stay.
-        try? FileManager.default.removeItem(at: onFlag)
-        FileManager.default.createFile(atPath: sessionFlag.path, contents: nil)
+        try prepareSessionFlags()
         return TunHelper.launchCommand(
             appPID: ProcessInfo.processInfo.processIdentifier, stateDirectory: stateDirectory,
             core: core, coreSHA256: coreSHA256, config: String(decoding: config, as: UTF8.self), rootDirectory: rootDirectory,
             killSwitchRules: KillSwitch.rules(tunInterface: interface), killSwitchAnchor: KillSwitch.anchor(name: AppPaths.dataFolderName),
             killSwitchMarker: KillSwitch.marker(name: AppPaths.dataFolderName)
         )
+    }
+
+    private func prepareSessionFlags() throws {
+        try FileManager.default.createDirectory(at: stateDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        // A helper that is gone left its TUN flag; the proxy and kill switch requests stay.
+        if FileManager.default.fileExists(atPath: onFlag.path) { try FileManager.default.removeItem(at: onFlag) }
+        try Data().write(to: sessionFlag, options: .atomic)
     }
 
     private func helperAppeared() async -> Bool {
@@ -275,22 +304,14 @@ final class TunController {
         return false
     }
 
-    /// Runs `command` as root with the saved administrator account, or else through the system's
-    /// administrator prompt. A saved password that no longer works is forgotten.
+    /// macOS handles administrator authentication; V2Mac never receives the password.
     static func runAsRoot(_ command: String) async -> LaunchResult {
         let prompt = String(localized: "V2Mac needs administrator access for TUN mode, the system proxy or the kill switch.")
-        if let account = Prefs.adminAccount {
-            let result = await osascript(TunHelper.appleScript(command: command, prompt: prompt, user: account.user, password: account.password))
-            guard case .failed(let message) = result, message.contains("-60007") else { return result }
-            do { try Prefs.setAdminAccount(nil) }
-            catch { return .failed(error.localizedDescription) }
-        }
-        // Only before macOS's own prompt: with a saved account there is none.
         guard AdminConsent.confirm() else { return .cancelled }
         return await osascript(TunHelper.appleScript(command: command, prompt: prompt))
     }
 
-    /// The script goes in on standard input, so a saved password never shows in the process list.
+    /// Pass the helper command through standard input rather than process arguments.
     static func osascript(_ source: String) async -> LaunchResult {
         await withCheckedContinuation { continuation in
             let process = Process()

@@ -1,6 +1,242 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Enable the privileged helper?": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "کمک‌برنامه دارای دسترسی مدیر فعال شود؟"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Включить привилегированный помощник?"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "启用特权辅助程序？"}}
+      }
+    },
+    "macOS will ask you to approve a background helper for TUN mode, the system proxy and the kill switch. Approval stays in System Settings across app restarts. The helper changes network settings only when V2Mac requests it. V2Mac never receives your administrator password. You can remove the helper here later.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "macOS تأیید یک کمک‌برنامه پس‌زمینه برای حالت TUN، پروکسی سیستم و کلید قطع اضطراری را می‌خواهد. این تأیید در تنظیمات سیستم پس از اجرای دوباره برنامه باقی می‌ماند. کمک‌برنامه فقط به درخواست V2Mac تنظیمات شبکه را تغییر می‌دهد. V2Mac هرگز رمز مدیر شما را دریافت نمی‌کند. بعداً می‌توانید کمک‌برنامه را از همین‌جا حذف کنید."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "macOS попросит одобрить фоновый помощник для TUN, системного прокси и блокировки трафика. Одобрение сохраняется в Системных настройках после перезапуска приложения. Помощник меняет настройки сети только по запросу V2Mac. V2Mac никогда не получает пароль администратора. Позже помощник можно удалить здесь."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "macOS 将要求你批准用于 TUN 模式、系统代理和断网保护的后台辅助程序。批准保存在系统设置中，重启应用后仍然有效。辅助程序仅在 V2Mac 请求时修改网络设置。V2Mac 绝不会接收管理员密码。你可以稍后在此移除辅助程序。"}}
+      }
+    },
+    "The privileged helper is missing. Reinstall V2Mac.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "کمک‌برنامه دارای دسترسی مدیر پیدا نشد. V2Mac را دوباره نصب کنید."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Привилегированный помощник отсутствует. Переустановите V2Mac."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "缺少特权辅助程序。请重新安装 V2Mac。"}}
+      }
+    },
+    "Approve V2Mac's privileged helper in System Settings → General → Login Items & Extensions, then reconnect.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "کمک‌برنامه دارای دسترسی مدیر V2Mac را در تنظیمات سیستم ← عمومی ← موارد ورود و افزونه‌ها تأیید کنید، سپس دوباره وصل شوید."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Одобрите привилегированный помощник V2Mac в Системные настройки → Основные → Объекты входа и расширения, затем подключитесь снова."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "请在系统设置 → 通用 → 登录项与扩展中批准 V2Mac 的特权辅助程序，然后重新连接。"}}
+      }
+    },
+    "The privileged helper connection is unavailable.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "ارتباط با کمک‌برنامه دارای دسترسی مدیر در دسترس نیست."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Соединение с привилегированным помощником недоступно."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法连接到特权辅助程序。"}}
+      }
+    },
+    "The privileged helper did not answer.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "کمک‌برنامه دارای دسترسی مدیر پاسخ نداد."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Привилегированный помощник не ответил."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "特权辅助程序未响应。"}}
+      }
+    },
+    "Status": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "وضعیت"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Состояние"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "状态"}}
+      }
+    },
+    "Remove Helper": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "حذف کمک‌برنامه"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Удалить помощник"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "移除辅助程序"}}
+      }
+    },
+    "Enable Helper…": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "فعال کردن کمک‌برنامه…"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Включить помощник…"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "启用辅助程序…"}}
+      }
+    },
+    "This build uses the macOS administrator dialog each session. The managed helper requires an Apple-signed build.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "این نسخه در هر نشست از پنجره دسترسی مدیر macOS استفاده می‌کند. کمک‌برنامه مدیریت‌شده به نسخه‌ای با امضای گواهی اپل نیاز دارد."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Эта сборка использует диалог администратора macOS в каждом сеансе. Для управляемого помощника нужна сборка, подписанная сертификатом Apple."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "此构建在每次会话中使用 macOS 管理员对话框。托管辅助程序需要使用 Apple 证书签名的构建。"}}
+      }
+    },
+    "Privileged helper": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "کمک‌برنامه دارای دسترسی مدیر"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Привилегированный помощник"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "特权辅助程序"}}
+      }
+    },
+    "Handles TUN mode, DNS changes, the system proxy and the kill switch. Approve it once in macOS to use it across app restarts. V2Mac never collects your administrator password. Removing it stops the current connection.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "حالت TUN، تغییرات DNS، پروکسی سیستم و کلید قطع اضطراری را مدیریت می‌کند. یک بار در macOS تأییدش کنید تا پس از اجرای دوباره برنامه هم قابل استفاده باشد. V2Mac هرگز رمز مدیر شما را دریافت نمی‌کند. حذف کمک‌برنامه اتصال فعلی را متوقف می‌کند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Управляет TUN, изменениями DNS, системным прокси и блокировкой трафика. Одобрите его один раз в macOS, чтобы использовать после перезапуска приложения. V2Mac никогда не запрашивает пароль администратора в своём интерфейсе. Удаление остановит текущее соединение."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "负责 TUN 模式、DNS 更改、系统代理和断网保护。在 macOS 中批准一次后，重启应用仍可使用。V2Mac 绝不会收集管理员密码。移除它将停止当前连接。"}}
+      }
+    },
+    "TUN mode: route all traffic on this Mac through the proxy. Requires the privileged helper or macOS administrator access.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "حالت TUN: همه ترافیک این مک را از پروکسی عبور می‌دهد. به کمک‌برنامه دارای دسترسی مدیر یا تأیید مدیر macOS نیاز دارد."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Режим TUN: направляет весь трафик этого Mac через прокси. Требует привилегированного помощника или доступа администратора macOS."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "TUN 模式：将此 Mac 上的全部流量通过代理路由。需要特权辅助程序或 macOS 管理员授权。"}}
+      }
+    },
+    "Needs approval in System Settings": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "نیازمند تأیید در تنظیمات سیستم"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Требуется одобрение в Системных настройках"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "需要在系统设置中批准"}}
+      }
+    },
+    "Not enabled": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "فعال نشده"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Не включён"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "未启用"}}
+      }
+    },
+    "Helper not found": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "کمک‌برنامه پیدا نشد"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Помощник не найден"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "未找到辅助程序"}}
+      }
+    },
+    "Unavailable": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "در دسترس نیست"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Недоступно"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "不可用"}}
+      }
+    },
+    "Enabled": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "فعال"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Включён"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "已启用"}}
+      }
+    },
+    "Off by default. The local proxy password and WARP credentials are encrypted in a file with a key stored on this Mac. Apps running as your user can decrypt it. Keychain adds macOS access controls and may ask for your login password, including after app updates. V2Mac never collects or stores your administrator password.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "به‌صورت پیش‌فرض خاموش است. رمز پروکسی محلی و اطلاعات WARP در یک فایل با کلیدی که روی این مک ذخیره می‌شود رمزنگاری می‌شوند. برنامه‌هایی که با حساب شما اجرا می‌شوند می‌توانند آن را رمزگشایی کنند. زنجیره کلید کنترل دسترسی macOS را اضافه می‌کند و ممکن است رمز ورود شما را بخواهد، از جمله پس از به‌روزرسانی برنامه. V2Mac هرگز رمز مدیر شما را دریافت یا ذخیره نمی‌کند."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По умолчанию выключено. Пароль локального прокси и данные WARP шифруются в файле ключом, сохранённым на этом Mac. Приложения, запущенные от вашего имени, могут его расшифровать. Связка ключей добавляет контроль доступа macOS и может запрашивать пароль входа, в том числе после обновлений приложения. V2Mac никогда не получает и не сохраняет пароль администратора."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "默认关闭。本地代理密码和 WARP 凭据使用保存在本机的密钥加密，存储在文件中。以你身份运行的应用可以解密。钥匙串提供 macOS 访问控制，可能会要求输入登录密码，应用更新后也可能再次询问。V2Mac 绝不会收集或存储管理员密码。"
+          }
+        }
+      }
+    },
+    "V2Mac will move the local proxy password and WARP credentials to your login Keychain and recover older copies of those secrets. macOS may ask for your login password next, and may ask again after app updates. Enter it only in the macOS Keychain dialog. Cancel to keep using the encrypted local file.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac رمز پروکسی محلی و اطلاعات WARP را به زنجیره کلید ورود شما منتقل می‌کند و نسخه‌های قدیمی همان اطلاعات را بازیابی می‌کند. macOS ممکن است در مرحله بعد رمز ورود شما را بخواهد و پس از به‌روزرسانی برنامه دوباره بپرسد. رمز را فقط در پنجره زنجیره کلید macOS وارد کنید. برای ادامه استفاده از فایل محلی رمزنگاری‌شده، لغو کنید."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac перенесёт пароль локального прокси и данные WARP в вашу Связку ключей входа и восстановит старые копии этих данных. Затем macOS может запросить пароль входа и повторить запрос после обновлений приложения. Вводите его только в диалоге Связки ключей macOS. Отмените, чтобы продолжить использовать зашифрованный локальный файл."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac 会将本地代理密码和 WARP 凭据移入登录钥匙串，并恢复这些凭据的旧副本。macOS 接下来可能要求输入登录密码，应用更新后也可能再次询问。请仅在 macOS 钥匙串对话框中输入密码。取消即可继续使用加密的本地文件。"
+          }
+        }
+      }
+    },
+    "A .v2m file with your subscriptions and their servers, pasted configs, favorites and settings. It holds subscription links and server passwords, so keep it private. The local proxy password and registered WARP credentials are not in it. Restoring adds what is missing here and takes the backup's settings.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "یک فایل ‎.v2m‎ با اشتراک‌ها و سرورهایشان، کانفیگ‌های چسبانده‌شده، علاقه‌مندی‌ها و تنظیمات. لینک‌های اشتراک و رمز سرورها در آن است، پس آن را خصوصی نگه دارید. رمز پروکسی محلی و اطلاعات دستگاه ثبت‌شده WARP در آن نیست. بازیابی، هرچه را اینجا نیست اضافه می‌کند و تنظیمات پشتیبان را جایگزین می‌کند."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файл .v2m с подписками и их серверами, вставленными конфигурациями, избранным и настройками. Он содержит ссылки подписок и пароли серверов — храните его в тайне. Пароль локального прокси и данные зарегистрированного устройства WARP в него не входят. Восстановление добавляет недостающее и применяет настройки из копии."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包含订阅及其服务器、粘贴的配置、收藏和设置的 .v2m 文件。其中含有订阅链接和服务器密码，请妥善保管。本地代理密码和已注册的 WARP 凭据不包含在内。恢复会添加本机缺少的内容，并采用备份中的设置。"
+          }
+        }
+      }
+    },
+    "An older version saved an administrator password. V2Mac no longer reads or uses it. Remove the old Keychain entry; macOS may ask for permission.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نسخه‌ای قدیمی رمز مدیر را ذخیره کرده است. V2Mac دیگر آن را نمی‌خواند یا استفاده نمی‌کند. ورودی قدیمی زنجیره کلید را حذف کنید؛ ممکن است macOS اجازه بخواهد."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Старая версия сохранила пароль администратора. V2Mac больше не читает и не использует его. Удалите старую запись из Связки ключей; macOS может запросить разрешение."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旧版本曾保存管理员密码。V2Mac 不再读取或使用它。请删除旧的钥匙串条目；macOS 可能会要求授权。"
+          }
+        }
+      }
+    },
+    "Remove old administrator password from Keychain…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف رمز قدیمی مدیر از زنجیره کلید…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить старый пароль администратора из Связки ключей…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从钥匙串删除旧管理员密码…"
+          }
+        }
+      }
+    },
       "Store secrets in Apple Keychain": {
         "localizations": {
           "fa": {
@@ -45,28 +281,6 @@
           }
         }
       },
-      "Off by default. Passwords and WARP credentials are encrypted in a local file with a key stored on this Mac. Apps running as your user can decrypt it. Keychain adds macOS access controls and may ask for your login password, including after app updates. Old Keychain secrets are only read when you enable this option.": {
-        "localizations": {
-          "fa": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "به‌صورت پیش‌فرض خاموش است. رمزها و اطلاعات WARP در یک فایل محلی با کلیدی که روی این مک ذخیره می‌شود رمزنگاری می‌شوند. برنامه‌هایی که با حساب شما اجرا می‌شوند می‌توانند آن را رمزگشایی کنند. زنجیره کلید کنترل دسترسی macOS را اضافه می‌کند و ممکن است رمز ورود شما را بخواهد، از جمله پس از به‌روزرسانی برنامه. اطلاعات قبلی زنجیره کلید فقط با فعال کردن این گزینه خوانده می‌شوند."
-            }
-          },
-          "ru": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "По умолчанию выключено. Пароли и данные WARP шифруются в локальном файле ключом, сохранённым на этом Mac. Приложения, запущенные от вашего имени, могут его расшифровать. Связка ключей добавляет контроль доступа macOS и может запрашивать пароль входа, в том числе после обновлений приложения. Старые секреты из Связки ключей читаются только при включении этой опции."
-            }
-          },
-          "zh-Hans": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "默认关闭。密码和 WARP 凭据使用保存在本机的密钥加密，存储在本地文件中。以你身份运行的应用可以解密。钥匙串提供 macOS 访问控制，可能会要求输入登录密码，应用更新后也可能再次询问。只有启用此选项时才会读取旧的钥匙串凭据。"
-            }
-          }
-        }
-      },
       "Use Apple Keychain?": {
         "localizations": {
           "fa": {
@@ -85,28 +299,6 @@
             "stringUnit": {
               "state": "translated",
               "value": "使用 Apple 钥匙串？"
-            }
-          }
-        }
-      },
-      "V2Mac will move saved passwords and WARP credentials to your login Keychain and recover any older Keychain secrets. macOS may ask for your login password next, and may ask again after app updates. Enter it only in the macOS Keychain dialog. Cancel to keep using the encrypted local file.": {
-        "localizations": {
-          "fa": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "V2Mac رمزهای ذخیره‌شده و اطلاعات WARP را به زنجیره کلید ورود شما منتقل می‌کند و اطلاعات قبلی آن را بازیابی می‌کند. macOS ممکن است در مرحله بعد رمز ورود شما را بخواهد و پس از به‌روزرسانی برنامه دوباره بپرسد. رمز را فقط در پنجره زنجیره کلید macOS وارد کنید. برای ادامه استفاده از فایل محلی رمزنگاری‌شده، لغو کنید."
-            }
-          },
-          "ru": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "V2Mac перенесёт сохранённые пароли и данные WARP в вашу Связку ключей входа и восстановит старые секреты из неё. Затем macOS может запросить пароль входа и повторить запрос после обновлений приложения. Вводите его только в диалоге Связки ключей macOS. Отмените, чтобы продолжить использовать зашифрованный локальный файл."
-            }
-          },
-          "zh-Hans": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "V2Mac 会将已保存的密码和 WARP 凭据移入登录钥匙串，并恢复其中的旧凭据。macOS 接下来可能要求输入登录密码，应用更新后也可能再次询问。请仅在 macOS 钥匙串对话框中输入密码。取消即可继续使用加密的本地文件。"
             }
           }
         }
@@ -1068,28 +1260,6 @@
         }
       }
     },
-    "A .v2m file with your subscriptions and their servers, pasted configs, favorites and settings. It holds subscription links and server passwords, so keep it private. The proxy and administrator passwords are not in it. Restoring adds what is missing here and takes the backup's settings.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "یک فایل ‎.v2m‎ با اشتراک‌ها و سرورهایشان، کانفیگ‌های چسبانده‌شده، علاقه‌مندی‌ها و تنظیمات. لینک‌های اشتراک و رمز سرورها در آن است، پس آن را خصوصی نگه دارید. رمز پروکسی و رمز مدیر در آن نیست. بازیابی، هرچه را اینجا نیست اضافه می‌کند و تنظیمات پشتیبان را جایگزین می‌کند."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Файл .v2m с подписками и их серверами, вставленными конфигурациями, избранным и настройками. В нём есть ссылки подписок и пароли серверов, храните его в тайне. Пароли прокси и администратора в него не входят. При восстановлении добавляется то, чего здесь нет, а настройки берутся из резервной копии."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一个 .v2m 文件，包含你的订阅及其服务器、粘贴的配置、收藏和设置。其中有订阅链接和服务器密码，请妥善保管。不包含代理密码和管理员密码。恢复时会添加此处缺少的内容，并采用备份中的设置。"
-          }
-        }
-      }
-    },
     "A country's addresses": {
       "localizations": {
         "fa": {
@@ -1331,28 +1501,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "账户"
-          }
-        }
-      }
-    },
-    "Account name": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "نام حساب"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Имя учётной записи"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "账户名"
           }
         }
       }
@@ -1781,28 +1929,6 @@
         }
       }
     },
-    "Administrator access": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "دسترسی مدیر"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Права администратора"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理员权限"
-          }
-        }
-      }
-    },
     "Administrator access was cancelled, so the system proxy was not set.": {
       "localizations": {
         "fa": {
@@ -1865,28 +1991,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "管理员授权已取消，系统隧道未启用。"
-          }
-        }
-      }
-    },
-    "Administrator password": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "رمز مدیر"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пароль администратора"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理员密码"
           }
         }
       }
@@ -5980,28 +6084,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "适用于链接中带有 allowInsecure 的服务器，通常是使用自签名证书的服务器。V2Mac 每次连接时都会获取该服务器的证书并直接接受，不检查签发者，因此你和服务器之间的人可能冒充它。其他服务器不受影响。"
-          }
-        }
-      }
-    },
-    "Forget": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "فراموش کن"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Забыть"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "忘记"
           }
         }
       }
@@ -10438,28 +10520,6 @@
         }
       }
     },
-    "Saved for %@": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "برای %@ ذخیره شده"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сохранён для %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已为 %@ 保存"
-          }
-        }
-      }
-    },
     "Search": {
       "localizations": {
         "fa": {
@@ -12560,50 +12620,6 @@
         }
       }
     },
-      "TUN mode, the system proxy and the kill switch need administrator access once each time V2Mac opens. With the password saved here, V2Mac uses it instead of asking. Anyone who can use your Mac account can then let V2Mac act as administrator. Choose how secrets are stored above.": {
-        "localizations": {
-          "fa": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "حالت TUN، پروکسی سیستم و کلید قطع اضطراری هر بار که V2Mac باز می‌شود یک بار دسترسی مدیر لازم دارند. اگر رمز اینجا ذخیره شود، V2Mac به‌جای پرسیدن از آن استفاده می‌کند. هر کسی که بتواند از حساب مک شما استفاده کند، می‌تواند V2Mac را وادار به کار در نقش مدیر کند. روش ذخیره اطلاعات محرمانه را در بالا انتخاب کنید."
-            }
-          },
-          "ru": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Режиму TUN, системному прокси и блокировке трафика нужен доступ администратора один раз при каждом запуске V2Mac. Если сохранить пароль здесь, V2Mac будет использовать его вместо запроса. Любой, кто может пользоваться вашей учётной записью Mac, сможет заставить V2Mac действовать от имени администратора. Выберите способ хранения секретов выше."
-            }
-          },
-          "zh-Hans": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "TUN 模式、系统代理和断网保护在每次打开 V2Mac 时都需要一次管理员授权。在此保存密码后，V2Mac 会直接使用它而不再询问。能使用你 Mac 账户的人都可以让 V2Mac 以管理员身份操作。请在上方选择凭据的存储方式。"
-            }
-          }
-        }
-      },
-    "TUN mode: route all traffic on this Mac through the proxy. Asks for an administrator password once each time V2Mac is opened.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "حالت TUN: همه ترافیک این مک را از پروکسی عبور می‌دهد. هر بار که V2Mac باز شود یک بار رمز مدیر را می‌پرسد."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Режим TUN: весь трафик этого Mac идёт через прокси. Пароль администратора спрашивается один раз при каждом запуске V2Mac."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TUN 模式：让这台 Mac 的所有流量都走代理。每次打开 V2Mac 时会请求一次管理员密码。"
-          }
-        }
-      }
-    },
     "TUN starting…": {
       "localizations": {
         "fa": {
@@ -13041,28 +13057,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "XHTTP 额外选项必须是 JSON 对象。"
-          }
-        }
-      }
-    },
-    "The account name or password is not right.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "نام حساب یا رمز درست نیست."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Неверное имя учётной записи или пароль."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "账户名或密码不正确。"
           }
         }
       }

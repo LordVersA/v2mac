@@ -78,6 +78,20 @@ struct ConnectionAutomationTests {
         #expect(!Prefs.autoSelectServer)
     }
 
+    @Test func managedRequestsDoNotFollowTamperedFlagFiles() async throws {
+        try await withController { controller, directory in
+            let run = directory.appendingPathComponent("tun")
+            try FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
+            try "12345".write(to: run.appendingPathComponent(SystemProxy.flag), atomically: true, encoding: .utf8)
+            FileManager.default.createFile(atPath: run.appendingPathComponent(KillSwitch.flag).path, contents: nil)
+            #expect(controller.tun.privilegedState.proxyPort == nil)
+            #expect(!controller.tun.privilegedState.killSwitchEnabled)
+            controller.tun.requestSystemProxy(port: 10818)
+            #expect(controller.tun.privilegedState.proxyPort == 10818)
+            #expect(try String(contentsOf: run.appendingPathComponent(SystemProxy.flag), encoding: .utf8) == "12345")
+        }
+    }
+
     @Test(arguments: [false, true])
     func launchPreservesTunChoiceSelectedServerAndReconnectState(tunEnabled: Bool) async throws {
         try await withController(tunEnabled: tunEnabled) { controller, directory in

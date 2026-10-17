@@ -12,7 +12,7 @@ mkdir -p "$HELPERS" "$RES"
 cp -f "$SRC/xray" "$HELPERS/xray"
 cp -f "$SRC/geoip.dat" "$SRC/geosite.dat" "$RES/"
 if [[ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ]]; then
-  /usr/bin/codesign --force --sign "$EXPANDED_CODE_SIGN_IDENTITY" "$HELPERS/xray"
+  /usr/bin/codesign --force --options runtime --sign "$EXPANDED_CODE_SIGN_IDENTITY" --identifier "$PRODUCT_BUNDLE_IDENTIFIER.xray" "$HELPERS/xray"
 else
-  /usr/bin/codesign --force --sign - "$HELPERS/xray"
+  /usr/bin/codesign --force --options runtime --sign - --identifier "$PRODUCT_BUNDLE_IDENTIFIER.xray" "$HELPERS/xray"
 fi

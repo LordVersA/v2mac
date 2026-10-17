@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>io.github.lordversa.v2mac.privileged</string>
+    <key>BundleProgram</key><string>Contents/Library/HelperTools/V2MacPrivilegedHelper</string>
+    <key>MachServices</key>
+    <dict><key>io.github.lordversa.v2mac.privileged</key><true/></dict>
+    <key>AssociatedBundleIdentifiers</key>
+    <array><string>io.github.lordversa.v2mac</string></array>
+    <key>ProcessType</key><string>Interactive</string>
+</dict>
+</plist>

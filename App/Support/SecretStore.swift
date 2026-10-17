@@ -10,20 +10,25 @@ final class SecretStore {
 
     private(set) var usesKeychain: Bool
     private(set) var errorMessage: String?
+    private(set) var hasLegacyAdministratorPassword: Bool
     @ObservationIgnored private var cached: Result<[String: String], Error>?
     @ObservationIgnored private let directory: URL
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let readKeychain: (Keychain.Item) throws -> String?
     @ObservationIgnored private let writeKeychain: (String?, Keychain.Item) throws -> Void
+    @ObservationIgnored private let removeLegacyKeychainPassword: () throws -> Void
 
     init(directory: URL, defaults: UserDefaults = .standard,
          readKeychain: @escaping (Keychain.Item) throws -> String? = Keychain.string,
-         writeKeychain: @escaping (String?, Keychain.Item) throws -> Void = { try Keychain.set($0, for: $1) }) {
+         writeKeychain: @escaping (String?, Keychain.Item) throws -> Void = { try Keychain.set($0, for: $1) },
+         removeLegacyKeychainPassword: @escaping () throws -> Void = Keychain.removeLegacyAdministratorPassword) {
         self.directory = directory
         self.defaults = defaults
         self.readKeychain = readKeychain
         self.writeKeychain = writeKeychain
+        self.removeLegacyKeychainPassword = removeLegacyKeychainPassword
         usesKeychain = defaults.bool(forKey: Self.preferenceKey)
+        hasLegacyAdministratorPassword = defaults.object(forKey: "adminUser") != nil
     }
 
     func string(_ item: Keychain.Item) throws -> String? {
@@ -85,12 +90,8 @@ final class SecretStore {
                 var entries: [String: String] = [:]
                 for item in Keychain.Item.allCases { entries[item.rawValue] = try readKeychain(item) ?? "" }
                 loaded = entries
-            } else if FileManager.default.fileExists(atPath: dataURL.path) {
-                let key = try localKey()
-                let box = try AES.GCM.SealedBox(combined: Data(contentsOf: dataURL))
-                loaded = try JSONDecoder().decode([String: String].self, from: AES.GCM.open(box, using: key))
             } else {
-                loaded = [:]
+                loaded = try readLocal()
             }
             cached = .success(loaded)
             errorMessage = nil
@@ -107,8 +108,33 @@ final class SecretStore {
         try values()
     }
 
+    func removeLegacyAdministratorPassword() throws {
+        do {
+            _ = try readLocal()
+            try removeLegacyKeychainPassword()
+            defaults.removeObject(forKey: "adminUser")
+            hasLegacyAdministratorPassword = false
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+            throw error
+        }
+    }
+
     private var dataURL: URL { directory.appendingPathComponent("secrets.enc") }
     private var keyURL: URL { directory.appendingPathComponent("secrets.key") }
+
+    private func readLocal() throws -> [String: String] {
+        guard FileManager.default.fileExists(atPath: dataURL.path) else { return [:] }
+        let key = try localKey()
+        let box = try AES.GCM.SealedBox(combined: Data(contentsOf: dataURL))
+        var entries = try JSONDecoder().decode([String: String].self, from: AES.GCM.open(box, using: key))
+        if entries.removeValue(forKey: "adminPassword") != nil {
+            hasLegacyAdministratorPassword = true
+            try writeLocal(entries)
+        }
+        return entries
+    }
 
     private func localKey() throws -> SymmetricKey {
         let bytes = try Data(contentsOf: keyURL)

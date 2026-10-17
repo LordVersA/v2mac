@@ -253,13 +253,8 @@ public enum TunHelper {
         try await Task.detached { RegionPackInstaller.sha256(try Data(contentsOf: file)) }.value
     }
 
-    /// AppleScript that runs `command` as root after the system's administrator prompt, or with
-    /// a saved administrator account and no prompt. Pass the script on standard input, never as an
-    /// argument, so the password is not in the process list.
-    public static func appleScript(command: String, prompt: String, user: String? = nil, password: String? = nil) -> String {
-        if let user, let password {
-            return "do shell script \(appleScriptQuoted(command)) user name \(appleScriptQuoted(user)) password \(appleScriptQuoted(password)) with administrator privileges"
-        }
+    /// Runs `command` through the system's administrator dialog without handling credentials.
+    public static func appleScript(command: String, prompt: String) -> String {
         return "do shell script \(appleScriptQuoted(command)) with prompt \(appleScriptQuoted(prompt)) with administrator privileges"
     }
 

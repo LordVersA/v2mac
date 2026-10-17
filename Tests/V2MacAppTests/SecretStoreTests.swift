@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Testing
 
@@ -36,9 +37,9 @@ struct SecretStoreTests {
             for name in ["secrets.key", "secrets.enc"] {
                 #expect(try fm.attributesOfItem(atPath: directory.appendingPathComponent(name).path)[.posixPermissions] as? Int == 0o600)
             }
-            try reloaded.set(nil, for: .adminPassword)
+            try reloaded.set(nil, for: .warpAccount)
             let cleared = SecretStore(directory: directory, defaults: defaults, readKeychain: unexpectedRead)
-            #expect(try cleared.string(.adminPassword) == nil)
+            #expect(try cleared.string(.warpAccount) == nil)
             #expect(try cleared.string(.proxyPassword) == "demo-secret-proxyPassword")
         }
     }
@@ -56,8 +57,9 @@ struct SecretStoreTests {
             #expect(store.usesKeychain)
             #expect(defaults.bool(forKey: SecretStore.preferenceKey))
             #expect(try store.string(.proxyPassword) == "new-proxy")
-            #expect(try store.string(.adminPassword) == "demo-admin")
             #expect(try store.string(.warpAccount) == "demo-warp")
+            #expect(!Keychain.Item.allCases.map(\.rawValue).contains("adminPassword"))
+            #expect(keychain["adminPassword"] == "demo-admin")
             #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("secrets.enc").path))
             #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("secrets.key").path))
 
@@ -68,11 +70,11 @@ struct SecretStoreTests {
             let local = SecretStore(directory: directory, defaults: defaults, readKeychain: read, writeKeychain: write)
             #expect(!local.usesKeychain)
             #expect(try local.string(.warpAccount) == "demo-warp")
-            try local.set(nil, for: .adminPassword)
+            try local.set(nil, for: .warpAccount)
             #expect(reads == readsBefore)
             try local.setUsesKeychain(true)
-            #expect(try local.string(.adminPassword) == nil)
-            #expect(keychain["adminPassword"]?.isEmpty == true)
+            #expect(try local.string(.warpAccount) == nil)
+            #expect(keychain["warpAccount"]?.isEmpty == true)
         }
     }
 
@@ -125,6 +127,56 @@ struct SecretStoreTests {
 
     @Test func keychainChoiceIsNotExportedInBackups() {
         #expect(!Prefs.backupKeys.contains(SecretStore.preferenceKey))
+    }
+
+    @Test func legacyLocalAdministratorPasswordIsRemovedWithoutTouchingKeychain() throws {
+        try withDirectory { directory, defaults in
+            defaults.set("demo-administrator", forKey: "adminUser")
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let key = SymmetricKey(size: .bits256)
+            try key.withUnsafeBytes { try Data($0).write(to: directory.appendingPathComponent("secrets.key")) }
+            let legacy = ["adminPassword": "retired-demo-password", "proxyPassword": "demo-proxy", "warpAccount": "demo-warp"]
+            let ciphertext = try #require(AES.GCM.seal(JSONEncoder().encode(legacy), using: key).combined)
+            let dataURL = directory.appendingPathComponent("secrets.enc")
+            try ciphertext.write(to: dataURL)
+            let store = SecretStore(directory: directory, defaults: defaults,
+                                    readKeychain: { _ in Issue.record("Must not read Keychain"); return nil },
+                                    removeLegacyKeychainPassword: { Issue.record("Must not delete Keychain automatically") })
+            #expect(try store.string(.proxyPassword) == "demo-proxy")
+            #expect(try store.string(.warpAccount) == "demo-warp")
+            #expect(store.hasLegacyAdministratorPassword)
+            let box = try AES.GCM.SealedBox(combined: Data(contentsOf: dataURL))
+            let sanitized = try JSONDecoder().decode([String: String].self, from: AES.GCM.open(box, using: key))
+            #expect(sanitized == ["proxyPassword": "demo-proxy", "warpAccount": "demo-warp"])
+        }
+    }
+
+    @Test func legacyKeychainCleanupOnlyDeletesAfterExplicitRequest() throws {
+        try withDirectory { directory, defaults in
+            defaults.set("demo-administrator", forKey: "adminUser")
+            var deletions = 0
+            let store = SecretStore(directory: directory, defaults: defaults,
+                                    readKeychain: { _ in Issue.record("Must not read a password"); return nil },
+                                    removeLegacyKeychainPassword: { deletions += 1 })
+            #expect(store.hasLegacyAdministratorPassword)
+            #expect(deletions == 0)
+            try store.removeLegacyAdministratorPassword()
+            #expect(deletions == 1)
+            #expect(!store.hasLegacyAdministratorPassword)
+            #expect(defaults.object(forKey: "adminUser") == nil)
+        }
+    }
+
+    @Test func failedLegacyCleanupKeepsTheActionAvailable() throws {
+        try withDirectory { directory, defaults in
+            defaults.set("demo-administrator", forKey: "adminUser")
+            let store = SecretStore(directory: directory, defaults: defaults,
+                                    removeLegacyKeychainPassword: { throw CocoaError(.userCancelled) })
+            #expect(throws: (any Error).self) { try store.removeLegacyAdministratorPassword() }
+            #expect(store.hasLegacyAdministratorPassword)
+            #expect(store.errorMessage != nil)
+            #expect(defaults.object(forKey: "adminUser") != nil)
+        }
     }
 
     @Test func corruptCiphertextAndMissingKeysAreNeverOverwritten() throws {

@@ -327,7 +327,7 @@ final class ConnectionController {
         commandGeneration += 1
         cancelAutomation()
         cancelRecovery()
-        tun.endSession()
+        await tun.endSession()
         await queue?.value
         await runner.stop()
     }
