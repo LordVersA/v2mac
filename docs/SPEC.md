@@ -541,7 +541,7 @@ With credentials: `"auth": "password", "accounts": [{"user": "...",
   If no pack is usable, the builder produces the Global routing.
 - **Direct** — one catch-all rule `network: "tcp,udp"` → `direct`.
 - **Rules only** — the user's rules as in Global, then a catch-all `network: "tcp,udp"`
-  → `direct`: only traffic matching a Proxy rule reaches the server. No exit check.
+  → `direct`: only traffic matching a Proxy rule reaches the server, plus the exit check's sources so it reports the server's country.
 
 ### 8.2 Custom profiles
 
