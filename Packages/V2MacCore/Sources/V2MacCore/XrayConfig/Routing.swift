@@ -86,7 +86,10 @@ extension ConfigBuilder {
             for route in routes { tail += rules(route.domainRules, route.ipRules, to: directTag) }
             hasIPRules = true
         case .rulesOnly:
-            tail = [["type": "field", "network": "tcp,udp", "outboundTag": .string(directTag)]]
+            // The exit check's sources go through the server, so it reports the server's country.
+            let lookup: JSONValue = .array(ExitLookup.sources.compactMap { $0.host.map { .string("full:" + $0) } })
+            tail = [["type": "field", "domain": lookup, "outboundTag": .string(proxyTag)],
+                    ["type": "field", "network": "tcp,udp", "outboundTag": .string(directTag)]]
         case .bypass, .global: break
         }
         if let route = custom.unmatchedRoute {

@@ -64,7 +64,8 @@ import Testing
 
     @Test func rulesOnlyProxiesMatchesAndDefaultsDirect() throws {
         let rules = try #require(try build(.rulesOnly, lists(proxy: "a.com", block: "c.com"))["routing"]?["rules"]?.arrayValue)
-        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "proxy", "direct"])
+        #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "proxy", "proxy", "direct"])
+        #expect(rules[4]["domain"]?.arrayValue?.contains("full:ipwho.is") == true)
         #expect(rules.last?["network"]?.stringValue == "tcp,udp")
     }
 
