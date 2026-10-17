@@ -102,6 +102,10 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   `macos-26`. Watch it with `gh run watch` after pushing.
 - The menu bar glyph PDFs in the asset catalog are generated: edit the SVGs in `Design/` and run
   `Scripts/make-glyphs.sh` (needs `rsvg-convert`).
+- **Update the wiki with every user-visible change.** It is cloned at `../v2mac.wiki`
+  (`https://github.com/LordVersA/v2mac.wiki.git`; clone it there if missing, `git pull` first).
+  Edit the page that covers the feature in English and in its `fa-`, `zh-` and `ru-` copies, and commit
+  in the wiki repo. Pushing publishes it: push when the user asks, as with the main repo.
 - `README.fa.md`, `README.zh.md` and `README.ru.md` are the Persian, Chinese and Russian translations of `README.md`. Change them together.
 - The app is translated into Persian (`fa`), Simplified Chinese (`zh-Hans`) and Russian (`ru`) in String
   Catalogs: `App/Resources/Localizable.xcstrings`, `App/Resources/AppShortcuts.xcstrings` (Siri phrases)
