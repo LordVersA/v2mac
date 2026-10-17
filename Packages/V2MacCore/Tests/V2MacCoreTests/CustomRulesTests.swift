@@ -68,6 +68,18 @@ import Testing
         #expect(rules.last?["network"]?.stringValue == "tcp,udp")
     }
 
+    @Test func unmatchedRouteEndsTheRules() throws {
+        var custom = lists(proxy: "a.com")
+        custom.unmatchedRoute = .block
+        for plan in [RoutingPlan.global, .rulesOnly] {
+            let rules = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue)
+            #expect(rules.last == ["type": "field", "network": "tcp,udp", "outboundTag": "block"])
+            #expect(rules.filter { $0["network"] == "tcp,udp" }.count == 1)
+        }
+        let direct = try #require(try build(.direct, custom)["routing"]?["rules"]?.arrayValue)
+        #expect(direct.last?["outboundTag"] == "direct")
+    }
+
     @Test func proxyClientsCanGoDirect() throws {
         var custom = lists(proxy: "a.com")
         custom.proxyClientsRoute = .direct

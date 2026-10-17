@@ -71,8 +71,7 @@ extension ConfigBuilder {
         let localNames: JSONValue = ["type": "field", "domain": .array(CustomRules.localNames.map { .string($0) }), "outboundTag": .string(directTag)]
         // Direct mode keeps everything off the server, the proxy port included.
         if let route = custom.proxyClientsRoute, plan != .direct {
-            let tag = switch route { case .proxy: proxyTag; case .direct: directTag; case .block: blockTag }
-            customRules.insert(["type": "field", "inboundTag": [.string(inboundTag)], "outboundTag": .string(tag)], at: 0)
+            customRules.insert(["type": "field", "inboundTag": [.string(inboundTag)], "outboundTag": .string(route.tag)], at: 0)
         }
         if plan != .direct || !customRules.isEmpty { customRules.insert(contentsOf: [localNames, privateRule], at: 0) }
         if custom.blockQUIC { customRules.insert(["type": "field", "network": "udp", "port": "443", "outboundTag": .string(blockTag)], at: 0) }
@@ -89,6 +88,9 @@ extension ConfigBuilder {
         case .rulesOnly:
             tail = [["type": "field", "network": "tcp,udp", "outboundTag": .string(directTag)]]
         case .bypass, .global: break
+        }
+        if let route = custom.unmatchedRoute {
+            tail = tail.filter { $0["network"] == nil } + [["type": "field", "network": "tcp,udp", "outboundTag": .string(route.tag)]]
         }
         guard hasIPRules else { return (["domainStrategy": "AsIs", "rules": .array(customRules + tail)], nil) }
         // Without this, non-matching domains would be resolved by the local resolver,

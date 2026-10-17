@@ -1,6 +1,27 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Traffic that matches no rule": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "ترافیکی که با هیچ قانونی جور نیست"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Трафик без подходящего правила"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "不匹配任何规则的流量"}}
+      }
+    },
+    "Follow mode": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "طبق حالت"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Как в режиме"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "跟随模式"}}
+      }
+    },
+    "Also replaces a custom config's own fallback. Direct mode sends everything direct.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "جایگزین مسیر پیش‌فرض پیکربندی سفارشی هم می‌شود. حالت مستقیم همه‌چیز را مستقیم می‌فرستد."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Также заменяет запасной маршрут собственного конфига. В режиме «Напрямую» всё идёт напрямую."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "也会替代自定义配置自身的回退。直连模式下所有流量都直连。"}}
+      }
+    },
     "Go to Configuration": {
       "localizations": {
         "fa": {"stringUnit": {"state": "translated", "value": "رفتن به پیکربندی"}},

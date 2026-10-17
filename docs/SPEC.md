@@ -704,6 +704,12 @@ System Proxy on, the exception is disabled: manual and system proxy traffic
 share the inbound and cannot be distinguished. Changing System Proxy restarts
 the running core to apply this policy. This also applies to full configs.
 
+"Traffic that matches no rule" (Settings → Routing, `unmatchedRoute`) can send
+everything no rule matched to Proxy, Direct or Block with one catch-all after
+the custom and region rules, replacing the mode's own default and a full
+config's imported fallback. "Follow mode" leaves them as they are; Direct mode
+ignores the setting.
+
 **Rule Editor.** A window (`rule-editor`), opened from the glass button at the
 foot of the main window's sidebar (its name slides out on hover) or from
 Settings → Routing. The toolbar switches between Simple and Advanced and holds

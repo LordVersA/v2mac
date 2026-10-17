@@ -5,6 +5,7 @@ import V2MacCore
 struct RoutingSettings: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
+    @AppStorage("unmatchedRoute") private var unmatchedRoute = "mode"
 
     var body: some View {
         @Bindable var connection = model.connection
@@ -16,6 +17,19 @@ struct RoutingSettings: View {
                 ForEach(RoutingMode.allCases) { mode in
                     Text(mode.title).tag(mode)
                 }
+            }
+            Section {
+                Picker("Traffic that matches no rule", selection: $unmatchedRoute) {
+                    Text("Follow mode").tag("mode")
+                    Text("Proxy").tag("proxy")
+                    Text("Direct").tag("direct")
+                    Text("Block").tag("block")
+                }
+                .disabled(model.connection.routingMode == .direct)
+                .onChange(of: unmatchedRoute) { model.connection.reconnectIfRunning() }
+            } footer: {
+                Text("Also replaces a custom config's own fallback. Direct mode sends everything direct.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Bypass regions") {
                 if model.regionPacks.packs.isEmpty {

@@ -22,13 +22,7 @@ public struct CustomRule: Codable, Sendable, Hashable, Identifiable {
         self.enabled = enabled
     }
 
-    var tag: String {
-        switch action {
-        case .proxy: ConfigBuilder.proxyTag
-        case .direct: ConfigBuilder.directTag
-        case .block: ConfigBuilder.blockTag
-        }
-    }
+    var tag: String { action.tag }
 
     /// The ordered list as stored in `UserDefaults`; unreadable text gives no rules.
     public static func decode(_ json: String) -> [CustomRule] {
@@ -72,13 +66,17 @@ public struct CustomRules: Sendable, Equatable, Hashable {
     /// Where apps that were set to use the proxy port themselves go, without any rule; nil follows
     /// the rules. Off while the system proxy is on, since then every app comes through that port.
     public var proxyClientsRoute: CustomRule.Action?
+    /// Where traffic that matches no rule goes, ahead of the mode's own default and an imported
+    /// config's fallback; nil leaves it to them. Direct mode ignores it.
+    public var unmatchedRoute: CustomRule.Action?
 
     public init(rules: [CustomRule] = [], installedApps: [InstalledApp] = [], blockQUIC: Bool = false,
-                proxyClientsRoute: CustomRule.Action? = nil) {
+                proxyClientsRoute: CustomRule.Action? = nil, unmatchedRoute: CustomRule.Action? = nil) {
         self.rules = rules
         self.installedApps = installedApps
         self.blockQUIC = blockQUIC
         self.proxyClientsRoute = proxyClientsRoute
+        self.unmatchedRoute = unmatchedRoute
     }
 
     public var needsApps: Bool { rules.contains { $0.enabled && !$0.apps.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
@@ -279,5 +277,15 @@ public struct RuleMatchers: Sendable, Equatable {
             inet_ntop(AF_INET6, &bytes, &buffer, socklen_t(buffer.count))
         }
         return String(decoding: buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+    }
+}
+
+extension CustomRule.Action {
+    var tag: String {
+        switch self {
+        case .proxy: ConfigBuilder.proxyTag
+        case .direct: ConfigBuilder.directTag
+        case .block: ConfigBuilder.blockTag
+        }
     }
 }
