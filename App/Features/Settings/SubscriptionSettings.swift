@@ -6,9 +6,9 @@ struct SubscriptionSettings: View {
     @AppStorage("subscriptionUpdateViaProxy") private var viaProxy = false
     @AppStorage("defaultIntervalHours") private var hours = 12
     @AppStorage("userAgent") private var userAgent = ""
-    @AppStorage("latencyURL") private var url = "https://www.gstatic.com/generate_204"
+    @AppStorage("latencyURL") private var url = "https://www.wikipedia.org"
     @AppStorage("latencyTimeout") private var timeout = 8.0
-    @AppStorage("latencyConcurrency") private var concurrency = 8
+    @AppStorage("latencyConcurrency") private var concurrency = 32
     @AppStorage("speedTestURL") private var speedURL = Prefs.defaultSpeedURL
 
     var body: some View {

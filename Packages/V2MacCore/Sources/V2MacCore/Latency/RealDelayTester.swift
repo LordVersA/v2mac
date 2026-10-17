@@ -10,9 +10,9 @@ public struct LatencyOptions: Sendable, Equatable {
     public var speedURL: URL?
 
     public init(
-        url: URL = URL(string: "https://www.gstatic.com/generate_204")!,
+        url: URL = URL(string: "https://www.wikipedia.org")!,
         timeout: TimeInterval = 8,
-        concurrency: Int = 8,
+        concurrency: Int = 32,
         batchSize: Int = 32,
         speedURL: URL? = nil
     ) {

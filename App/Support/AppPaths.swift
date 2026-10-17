@@ -127,9 +127,9 @@ enum Prefs {
             "autoUpdateSubscriptions": true,
             "subscriptionUpdateViaProxy": false,
             "defaultIntervalHours": 12,
-            "latencyURL": "https://www.gstatic.com/generate_204",
+            "latencyURL": "https://www.wikipedia.org",
             "latencyTimeout": 8.0,
-            "latencyConcurrency": 8,
+            "latencyConcurrency": 32,
             "speedTestURL": Prefs.defaultSpeedURL,
             "liveSwitch": true,
             "autoSelectServer": false,
@@ -425,10 +425,10 @@ enum Prefs {
 
     static var latencyOptions: LatencyOptions {
         let url = defaults.string(forKey: "latencyURL").flatMap(URL.init(string:))
-            ?? URL(string: "https://www.gstatic.com/generate_204")!
+            ?? URL(string: "https://www.wikipedia.org")!
         let timeout = defaults.double(forKey: "latencyTimeout")
         let concurrency = defaults.integer(forKey: "latencyConcurrency")
-        return LatencyOptions(url: url, timeout: timeout > 0 ? timeout : 8, concurrency: concurrency > 0 ? concurrency : 8)
+        return LatencyOptions(url: url, timeout: timeout > 0 ? timeout : 8, concurrency: concurrency > 0 ? concurrency : 32)
     }
 
     static var appVersion: String {

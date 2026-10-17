@@ -119,8 +119,8 @@ change without affecting the rest.
    for executables. Geo data stays in `Resources`.
 9. **Subscription info.** When the provider sends `subscription-userinfo`, the
    group header shows used / total data and the expiry date.
-10. **Latency defaults.** URL `https://www.gstatic.com/generate_204`, timeout
-    8 s, 8 concurrent requests, 32 servers per throwaway core.
+10. **Latency defaults.** URL `https://www.wikipedia.org`, timeout
+    8 s, 32 concurrent requests, 32 servers per throwaway core.
 
 ---
 
@@ -1173,7 +1173,7 @@ under `cloudflareclient.com`, so traffic through WARP never started.
 3. Start a throwaway core with this config. If it exits before ready, split the
    batch in half and retry each half; a batch of one that still fails marks that
    profile `invalid` with the core's error line.
-4. With 8 concurrent requests, send `GET <test URL>` through each port using an
+4. With 32 concurrent requests, send `GET <test URL>` through each port using an
    ephemeral `URLSession` with `ProxyConfiguration(socksv5Proxy:)`, timeout 8 s.
    Elapsed time to response headers is the delay. Any error or non-2xx/3xx →
    `timeout`.
@@ -1749,9 +1749,9 @@ another address) has no app or bytes. At most 1,000 rows and 2,000 log lines are
 | | Auto-update route: Without proxy / Via proxy | Without proxy |
 | | Default interval when the provider sends none | 12 h |
 | | User-Agent | `v2mac/<version>` |
-| Latency | Test URL | `https://www.gstatic.com/generate_204` |
+| Latency | Test URL | `https://www.wikipedia.org` |
 | | Timeout | 8 s |
-| | Concurrency | 8 |
+| | Concurrency | 32 |
 | Connection | Switch servers without restarting | On |
 | | Automatically select a working server | Off |
 | | Switch conditions: delay over (ms); download under (KB/s) for (min) (section 9.7) | Off; 1000 ms; 100 KB/s for 2 min |
