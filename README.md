@@ -101,7 +101,36 @@ Closing the window keeps the proxy running. Quit with ⌘Q to stop it.
 - **Languages:** English, Persian (RTL), Simplified Chinese and Russian.
 - **Private:** no analytics, no telemetry. Secrets stay in an encrypted local file or, if you choose, the Keychain.
 
-## Screenshots
+## Per-app routing: a Proxifier alternative for macOS
+
+V2Mac decides, connection by connection, which app and which site goes **through the proxy**, goes **direct**, or is **blocked**, the way Proxifier does, but with Xray's protocols built in, so you no longer need two apps.
+
+- **Rules by app and by host.** An app can be written as `Telegram.app`, a bundle id (`com.example.chat`), a pattern (`*code*`), a process name (`curl`) or a full path. Hosts take domains, wildcards (`*google*`), IP ranges, geosite/geoip tags, Clash rules, hosts files and Adblock lists. A rule with both needs both to match.
+- **First match wins.** Rules are checked from the top; drag to reorder. Local names (`localhost`, `*.local`) and the local network always go direct.
+- **Simple editor.** One row per app or host with a Proxy / Direct / Block menu, saved groups, bulk changes, and a **Discovered** inbox of new apps and hosts seen in your traffic, ready to route with one click.
+- **Import your Proxifier profile.** **Import…** reads a `.ppx` file and shows every rule before adding it. Rules that use V2Mac's port become Proxy rules, Direct and Block rules stay as they are, and rules to other proxies or chains are skipped and listed. **Block QUIC (UDP 443)** works like Proxifier's option, so browsers fall back to TCP and their host names reach the rules.
+- **Rule profiles.** Keep several named rule sets (home, work, travel) and switch between them from the toolbar.
+
+<p align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="Rule Editor, Simple view: apps such as Telegram, Discord, Xcode and Safari, each with a Proxy or Direct route" width="720"></p>
+
+<p align="center"><img src="docs/images/screenshots/rule-editor-advanced.png" alt="Rule Editor, Advanced view: ordered rules with Add Rule, Rule Builder and Import Proxifier Profile buttons and the Block QUIC switch" width="720"></p>
+
+App rules apply to apps that use the system proxy or connect to V2Mac's port. In TUN mode the app name is not known, so host and IP rules apply instead. More in the **[routing rules guide](docs/routing-rules.md)**.
+
+## Connections: see where every request goes
+
+The **Connections** window lists every request live: the app that made it, the target host and port, how long it has been open, the bytes sent and received, and the **rule** that routed it (Proxy, Direct or Block, plus the rule's name).
+
+- **Group** by application or by host to see which apps talk most and where, or show every connection on its own.
+- **Filter** by All / Open and by route, and search apps and targets.
+- **Colour-coded reasons:** orange for apps that use the proxy port by their own setting, purple for traffic that fell back to an imported config's own routing.
+- **Event log** at the bottom shows each connection as it opens and closes.
+- **Map** view shows your requests and top apps on a globe.
+- Right-click a connection to jump straight to the rule (or server config) behind it, or to add a new rule for that app or host.
+
+<p align="center"><img src="docs/images/screenshots/connections.png" alt="Connections window: Mail, Safari, curl and Music requests with their targets, durations, Proxy, Direct and Block routes, rule names and traffic" width="720"></p>
+
+
 
 All screenshots use made-up demo servers.
 
