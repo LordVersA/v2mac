@@ -110,7 +110,15 @@ struct SimpleRuleEditor: View {
         .alert("Could not import profile", isPresented: Binding { importError != nil } set: { if !$0 { importError = nil } }) {
             Button("OK", role: .cancel) { importError = nil }
         } message: { Text(importError ?? "") }
-        .task { await EntryIcons.shared.load() }
+        .task {
+            #if DEBUG
+            // `-debugProxifierImport <path>` opens the import review on that file, for `-debugSnapshot`.
+            if let path = UserDefaults.standard.string(forKey: "debugProxifierImport") {
+                importedProfile = try? ProxifierProfile(data: Data(contentsOf: URL(fileURLWithPath: path)))
+            }
+            #endif
+            await EntryIcons.shared.load()
+        }
         .onAppear { model.connection.watcher.watch() }
         .onDisappear { model.connection.watcher.unwatch() }
         .onChange(of: library) { selection.removeAll(); route = nil; search = "" }
