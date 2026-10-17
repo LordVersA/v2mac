@@ -1,204 +1,176 @@
 <p align="center"><img src="docs/images/banner.jpg" alt="V2Mac, a native macOS Xray-core client for VLESS, VMess, Trojan, Shadowsocks and Hysteria2" width="720"></p>
 
+<h1 align="center">V2Mac</h1>
+
+<p align="center"><b>A native macOS client for Xray-core and V2Ray.</b><br>
+VLESS, REALITY, VMess, Trojan, Shadowsocks, Hysteria2 and WireGuard in a fast SwiftUI menu bar app for Apple Silicon.</p>
+
+<p align="center">
+  <a href="https://github.com/LordVersA/v2mac/releases/latest"><img src="https://img.shields.io/github/v/release/LordVersA/v2mac?label=release&color=0A84FF" alt="Latest release"></a>
+  <a href="https://github.com/LordVersA/v2mac/releases"><img src="https://img.shields.io/github/downloads/LordVersA/v2mac/total?color=34C759" alt="Total downloads"></a>
+  <a href="https://github.com/LordVersA/v2mac/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/LordVersA/v2mac/ci.yml?branch=main&label=CI" alt="CI status"></a>
+  <img src="https://img.shields.io/badge/macOS-26%2B-000000?logo=apple" alt="macOS 26 or later">
+  <img src="https://img.shields.io/badge/Apple%20Silicon-arm64-555555" alt="Apple Silicon">
+  <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/LordVersA/v2mac?color=blue" alt="GPL-3.0 license"></a>
+  <a href="https://github.com/LordVersA/v2mac/stargazers"><img src="https://img.shields.io/github/stars/LordVersA/v2mac?style=flat&color=FFCC00" alt="GitHub stars"></a>
+</p>
+
 <p align="center">English | <a href="README.fa.md">فارسی</a> | <a href="README.zh.md">简体中文</a> | <a href="README.ru.md">Русский</a></p>
 
-# V2Mac
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="docs/routing-rules.md">Routing rules</a> ·
+  <a href="#faq">FAQ</a> ·
+  <a href="#build-from-source">Build</a>
+</p>
 
-**A native macOS client for [Xray-core](https://github.com/XTLS/Xray-core).** Paste a subscription link, pick a server, and get a local SOCKS5 + HTTP proxy. Built with SwiftUI and Liquid Glass, for Apple Silicon.
+<p align="center"><img src="docs/images/screenshots/server-browsing.gif" alt="V2Mac main window: sorting servers by delay, opening Favorites and searching" width="760"></p>
 
-## Features
-
-- **Subscriptions:** import VLESS, VMess, Trojan, Shadowsocks, Hysteria2, WireGuard and plain SOCKS/HTTP links, or full Xray JSON configs. Auto-update, and shows your traffic usage and expiry date when the provider sends them.
-- **Add and edit servers by hand:** fill in every option of a VLESS, VMess, Trojan, Shadowsocks, Hysteria2, WireGuard, SOCKS or HTTP server yourself (transport, TLS or REALITY, Mux), or change one you imported.
-- **Favorites:** star the servers you like and find them in one list. A subscription update never removes them without asking.
-- **Latency tests:** real-delay and TCP ping for a whole group at once, sorted by speed.
-- **Optional automatic selection:** off by default; chooses a working server using real HTTP response delay, monitors the running proxy, and falls back to peers in group order. Manual choices stay selected while they respond. Optional conditions also switch when the delay stays high or the download stays slow for as long as you set.
-- **Routing:** Global, Direct, or Bypass regions (Iran, China, Russia) to send local traffic direct.
-- **Custom routing rules:** your own ordered Proxy, Direct and Block rules on top of any mode, by site and by app, like Proxifier (whose profiles it imports). Paste domains, IP ranges, geosite/geoip tags, Clash rules, hosts files or Adblock lists, or build them in the **Rule Builder** by picking countries on a map and services from a list. [More below](#custom-routing-rules).
-- **TUN mode:** one switch routes all traffic on the Mac through the proxy, including apps with no proxy setting and every DNS lookup. No paid developer account or system extension needed. `Scripts/check-tun.sh` checks that nothing leaks.
-- **System proxy:** one switch in the menu bar or the window points the macOS system proxy at V2Mac while it is connected. A dot shows whether the system proxy is V2Mac (green), something else (red) or not set (grey).
-- **Kill switch:** optional, off by default. While V2Mac is connected or reconnecting, only the server, the local network and name servers can be reached; everything else is blocked, also when the connection drops or V2Mac stops unexpectedly, until you disconnect. It uses the macOS firewall (pf).
-- **Cloudflare WARP:** register a free WARP device over MASQUE in Settings, enter a WARP+ license key to use its plan, and either add WARP as a server or send traffic out through WARP behind your own server, so sites see a Cloudflare address.
-- **Explicit TUN failure behavior:** choose whether to keep the local proxy or stop the connection when TUN fails. Status distinguishes a local proxy from an active system tunnel.
-- **Managed administrator access:** Apple-signed builds use an `SMAppService` helper for TUN, DNS, the system proxy and the kill switch. Approve it once in macOS; manage or remove it in Settings → General → Privileged helper. Ad-hoc builds keep one macOS administrator prompt per app session. V2Mac never collects or saves your administrator password.
-- **Optional Keychain:** the local proxy password and WARP credentials use an encrypted local file by default, without a Keychain prompt. Settings → General can enable Apple Keychain after explaining the macOS password prompt. The local encryption key stays beside the file, so apps running as your user can decrypt it. Older proxy and WARP Keychain secrets remain there until you enable the option or re-enter them locally. Administrator-password storage has been removed; old local copies are scrubbed and Settings offers cleanup of the old Keychain entry.
-- **Menu bar control:** connect, switch server, live speed, and a local address you can copy.
-- **Reliable:** restarts the core after a crash, sleep or network change. Reconnect on launch restores the active server and TUN choice when the previous session was connected.
-- **Quick import:** click a `vless://`, `vmess://`, `trojan://`, `ss://` or `hy2://` link anywhere, or a provider's "add to app" button (`v2mac://install-config?url=…`), paste a screenshot of a QR code, or drop config files and QR pictures on the window.
-- **Control Center, Shortcuts and Siri:** a V2Mac switch for Control Center and the menu bar; connect, disconnect, and set TUN mode, the routing mode, the system proxy or the kill switch from Shortcuts, Spotlight and Siri, or with a keyboard shortcut you give them there.
-- **Backup:** export subscriptions, servers, favorites and settings to a `.v2m` file and restore them on another Mac.
-- **Languages:** English, Persian (right to left), Simplified Chinese and Russian.
-- **Also:** upload and download speed in the menu bar, password-protected LAN sharing, QR codes, a log viewer, launch at login, and one-click updates for the app and the Xray core.
-- **Private:** no analytics or telemetry.
-
-## Screenshots
-
-Captured from the current V2MacDev build with made-up demo servers. The development proxy uses port `10818`; the installed app defaults to `10808`.
-
-**Server browsing:** sort by delay, open Favorites, and search for a server.
-
-<p align="center"><img src="docs/images/screenshots/server-browsing.gif" alt="Animated walkthrough of sorting servers by delay, opening Favorites and searching for Frankfurt" width="720"></p>
-
-<details>
-<summary>More screenshots: import, editing, QR sharing, and settings</summary>
-
-<p align="center"><img src="docs/images/screenshots/main.png" alt="V2Mac main window: subscription groups, servers with delay and speed, inspector and connection bar" width="720"></p>
-
-The main window lists each subscription with its traffic usage and days left, plus every server's delay and top download speed. Select a server to see its details and copy its share link or QR code. The bar at the bottom shows the connection, the TUN switch, the routing mode and the local proxy address.
-
-**Settings tour:** General, Proxy, Routing, Connection, Servers, Notifications, Core, and About.
-
-<p align="center"><img src="docs/images/screenshots/settings-tour.gif" alt="Animated walkthrough of all eight V2Mac settings tabs" width="560"></p>
-
-Automatic server selection is off by default. Connection settings explain real HTTP checks and let you choose what happens if TUN fails.
-
-<p align="center"><img src="docs/images/screenshots/connection-settings.png" alt="Connection settings with automatic server selection off and the TUN failure policy set to keep the local proxy running" width="560"></p>
-
-**Add a subscription** using its URL and an optional name.
-
-<p align="center"><img src="docs/images/screenshots/add-subscription.png" alt="Add Subscription dialog with URL, optional name and proxy fetching controls" width="460"></p>
-
-**Edit a server copy** in Custom Configs without changing the subscription's original entry.
-
-<p align="center"><img src="docs/images/screenshots/server-editor.png" alt="Server editor showing demo VLESS address, port, user ID, flow and transport" width="520"></p>
-
-**Share a server** using the inspector's QR code.
-
-<p align="center"><img src="docs/images/screenshots/sharing.png" alt="Demo server inspector with its QR sharing popover fully visible" width="328"></p>
-
-**General settings** cover startup, reconnecting, recovery after sleep or network changes, updates, and diagnostics.
-
-<p align="center"><img src="docs/images/screenshots/settings.png" alt="General settings showing startup, connection recovery, updates and diagnostics" width="560"></p>
-
-**Proxy settings** configure the local port and optional LAN access with authentication.
-
-<p align="center"><img src="docs/images/screenshots/proxy-settings.png" alt="Proxy settings with the development port and LAN access disabled" width="560"></p>
-
-**Routing settings** choose a routing mode, manage bypass regions and hold your [custom rules](#custom-routing-rules).
-
-<p align="center"><img src="docs/images/screenshots/routing-settings.png" alt="Routing settings showing Global mode and the Iran bypass region" width="560"></p>
-
-</details>
+Paste a subscription link, pick a server, and you have a local SOCKS5 + HTTP proxy, or turn on TUN mode to send the whole Mac through it. V2Mac is a free, open-source **v2rayN / V2RayX alternative for macOS**, written natively in SwiftUI with Liquid Glass. No Electron, no analytics, no telemetry.
 
 ## Install
 
-Requires macOS 26 or later on Apple Silicon.
+Requires **macOS 26 or later** on **Apple Silicon** (M1 and newer).
 
-With [Homebrew](https://brew.sh), one command installs it and skips the Gatekeeper prompt, so you can go straight to step 3:
+**Homebrew** (recommended, skips the Gatekeeper prompt):
 
 ```sh
 brew install --cask lordversa/tap/v2mac
 ```
 
-Update later with `brew upgrade --cask v2mac`. Or install by hand:
+Update later with `brew upgrade --cask v2mac`.
 
-1. Download `V2Mac-<version>.dmg` from [Releases](../../releases) and drag **V2Mac** to **Applications**.
-2. The app is not notarized, so macOS blocks the first launch. Open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**. Or run:
+**Manual download:**
+
+1. Download `V2Mac-<version>.dmg` from the [latest release](https://github.com/LordVersA/v2mac/releases/latest) and drag **V2Mac** to **Applications**.
+2. The app is not notarized, so macOS blocks the first launch. Open it once, then click **Open Anyway** in **System Settings → Privacy & Security**, or run:
    ```sh
    xattr -dr com.apple.quarantine /Applications/V2Mac.app
    ```
-3. Click **Add Subscription**, paste your link, and double-click a server to connect.
-4. Point your apps at `socks5://127.0.0.1:10808` or `http://127.0.0.1:10808`.
 
-To proxy the whole Mac instead, turn on the **TUN** switch next to the routing menu. Apple-signed builds ask you to approve the managed helper in System Settings → General → Login Items & Extensions; approval persists across app restarts. Ad-hoc builds instead use the macOS administrator dialog each app session. V2Mac never receives your administrator password.
+**First connection:**
+
+1. Click **Add Subscription** and paste your link (or a `vless://`, `vmess://`, `trojan://`, `ss://`, `hy2://` link).
+2. Double-click a server to connect.
+3. Point your apps at `socks5://127.0.0.1:10808` or `http://127.0.0.1:10808`, or switch on **System Proxy** or **TUN**.
 
 Closing the window keeps the proxy running. Quit with ⌘Q to stop it.
 
-## Custom routing rules
+## Features
 
-The routing mode decides what happens to most traffic. Custom rules decide the exceptions: which sites, countries or addresses always go **through the proxy**, always go **direct**, or are **blocked**. They work in every mode and next to Bypass regions, so you can, for example, bypass Iran but still send one Iranian site through the proxy, or block ads whichever mode you use.
+### Protocols and import
 
-Open **Settings → Routing → Custom rules**. It is one list of rules, each with a name, an on/off switch, an action (Proxy, Direct or Block), the apps it applies to and the hosts it matches. Click **Add Rule** or **Edit…**, drag rules to reorder them, and click **Apply**; a running connection restarts to use them. A rule with both apps and hosts needs both to match; an empty field matches everything.
-
-In **Rule Editor → Simple**, use **Apps** and **Hosts** to manage saved groups. **Discovered** keeps new connections in a separate inbox. Expand a group to adjust its members, use each row's route menu, or select several rows for a bulk change. **Add…** lets you pick installed apps or enter domains without waiting for a connection. Changes save automatically.
-
-Coming from Proxifier? **Import…** in the Simple editor reads a `.ppx` file and lets you review it before adding rules after the existing ones. **Import Proxifier Profile…** is also available in Advanced/settings. Rules to V2Mac's port become Proxy rules, Direct and Block rules stay as they are, and rules to other proxies or chains are skipped and named. **Block QUIC (UDP 443)** does what Proxifier's option does: browsers fall back to TCP, so their host names reach the rules.
-
-Apps can be written as `Spotify.app`, `com.spotify.client`, `*discord*`, a process name (`curl`) or a full path. App rules work for apps that use the system proxy or connect directly to V2Mac's proxy port. TUN connections skip app rules because the forwarder loses app identity; host/IP rules and the default route still apply. This also applies to process rules in imported JSON configs.
-
-With **System Proxy off**, apps pointed at V2Mac's proxy port skip custom and region rules and use the server. Connections marks these in orange as **App's proxy setting** and leaves them out of newly discovered rule-editor entries. Local traffic stays direct, Block QUIC still applies, and Direct mode still uses only Block rules before sending everything else direct. With **System Proxy on**, all traffic through that port follows the rules, since manual and system proxy connections share the same port. Full JSON configs follow this policy too.
-
-In **Connections**, use **By Host** or **By Application** to fold traffic into expandable groups like the rule editor. Groups show connection counts, open connections and total traffic; expand them to inspect individual connections and their routing labels. Search, All/Open and the All/Proxy/Direct/Block route filter apply before grouping. All modes keep the same sortable table and single-line rows; groups start collapsed. **No grouping** shows individual connections.
-
-<p align="center"><img src="docs/images/screenshots/custom-rules.png" alt="Custom rules section in Routing settings, showing a Proxy list with Telegram, AI services, a Clash rule and a wildcard domain" width="560"></p>
-
-**How rules are checked**
-
-1. Block QUIC, when enabled; then local names (`localhost`, `*.local`, `*.test`, …) and local network addresses go direct.
-2. The app proxy exception described above, then your rules from the top down.
-3. Then the routing mode itself: the Bypass region packs, then everything else to the proxy (or direct in Direct mode).
-
-The first match wins, so a site in a Proxy rule goes through the proxy even when its country is bypassed, and a Direct rule above a broad Proxy rule wins over it. In **Direct** mode only Block rules are used, since nothing there should reach the proxy. Full Xray JSON configs use V2Mac's rules and mode first, then their imported routing as fallback. The mode picker works for them too. Connections marks imported fallback traffic in purple as **Config fallback**; manually proxied traffic stays orange. IP rules resolve names when reached, so a later catch-all cannot preempt them.
-
-**What you can write**
-
-A rule's hosts take the formats most guides, rule sets and Proxifier use. Commas, spaces and `;` also separate entries, and lines starting with `#`, `//` or `!` are comments.
-
-| Write | Matches |
+| | |
 |---|---|
-| `example.com`, `*.example.com`, `+.example.com`, `.ir` | the domain and all its subdomains (`.ir` covers every `.ir` site) |
-| `full:www.example.com` | only that exact name |
-| `keyword:shop`, `*shop*` | any name containing the word |
-| `regexp:^ads\d+\.` | names matching a regular expression |
-| `1.2.3.4`, `10.0.0.0/8`, `2001:db8::/32`, `10.0.0.1-10.0.0.9` | an address or a range, IPv4 or IPv6 |
-| `geosite:google`, `geosite:category-ads-all` | a site list from the core's `geosite.dat` (1,500+ lists) |
-| `geoip:de`, `geoip:telegram` | a country's or service's addresses from `geoip.dat` |
-| `ext:region-ir-geosite.dat:ir` | a list from a downloaded region pack |
-| `DOMAIN-SUFFIX,example.com,DIRECT` | Clash rules: `DOMAIN`, `DOMAIN-SUFFIX`, `DOMAIN-KEYWORD`, `DOMAIN-REGEX`, `IP-CIDR`, `IP-CIDR6`, `GEOIP`, `GEOSITE` (the rule's action decides, not the policy column) |
-| `0.0.0.0 ads.example.com` | lines from a hosts file |
-| `\|\|ads.example.com^` | Adblock domain lines |
+| **Protocols** | VLESS (incl. REALITY, XTLS Vision), VMess, Trojan, Shadowsocks, Hysteria2, WireGuard, SOCKS, HTTP, and full Xray JSON configs |
+| **Subscriptions** | Auto-update, with traffic usage and expiry date when the provider sends them |
+| **Quick import** | Click a share link anywhere, a provider's `v2mac://install-config?url=…` button, paste a QR screenshot, or drop config files and QR images on the window |
+| **Server editor** | Every option by hand: transport, TLS or REALITY, Mux. Edit imported servers without touching the original |
+| **Favorites** | Star servers; a subscription update never removes them without asking |
 
-Anything that is not a rule is skipped and named under the editor, so a typo never stops the connection.
+### Connection
 
-### Rule Builder
+- **Latency tests:** real-delay and TCP ping for a whole group at once, sorted by speed, plus download speed.
+- **Automatic server selection** (optional): picks a working server by real HTTP delay, watches it, and falls back in group order when it stalls or gets slow.
+- **TUN mode:** one switch routes every app and every DNS lookup through the proxy. No paid developer account or system extension needed; `Scripts/check-tun.sh` verifies nothing leaks.
+- **System proxy:** one switch points the macOS system proxy at V2Mac, with a status dot that shows who owns it.
+- **Kill switch** (optional): blocks everything except the server and local network while connected, even if the connection drops, using the macOS firewall (pf).
+- **Cloudflare WARP:** register a free WARP device (MASQUE), use a WARP+ key, and add WARP as a server or chain it behind your own.
+- **Reliable:** restarts the core after a crash, sleep or network change, and reconnects on launch.
+- **Live switching:** picking another server swaps it inside the running core instead of restarting it.
 
-Rather not type rules? Click **Rule Builder…** under the rules. It writes them for you in three steps.
+### Routing
 
-**1. Action.** Choose what should happen: Proxy, Direct or Block. Or start from a common setup, such as keeping your own country direct, blocking ads and trackers, or sending AI services, Telegram or streaming through the proxy.
+- **Modes:** Global, Rules Only, Direct, or **Bypass** regions (Iran, China, Russia) so local sites go direct.
+- **Custom rules, like Proxifier:** ordered Proxy / Direct / Block rules by site and by app. Imports Proxifier `.ppx` profiles, Clash rules, hosts files, Adblock lists, geosite and geoip tags.
+- **Rule Builder:** pick countries on a world map and services (Google, Telegram, OpenAI, Netflix, ads…) from a list.
+- **Connections view:** every connection, grouped by host or app, with the rule that routed it.
 
-<p align="center"><img src="docs/images/screenshots/rule-builder-action.png" alt="Rule Builder first step with Proxy, Direct and Block cards and a list of common setups" width="720"></p>
+→ Full guide: **[Custom routing rules](docs/routing-rules.md)**
 
-**2. Choose.** Pick what to match from three tabs. The counts in the tabs and the footer show how much you have picked so far.
+### macOS integration
 
-- **Countries:** search all 250 countries by name or code, or click a country on the map to add or remove it. Each picked country gets a flag on the map. For each country you choose what to add: its IP ranges (`geoip:ir`), its domain ending (`domain:ir`, every `.ir` site), and its list of known sites on other domains (`geosite:category-ir`) where the rule files have one.
+- **Menu bar control:** connect, switch servers, live upload/download speed, exit IP and country.
+- **Control Center, Shortcuts, Spotlight and Siri:** connect, disconnect, and toggle TUN, routing mode, system proxy or kill switch.
+- **Privileged helper:** Apple-signed builds use an `SMAppService` helper you approve once; V2Mac never sees or stores your administrator password.
+- **Backup:** export subscriptions, servers, favorites and settings to a `.v2m` file and restore on another Mac.
+- **Also:** password-protected LAN sharing, QR codes, log viewer, notifications, launch at login, and one-click updates for the app and the Xray core.
+- **Languages:** English, Persian (RTL), Simplified Chinese and Russian.
+- **Private:** no analytics, no telemetry. Secrets stay in an encrypted local file or, if you choose, the Keychain.
 
-<p align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="Rule Builder country step: searchable country list on the left, a world map with flags on Germany, Iran and Japan on the right" width="720"></p>
+## Screenshots
 
-- **Services:** one click for Google, YouTube, Telegram, Instagram, WhatsApp, X, Netflix, Spotify, OpenAI, Anthropic, Apple, Microsoft, ads and trackers, and more. On the right you can search every list in the core's rule files. The lists come from the files themselves, so the builder never writes a rule for a list the core does not have.
+All screenshots use made-up demo servers.
 
-<p align="center"><img src="docs/images/screenshots/rule-builder-services.png" alt="Rule Builder services step with popular service tiles and a searchable list of every geosite and geoip list" width="720"></p>
+<p align="center"><img src="docs/images/screenshots/main.png" alt="V2Mac main window with subscription groups, server delay and speed, inspector and connection bar" width="760"></p>
 
-- **Domains & IPs:** type or paste anything in the formats above. It is checked as you type, and a guide to the formats sits beside it.
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/screenshots/add-subscription.png" alt="Add Subscription dialog" width="380"><br><sub>Add a subscription</sub></td>
+    <td align="center"><img src="docs/images/screenshots/server-editor.png" alt="VLESS server editor" width="380"><br><sub>Edit any server</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="Rule Builder world map with selected countries" width="380"><br><sub>Rule Builder: pick countries on a map</sub></td>
+    <td align="center"><img src="docs/images/screenshots/custom-rules.png" alt="Custom routing rules in settings" width="380"><br><sub>Custom routing rules</sub></td>
+  </tr>
+</table>
 
-<p align="center"><img src="docs/images/screenshots/rule-builder-domains.png" alt="Rule Builder domains step with a text editor, a live count and a guide to accepted formats" width="720"></p>
+<details>
+<summary><b>More screenshots</b></summary>
 
-**3. Review.** See every entry that will be written and what kind it is. Entries your rules with the same action already have are marked and not added twice. Click **Add Rules** to save them as one new rule named after the date: a Block rule goes to the top of the list, the others to the bottom. You can rename, edit or move it later in Settings.
+<p align="center"><img src="docs/images/screenshots/settings-tour.gif" alt="Animated tour of all V2Mac settings tabs" width="560"></p>
+<p align="center"><img src="docs/images/screenshots/connection-settings.png" alt="Connection settings: automatic server selection and TUN failure policy" width="560"></p>
+<p align="center"><img src="docs/images/screenshots/routing-settings.png" alt="Routing settings with Bypass Iran" width="560"></p>
+<p align="center"><img src="docs/images/screenshots/sharing.png" alt="Server QR code for sharing" width="328"></p>
 
-<p align="center"><img src="docs/images/screenshots/rule-builder-review.png" alt="Rule Builder review step listing thirteen rules for the Direct list" width="720"></p>
-
-**Examples**
-
-| Goal | List | Rules |
-|---|---|---|
-| Block ads everywhere | Block | `geosite:category-ads-all` |
-| Use AI services through the proxy, even with Iran bypassed | Proxy | `geosite:openai`, `geosite:anthropic`, `geosite:category-ai-!cn` |
-| Keep Apple and Microsoft updates off the proxy | Direct | `geosite:apple`, `geosite:microsoft` |
-| Reach your office network directly | Direct | `10.0.0.0/8`, `full:intranet.example.com` |
-| Use a downloaded Clash rule list | any | paste the `payload:` lines as they are |
-
-A rule naming a list the files do not contain, say `geosite:nonexistent`, stops the core from starting; the log says which one. The Rule Builder only offers lists that exist.
+</details>
 
 ## Leak protection in Chrome: noleaker
 
-A proxy alone does not stop the browser from giving you away: WebRTC can expose your real IP, DNS and QUIC can go around the proxy, and your timezone and language still say where you are. For Chrome and other Chromium-based browsers, use [**noleaker**](https://github.com/LordVersA/noleaker), a free, open-source extension from the same author that pairs with V2Mac:
+A proxy alone does not stop the browser from leaking: WebRTC can expose your real IP, DNS and QUIC can bypass the proxy, and timezone and language reveal your location. [**noleaker**](https://github.com/LordVersA/noleaker), a free extension from the same author, pairs with V2Mac for Chrome and Chromium browsers: it forces traffic and DNS through V2Mac's SOCKS5 proxy, blocks WebRTC and QUIC leaks, matches timezone, language and geolocation to your server, and blocks requests if the proxy goes down.
 
-- Sends all browser traffic and DNS lookups through V2Mac's SOCKS5 proxy, and blocks WebRTC and QUIC leaks.
-- Matches timezone, language and geolocation to the country of your server.
-- Kill switch: if the proxy goes down, requests are blocked instead of going out directly.
-- Built-in leak test that checks each of these and says which setting fixes a failure.
-- Compatibility mode lets Iran-hosted sites skip the proxy.
+Setup: install the [latest release](https://github.com/LordVersA/noleaker/releases/latest), add proxy `127.0.0.1:10808`, and switch **Protection** on. Leave V2Mac's proxy username and password empty.
 
-Setup: install noleaker from its [latest release](https://github.com/LordVersA/noleaker/releases/latest), add a proxy with host `127.0.0.1` and port `10808`, and switch **Protection** on. noleaker cannot send a proxy username or password, so leave those empty in V2Mac's settings. It is tested on Chrome 120 and newer.
+## FAQ
+
+<details>
+<summary><b>Is V2Mac a V2Ray client for Mac?</b></summary>
+
+Yes. V2Mac runs [Xray-core](https://github.com/XTLS/Xray-core), the actively developed successor of V2Ray core, so it reads V2Ray and Xray share links and subscriptions (VLESS, VMess, Trojan, Shadowsocks) plus Hysteria2 and WireGuard.
+</details>
+
+<details>
+<summary><b>Does it support VLESS REALITY and XTLS Vision?</b></summary>
+
+Yes, both from share links and in the server editor, along with TCP, WebSocket, gRPC, HTTPUpgrade, XHTTP (SplitHTTP) and mKCP transports.
+</details>
+
+<details>
+<summary><b>How do I proxy all apps, including ones without proxy settings?</b></summary>
+
+Turn on **TUN** next to the routing menu. It routes every app and DNS lookup through the server. Approve the helper once (Apple-signed builds) or enter your administrator password once per session (ad-hoc builds).
+</details>
+
+<details>
+<summary><b>Does it work on Intel Macs or older macOS?</b></summary>
+
+No. V2Mac needs macOS 26 or later on Apple Silicon.
+</details>
+
+<details>
+<summary><b>Why does macOS say the app cannot be opened?</b></summary>
+
+The DMG is not notarized. Use **Open Anyway** in Privacy & Security, the `xattr` command above, or install with Homebrew.
+</details>
+
+<details>
+<summary><b>Does V2Mac collect any data?</b></summary>
+
+No. There is no analytics or telemetry. Besides your own traffic, V2Mac only contacts your subscription URLs, GitHub for updates and rule files, and a public IP service to check the exit after connecting.
+</details>
 
 ## Build from source
 
@@ -208,8 +180,12 @@ xcodegen generate
 xcodebuild -project v2mac.xcodeproj -scheme v2mac -configuration Debug build
 ```
 
-Needs Xcode 26+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen). The design is in [docs/SPEC.md](docs/SPEC.md).
+Needs Xcode 26+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen). The design is in [docs/SPEC.md](docs/SPEC.md). Package tests: `cd Packages/V2MacCore && swift test`.
+
+Bug reports and pull requests are welcome in [Issues](https://github.com/LordVersA/v2mac/issues).
 
 ## License
 
-GPL-3.0. See [LICENSE](LICENSE) and [THIRD_PARTY.md](THIRD_PARTY.md).
+[GPL-3.0](LICENSE). Bundles [Xray-core](https://github.com/XTLS/Xray-core) (MPL-2.0); see [THIRD_PARTY.md](THIRD_PARTY.md).
+
+<p align="center"><sub>If V2Mac helps you, a ⭐ helps others find it.</sub></p>
