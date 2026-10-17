@@ -1175,7 +1175,7 @@ under `cloudflareclient.com`, so traffic through WARP never started.
    profile `invalid` with the core's error line.
 4. With 32 concurrent requests, send `GET <test URL>` through each port using an
    ephemeral `URLSession` with `ProxyConfiguration(socksv5Proxy:)`, timeout 8 s.
-   Elapsed time to response headers is the delay. Any error or non-2xx/3xx →
+   A first request opens the connection; the time to response headers of a second one on the same session is the delay. Any error or non-2xx/3xx →
    `timeout`.
 5. Stop the throwaway core; write results in one batch.
 

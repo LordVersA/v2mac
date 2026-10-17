@@ -315,7 +315,7 @@ public struct RealDelayTester: Sendable {
     }
 
     static func measureOne(port: Int, url: URL, timeout: TimeInterval) async -> LatencyOutcome {
-        await ProxyHealthProbe.measure(route: .localProxy(port: port), url: url, timeout: timeout)
+        await ProxyHealthProbe.measure(route: .localProxy(port: port), url: url, timeout: timeout, warm: true)
     }
 }
 

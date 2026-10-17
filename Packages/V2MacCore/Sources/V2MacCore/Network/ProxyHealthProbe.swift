@@ -2,14 +2,21 @@ import Foundation
 
 /// Tests the running proxy with an HTTP response. It never retries over a direct connection.
 public enum ProxyHealthProbe {
-    public static func measure(route: FetchRoute, url: URL, timeout: TimeInterval) async -> LatencyOutcome {
+    /// With `warm`, a first request opens the connection and only the second one is timed,
+    /// so the result is one round trip rather than every handshake on the way.
+    public static func measure(route: FetchRoute, url: URL, timeout: TimeInterval, warm: Bool = false) async -> LatencyOutcome {
         guard case .proxy = route, isSuitable(url) else { return .invalid(String(localized: "Use a public HTTP or HTTPS test URL.")) }
         let session = SessionFactory.make(route: route, timeout: timeout, resourceTimeout: timeout, delegate: ResponseHeadersOnly())
         defer { session.invalidateAndCancel() }
-        let start = ContinuousClock.now
         do {
             var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData)
             request.httpShouldHandleCookies = false
+            if warm {
+                // Read it to the end, so the connection is free to reuse.
+                let (_, response) = try await session.data(for: request)
+                guard let http = response as? HTTPURLResponse, (200..<400).contains(http.statusCode) else { return .timeout }
+            }
+            let start = ContinuousClock.now
             let (_, response) = try await session.bytes(for: request)
             guard let http = response as? HTTPURLResponse, (200..<400).contains(http.statusCode) else { return .timeout }
             let elapsed = ContinuousClock.now - start
