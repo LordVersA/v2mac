@@ -49,11 +49,11 @@ public struct RuleImport: Sendable, Equatable {
     /// Clash and Surge share one line form: `TYPE,value,POLICY[,options]`.
     private mutating func lines(_ lines: [String]) {
         for line in lines where !line.isEmpty && !line.hasPrefix("#") && !line.hasPrefix("//") {
-            let fields = line.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            let fields = line.split(separator: ",", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespaces) }
             let type = fields[0].uppercased()
             // The fallback belongs to the routing mode and "Unmatched traffic" setting.
             if type == "MATCH" || type == "FINAL" { continue }
-            guard fields.count >= 3 else { skipped.append(line); continue }
+            guard fields.count >= 3, !fields[1].isEmpty else { skipped.append(line); continue }
             let action = Self.action(policy: fields[2])
             switch type {
             case "PROCESS-NAME", "PROCESS-PATH":
@@ -85,7 +85,7 @@ public struct RuleImport: Sendable, Equatable {
                 + list("ip_cidr") + list("geosite").map { "geosite:" + $0 } + list("geoip").map { "geoip:" + $0 }
             let apps = list("process_name") + list("process_path")
             let name = rule["outbound"]?.stringValue ?? rule["action"]?.stringValue ?? ""
-            guard let action, !hosts.isEmpty || !apps.isEmpty else {
+            guard let action, !hosts.isEmpty || !apps.isEmpty, !Self.narrows(rule, beyond: Self.singBoxKeys) else {
                 // DNS hijacks, sniffing and rule sets have no V2Mac counterpart.
                 if rule["outbound"]?.stringValue != "dns-out", rule["protocol"]?.stringValue != "dns" { skipped.append(Self.describe(rule)) }
                 continue
@@ -100,7 +100,9 @@ public struct RuleImport: Sendable, Equatable {
             let hosts = strings("domain") + strings("ip")
             let apps = strings("process")
             let tag = rule["outboundTag"]?.stringValue ?? ""
-            guard !tag.isEmpty, !hosts.isEmpty || !apps.isEmpty else { skipped.append(rule["remarks"]?.stringValue ?? Self.describe(rule)); continue }
+            // Xray needs both a domain and an address to match; V2Mac would take either.
+            guard !tag.isEmpty, !hosts.isEmpty || !apps.isEmpty, strings("domain").isEmpty || strings("ip").isEmpty,
+                  !Self.narrows(rule, beyond: Self.xrayKeys) else { skipped.append(rule["remarks"]?.stringValue ?? Self.describe(rule)); continue }
             let action: CustomRule.Action = switch tag.lowercased() {
             case "direct": .direct
             case "block", "blackhole", "reject": .block
@@ -118,6 +120,24 @@ public struct RuleImport: Sendable, Equatable {
             if !hosts.isEmpty { rules[rules.count - 1].hosts += "\n" + hosts }
         } else {
             rules.append(CustomRule(name: name, action: action, apps: apps, hosts: hosts))
+        }
+    }
+
+    private static let singBoxKeys: Set<String> = ["domain", "domain_suffix", "domain_keyword", "domain_regex", "ip_cidr", "geosite", "geoip",
+                                                   "process_name", "process_path", "outbound", "action"]
+    private static let xrayKeys: Set<String> = ["domain", "ip", "process", "outboundTag", "remarks", "enabled", "type", "id", "locked", "ruleTag"]
+
+    /// A condition V2Mac cannot express (a port, a network, `invert`, …): importing the rule
+    /// without it would send more traffic its way than the file meant, so it is skipped.
+    static func narrows(_ rule: JSONValue, beyond known: Set<String>) -> Bool {
+        (rule.objectValue ?? [:]).contains { key, value in
+            guard !known.contains(key) else { return false }
+            switch value {
+            case .null, .bool(false): return false
+            case .string(let s): return !s.isEmpty
+            case .array(let a): return !a.isEmpty
+            default: return true
+            }
         }
     }
 

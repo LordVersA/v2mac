@@ -353,3 +353,26 @@ import Testing
         #expect(index.country(of: "8.8.8.8") == "US")
     }
 }
+
+@Suite struct RuleImportSafetyTests {
+    @Test func malformedLinesAreSkippedNotFatal() throws {
+        let r = try RuleImport(data: Data(",\n,,\nDOMAIN,,PROXY\nDOMAIN,a.example.com,PROXY".utf8))
+        #expect(r.rules.count == 1 && r.skipped.count == 3)
+    }
+
+    @Test func rulesWithConditionsV2MacLacksAreSkipped() throws {
+        let sing = #"{"outbounds":[{"type":"direct","tag":"d"}],"route":{"rules":[{"domain":["a.example.com"],"port":[443],"outbound":"d"},{"domain":["b.example.com"],"invert":true,"outbound":"d"},{"domain":["c.example.com"],"outbound":"d"}]}}"#
+        let s = try RuleImport(data: Data(sing.utf8))
+        #expect(s.rules.map(\.hosts) == ["full:c.example.com"] && s.skipped.count == 2)
+        let xray = #"[{"outboundTag":"direct","domain":["a.example.com"],"ip":["1.2.3.4"]},{"outboundTag":"direct","domain":["b.example.com"],"network":"udp"},{"outboundTag":"direct","domain":["c.example.com"],"port":"","inboundTag":null}]"#
+        let x = try RuleImport(data: Data(xray.utf8))
+        #expect(x.rules.map(\.hosts) == ["c.example.com"] && x.skipped.count == 2)
+    }
+
+    @Test func deepNestingIsCutOff() {
+        let flow = "proxies: " + String(repeating: "[", count: 10_000)
+        _ = MiniYAML.parse(flow)
+        let block = (0..<5_000).map { String(repeating: " ", count: $0) + "k\($0):" }.joined(separator: "\n")
+        _ = MiniYAML.parse(block)
+    }
+}

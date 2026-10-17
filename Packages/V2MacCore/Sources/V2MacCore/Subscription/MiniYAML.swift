@@ -17,20 +17,27 @@ enum MiniYAML {
     }
 
     /// One block whose lines all start at `indent`.
-    private static func block(_ lines: inout [(indent: Int, text: String)], _ index: inout Int, indent: Int) -> JSONValue {
+    /// Deeper nesting is cut off, so a hostile subscription cannot exhaust the stack.
+    static let maxDepth = 64
+
+    private static func block(_ lines: inout [(indent: Int, text: String)], _ index: inout Int, indent: Int, depth: Int = 0) -> JSONValue {
         guard index < lines.count else { return .null }
+        guard depth < maxDepth else {
+            while index < lines.count, lines[index].indent >= indent { index += 1 }
+            return .null
+        }
         if lines[index].text == "-" || lines[index].text.hasPrefix("- ") {
             var items: [JSONValue] = []
             while index < lines.count, lines[index].indent == indent, lines[index].text == "-" || lines[index].text.hasPrefix("- ") {
                 let rest = String(lines[index].text.dropFirst()).trimmingCharacters(in: .whitespaces)
                 if rest.isEmpty {
                     index += 1
-                    items.append(index < lines.count && lines[index].indent > indent ? block(&lines, &index, indent: lines[index].indent) : .null)
+                    items.append(index < lines.count && lines[index].indent > indent ? block(&lines, &index, indent: lines[index].indent, depth: depth + 1) : .null)
                 } else if keyValue(rest) != nil, !rest.hasPrefix("{"), !rest.hasPrefix("[") {
                     // `- key: value` starts a mapping whose other keys line up with `key`.
                     let inner = indent + (lines[index].text.count - rest.count)
                     lines[index] = (inner, rest)
-                    items.append(block(&lines, &index, indent: inner))
+                    items.append(block(&lines, &index, indent: inner, depth: depth + 1))
                 } else {
                     items.append(scalar(rest))
                     index += 1
@@ -44,7 +51,7 @@ enum MiniYAML {
             if !value.isEmpty {
                 object[key] = scalar(value)
             } else if index < lines.count, lines[index].indent > indent || (lines[index].indent == indent && lines[index].text.hasPrefix("- ")) {
-                object[key] = block(&lines, &index, indent: lines[index].indent)
+                object[key] = block(&lines, &index, indent: lines[index].indent, depth: depth + 1)
             } else {
                 object[key] = .null
             }
@@ -105,12 +112,17 @@ enum MiniYAML {
     private struct FlowReader {
         let text: [Character]
         var at = 0
+        var depth = 0
 
         mutating func skipSpaces() { while at < text.count, text[at] == " " { at += 1 } }
 
         mutating func value(plainStops: Set<Character>) -> JSONValue {
             skipSpaces()
             guard at < text.count else { return .null }
+            if text[at] == "{" || text[at] == "[" {
+                guard depth < MiniYAML.maxDepth else { at = text.count; return .null }
+                depth += 1
+            }
             switch text[at] {
             case "{":
                 at += 1
@@ -125,6 +137,7 @@ enum MiniYAML {
                     if at < text.count, text[at] == ":" { at += 1; object[key] = value(plainStops: [",", "}"]) }
                     else { object[key] = .null }
                 }
+                depth -= 1
                 return .object(object)
             case "[":
                 at += 1
@@ -136,6 +149,7 @@ enum MiniYAML {
                     if text[at] == "," { at += 1; continue }
                     items.append(value(plainStops: [",", "]"]))
                 }
+                depth -= 1
                 return .array(items)
             case "\"", "'":
                 let quote = text[at]
