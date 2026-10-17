@@ -169,6 +169,10 @@ its own switch (`notify_<kind>`) in Settings → Notifications. A new one needs 
 `osascript` (or with a saved administrator account) by `TunController.startSession`, serves TUN
 mode, the system proxy (`SystemProxyController`, spec 9.9) and the kill switch
 (`KillSwitchController`, spec 9.8). It reads only flag files and checked data from `run/`.
+When the app is signed with a team ID, `TunController` uses the managed privileged helper instead:
+an `SMAppService` launch daemon (`PrivilegedHelper/`, embedded by `Scripts/embed-privileged-helper.sh`,
+XPC protocol in `Shared/`, driven by `PrivilegedHelperService`). Ad-hoc builds (CI, local DMG) keep
+the `osascript` script. `Scripts/check-tun.sh` (sudo) checks a running TUN session for leaks.
 
 **TUN mode** (spec 9.5) runs two Xray processes: the normal core as the user, and a root
 *forwarder* with a fixed config (TUN inbound → SOCKS to the core's `tun-in` port). The root helper
