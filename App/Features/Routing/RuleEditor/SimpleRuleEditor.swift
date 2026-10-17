@@ -40,7 +40,7 @@ struct SimpleRuleEditor: View {
     @State private var search = ""
     @State private var isAdding = false
     @State private var isImporting = false
-    @State private var importedProfile: ProxifierProfile?
+    @State private var importedProfile: RuleImport?
     @State private var importError: String?
     @State private var applyTask: Task<Void, Never>?
 
@@ -92,19 +92,19 @@ struct SimpleRuleEditor: View {
                 save(entries, action)
             }
         }
-        .fileImporter(isPresented: $isImporting, allowedContentTypes: [UTType(filenameExtension: "ppx") ?? .xml, .xml]) { result in
+        .fileImporter(isPresented: $isImporting, allowedContentTypes: RuleImportSheet.fileTypes) { result in
             do {
                 let url = try result.get()
                 let scoped = url.startAccessingSecurityScopedResource()
                 defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                importedProfile = try ProxifierProfile(data: Data(contentsOf: url))
+                importedProfile = try RuleImport(data: Data(contentsOf: url))
             } catch {
                 if (error as NSError).code != NSUserCancelledError { importError = error.localizedDescription }
             }
         }
         .sheet(isPresented: Binding { importedProfile != nil } set: { if !$0 { importedProfile = nil } }) {
             if let profile = importedProfile {
-                ProxifierImportSheet(profile: profile) { importProfile(profile) }
+                RuleImportSheet(profile: profile) { importProfile(profile) }
             }
         }
         .alert("Could not import profile", isPresented: Binding { importError != nil } set: { if !$0 { importError = nil } }) {
@@ -114,7 +114,7 @@ struct SimpleRuleEditor: View {
             #if DEBUG
             // `-debugProxifierImport <path>` opens the import review on that file, for `-debugSnapshot`.
             if let path = UserDefaults.standard.string(forKey: "debugProxifierImport") {
-                importedProfile = try? ProxifierProfile(data: Data(contentsOf: URL(fileURLWithPath: path)))
+                importedProfile = try? RuleImport(data: Data(contentsOf: URL(fileURLWithPath: path)))
             }
             #endif
             await EntryIcons.shared.load()
@@ -194,7 +194,7 @@ struct SimpleRuleEditor: View {
             Spacer(minLength: 0)
             HStack(spacing: 8) {
                 Button("Import…", systemImage: "square.and.arrow.down") { isImporting = true }
-                    .help("Import a Proxifier profile (.ppx)")
+                    .help("Import rules from Proxifier, Clash, sing-box, v2rayN or Shadowrocket")
                 Button("Add…", systemImage: "plus") { isAdding = true }
                     .buttonStyle(.borderedProminent)
             }
@@ -272,7 +272,7 @@ struct SimpleRuleEditor: View {
         save(entries, action)
     }
 
-    private func importProfile(_ profile: ProxifierProfile) {
+    private func importProfile(_ profile: RuleImport) {
         stored = CustomRule.encode(CustomRule.decode(stored) + profile.rules)
         if profile.blockQUIC { UserDefaults.standard.set(true, forKey: "blockQUIC") }
         importedProfile = nil

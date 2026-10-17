@@ -174,6 +174,43 @@ import Testing
         #expect(p.rules[2].apps == "\"Example.app\"\ncom.example.chat\n*tool*")
         #expect(!p.rules[3].enabled)
         #expect(throws: (any Error).self) { try ProxifierProfile(data: Data("<x/>".utf8)) }
+        #expect(try RuleImport(data: Data(Fixtures.proxifierProfile.utf8)).format == .proxifier)
+    }
+
+    @Test func importsClashRules() throws {
+        let r = try RuleImport(data: Data(Fixtures.clashConfig.utf8))
+        #expect(r.format == .clash)
+        #expect(r.rules.map(\.action) == [.proxy, .proxy, .direct, .block])
+        #expect(r.rules[0].hosts == "DOMAIN-SUFFIX,blocked.example\nDOMAIN-KEYWORD,tracker")
+        #expect(r.rules[1].apps == "Telegram" && r.rules[1].hosts.isEmpty)
+        #expect(RuleMatchers(parsing: r.rules[2].hosts).ips == ["10.0.0.0/8", "geoip:ir"])
+        #expect(r.skipped == ["RULE-SET,streaming,PROXY"])
+    }
+
+    @Test func importsSingBoxRules() throws {
+        let r = try RuleImport(data: Data(Fixtures.singBoxConfig.utf8))
+        #expect(r.format == .singBox)
+        #expect(r.rules.map(\.action) == [.direct, .proxy, .block])
+        #expect(r.rules[0].hosts == "domain:ir\ngeoip:ir")
+        #expect(r.rules[1].apps == "Safari" && r.rules[1].hosts == "full:x.example.com")
+        #expect(r.skipped.count == 1)
+    }
+
+    @Test func importsV2rayNRules() throws {
+        let r = try RuleImport(data: Data(Fixtures.v2rayNRules.utf8))
+        #expect(r.format == .xray)
+        #expect(r.rules.map(\.name) == ["Iran direct", "Block ads", "Telegram"])
+        #expect(r.rules.map(\.action) == [.direct, .block, .proxy])
+        #expect(!r.rules[2].enabled && r.rules[2].apps == "Telegram")
+        #expect(r.skipped == ["Ports"])
+    }
+
+    @Test func importsSurgeRules() throws {
+        let r = try RuleImport(data: Data(Fixtures.surgeConfig.utf8))
+        #expect(r.format == .surge)
+        #expect(r.rules.count == 2 && r.rules[0].hosts.split(separator: "\n").count == 2)
+        #expect(r.skipped == ["RULE-SET,https://lists.example.com/ads.list,REJECT"])
+        #expect(throws: (any Error).self) { try RuleImport(data: Data("hello".utf8)) }
     }
 }
 

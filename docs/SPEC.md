@@ -380,8 +380,13 @@ are accepted as a fallback for the same fields.
    line; blank lines and lines starting with `#` or `//` ignored).
 4. Else, try base64 (standard and URL-safe, missing padding and embedded
    whitespace tolerated) and repeat steps 2–3 on the decoded text.
-5. Else fail with "Unrecognised subscription format". Clash YAML and sing-box
-   JSON get a specific "format not supported" message.
+5. Else fail with "Unrecognised subscription format".
+
+Before these steps, a Clash / Mihomo YAML body (a line starting `proxies:` or
+`proxy-groups:`) is read with `MiniYAML` (no anchors or multi-line scalars), and
+JSON whose `outbounds` use `type` instead of `protocol` is sing-box. Each of their
+servers becomes a share link (`ForeignConfig`) and goes through `ShareLinkParser`;
+kinds without a link form (TUIC, WireGuard, …) are skipped and counted.
 
 A response that yields zero profiles is a failure, not an empty group.
 
@@ -680,7 +685,17 @@ dotless names) always go direct, ahead of the rules. **Block QUIC (UDP 443)**
 (`blockQUIC`, off by default) adds a first rule sending UDP 443 to Block, so
 browsers fall back to TCP and their host names reach the rules.
 
-**Import Proxifier Profile…** reads a `.ppx` file (`ProxifierProfile`): each
+**Import Rules…** reads the file with `RuleImport`, which tells the formats apart:
+Proxifier (below); Clash / Mihomo `rules:` and Shadowrocket / Surge `[Rule]` lines
+(`TYPE,value,POLICY`: `DIRECT` → Direct, `REJECT*` → Block, any other policy →
+Proxy; neighbouring lines with the same policy become one rule named after it;
+`MATCH`/`FINAL` is left to the routing mode; `RULE-SET`, logic and port rules are
+skipped and listed); sing-box `route.rules` (domain, suffix, keyword, regex, CIDR,
+geosite, geoip, process fields; the outbound's type gives the action, `reject`
+blocks; rule sets skipped); Xray / v2rayN / v2rayNG rule JSON (`outboundTag`
+`direct`, `block` or anything else → Proxy, with `remarks` and `enabled` kept).
+
+A Proxifier `.ppx` file (`ProxifierProfile`): each
 rule to a proxy on 127.0.0.1 or localhost becomes a Proxy rule, Direct and
 Block rules keep their action, `enabled` is kept, rules to other proxies or
 chains are skipped and named, the default rule is left to the routing mode,
@@ -728,7 +743,7 @@ the rule profile menu.
   domain-per-line field, and a route choice. Invalid domains, IP addresses and
   technical matchers cannot be saved through that field; Advanced handles those.
   App rules' TUN limitation is stated beside the Apps list and in the add sheet.
-  Import opens a `.ppx`/XML chooser and reviews `ProxifierProfile`'s rules, skipped
+  Import opens a file chooser and reviews `RuleImport`'s rules, skipped
   names and Block QUIC setting before appending to the active profile. Existing
   rules keep priority; cancellation leaves the list untouched, errors show an alert.
   Combined app-and-host rules, disabled rules and addresses remain in Advanced.

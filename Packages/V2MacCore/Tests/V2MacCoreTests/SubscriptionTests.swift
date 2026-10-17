@@ -53,12 +53,22 @@ import Testing
         #expect(throws: SubscriptionError.unrecognisedFormat) { try SubscriptionParser.parse(text: "") }
     }
 
-    @Test func clashAndSingBoxHaveSpecificErrors() {
-        let clash = "port: 7890\nproxies:\n  - name: a\n    type: vless\n"
-        #expect(throws: SubscriptionError.unsupportedFormat("Clash")) { try SubscriptionParser.parse(text: clash) }
-        let singbox = #"{"outbounds":[{"type":"vless","tag":"a","server":"x","server_port":443}]}"#
-        let r = try? SubscriptionParser.parse(text: singbox)
-        #expect(r == nil)
+    @Test func readsClashProxies() throws {
+        let r = try SubscriptionParser.parse(text: Fixtures.clashConfig)
+        #expect(r.profiles.map(\.name) == ["WS TLS", "Reality", "SS 123", "HY2"])
+        #expect(r.profiles.map(\.protocolName) == ["vless", "vless", "shadowsocks", "hysteria"])
+        #expect(r.profiles[0].transport == "ws" && r.profiles[0].security == "tls")
+        #expect(r.profiles[0].config["streamSettings"]?["wsSettings"]?["path"]?.stringValue == "/ws")
+        #expect(r.profiles[1].security == "reality" && r.profiles[1].address == "2001:db8::1")
+        #expect(r.profiles[2].config["settings"]?["password"]?.stringValue == "123456")
+        #expect(r.skipped.count == 1)
+    }
+
+    @Test func readsSingBoxOutbounds() throws {
+        let r = try SubscriptionParser.parse(text: Fixtures.singBoxConfig)
+        #expect(r.profiles.map(\.name) == ["SB Trojan", "SB VMess"])
+        #expect(r.profiles[0].protocolName == "trojan" && r.profiles[0].transport == "grpc")
+        #expect(r.profiles[1].port == 8443 && r.profiles[1].transport == "ws")
     }
 
     // MARK: JSON

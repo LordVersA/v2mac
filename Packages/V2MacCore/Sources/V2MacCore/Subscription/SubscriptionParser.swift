@@ -13,7 +13,11 @@ public enum SubscriptionParser {
         var metadata = parseMetadata(headers: headers)
 
         let content: String
-        if isClash(normalised) { throw SubscriptionError.unsupportedFormat("Clash") }
+        if isClash(normalised) {
+            let (profiles, skipped) = ForeignConfig.clashProxies(MiniYAML.parse(normalised))
+            guard !profiles.isEmpty else { throw SubscriptionError.noServers(skipped: skipped.count) }
+            return SubscriptionResult(profiles: profiles, skipped: skipped, metadata: metadata)
+        }
         if looksStructured(normalised) {
             content = normalised
         } else if hasKnownScheme(normalised) {
@@ -59,6 +63,11 @@ public enum SubscriptionParser {
         s.split(separator: "\n", omittingEmptySubsequences: true).contains {
             $0.hasPrefix("proxies:") || $0.hasPrefix("proxy-groups:")
         }
+    }
+
+    /// sing-box names an outbound's kind `type`; Xray calls it `protocol`.
+    static func isSingBox(_ root: JSONValue) -> Bool {
+        root["outbounds"]?.arrayValue?.contains { $0["type"] != nil && $0["protocol"] == nil } == true
     }
 
     // MARK: Link lists
@@ -112,6 +121,7 @@ public enum SubscriptionParser {
             }
         }
 
+        if isSingBox(root) { return ForeignConfig.singBoxOutbounds(root) }
         switch root {
         case .array(let items):
             for (i, item) in items.enumerated() { add(item, number: i + 1) }

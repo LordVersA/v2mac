@@ -23,6 +23,88 @@ enum Fixtures {
     </ProxifierProfile>
     """
 
+    static let clashConfig = """
+    port: 7890
+    proxies:
+      - name: "WS TLS"   # comment
+        type: vless
+        server: srv.example.com
+        port: 443
+        uuid: \(uuid)
+        tls: true
+        servername: cdn.example.com
+        network: ws
+        ws-opts:
+          path: /ws
+          headers:
+            Host: cdn.example.com
+      - {name: Reality, type: vless, server: "2001:db8::1", port: 443, uuid: \(uuid), flow: xtls-rprx-vision, tls: true, servername: www.example.com, client-fingerprint: chrome, reality-opts: {public-key: \(realityKey), short-id: ab12}}
+      - name: SS 123
+        type: ss
+        server: 1.2.3.4
+        port: 8388
+        cipher: aes-128-gcm
+        password: 123456
+      - name: HY2
+        type: hysteria2
+        server: srv.example.com
+        port: 443
+        password: 'it''s'
+        sni: a.example.com
+      - name: Tuic
+        type: tuic
+        server: srv.example.com
+        port: 443
+    proxy-groups:
+      - name: PROXY
+        type: select
+        proxies: [WS TLS, Reality]
+    rules:
+      - DOMAIN-SUFFIX,blocked.example,PROXY
+      - DOMAIN-KEYWORD,tracker,PROXY
+      - PROCESS-NAME,Telegram,PROXY
+      - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+      - GEOIP,IR,DIRECT
+      - DOMAIN,ads.example.com,REJECT
+      - RULE-SET,streaming,PROXY
+      - MATCH,PROXY
+    """
+
+    static let singBoxConfig = """
+    {"outbounds": [
+      {"type": "trojan", "tag": "SB Trojan", "server": "srv.example.com", "server_port": 443, "password": "pw",
+       "tls": {"enabled": true, "server_name": "a.example.com"}, "transport": {"type": "grpc", "service_name": "svc"}},
+      {"type": "vmess", "tag": "SB VMess", "server": "1.2.3.4", "server_port": 8443, "uuid": "\(uuid)", "security": "auto",
+       "transport": {"type": "ws", "path": "/vm", "headers": {"Host": "cdn.example.com"}}},
+      {"type": "direct", "tag": "direct"}, {"type": "block", "tag": "block"}, {"type": "dns", "tag": "dns-out"}],
+     "route": {"rules": [
+      {"protocol": "dns", "outbound": "dns-out"},
+      {"domain_suffix": [".ir"], "geoip": ["ir"], "outbound": "direct"},
+      {"process_name": ["Safari"], "domain": ["x.example.com"], "outbound": "SB Trojan"},
+      {"domain_keyword": ["ads"], "action": "reject"},
+      {"rule_set": ["geosite-cn"], "outbound": "direct"}]}}
+    """
+
+    static let v2rayNRules = """
+    [{"remarks": "Iran direct", "outboundTag": "direct", "domain": ["geosite:category-ir", "domain:ir"], "enabled": true},
+     {"remarks": "Block ads", "outboundTag": "block", "domain": ["geosite:category-ads-all"]},
+     {"remarks": "Telegram", "outboundTag": "proxy", "ip": ["geoip:telegram"], "process": ["Telegram"], "enabled": false},
+     {"remarks": "Ports", "outboundTag": "proxy", "port": "443"}]
+    """
+
+    static let surgeConfig = """
+    [General]
+    bypass-system = true
+    [Rule]
+    DOMAIN-SUFFIX,blocked.example,PROXY
+    DOMAIN-SUFFIX,other.example,PROXY
+    IP-CIDR,192.168.0.0/16,DIRECT
+    RULE-SET,https://lists.example.com/ads.list,REJECT
+    FINAL,DIRECT
+    [Host]
+    a.example.com = 1.2.3.4
+    """
+
     static let uuid = "b831381d-6324-4d53-ad4f-8cda48b30811"
     static let realityKey = "jmsHqm9I9NJN3d3cZmhU6iM3sFM0q9D9p1tBvXkQm2E"
     static let sha = "4b363bd924df5bf09f87bd445755ff8e5742b9a8a0480cda261061416c3c7dce"

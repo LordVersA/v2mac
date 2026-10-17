@@ -1,6 +1,49 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Import %@ rules": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "وارد کردن قوانین %@"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Импорт правил %@"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "导入 %@ 规则"}}
+      }
+    },
+    "Skipped, V2Mac has nothing like them: %@.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "رد شد، V2Mac معادلی برایشان ندارد: %@."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Пропущены, в V2Mac нет аналога: %@."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "已跳过，V2Mac 没有对应功能：%@。"}}
+      }
+    },
+    "Import Rules…": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "وارد کردن قوانین…"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Импорт правил…"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "导入规则…"}}
+      }
+    },
+    "Import rules from Proxifier, Clash, sing-box, v2rayN or Shadowrocket": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "وارد کردن قوانین از Proxifier، Clash، sing-box، v2rayN یا Shadowrocket"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Импорт правил из Proxifier, Clash, sing-box, v2rayN или Shadowrocket"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "从 Proxifier、Clash、sing-box、v2rayN 或 Shadowrocket 导入规则"}}
+      }
+    },
+    "Imported %lld rules. Skipped, V2Mac has nothing like them: %@.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "%lld قانون وارد شد. رد شده، V2Mac معادلی برایشان ندارد: %@."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Импортировано правил: %lld. Пропущены, в V2Mac нет аналога: %@."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "已导入 %lld 条规则。已跳过，V2Mac 没有对应功能：%@。"}}
+      }
+    },
+    "%@ servers are not supported": {
+      "extractionState": "manual",
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سرورهای %@ پشتیبانی نمی‌شوند"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Серверы %@ не поддерживаются"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "不支持 %@ 服务器"}}
+      }
+    },
     "Traffic that matches no rule": {
       "localizations": {
         "fa": {"stringUnit": {"state": "translated", "value": "ترافیکی که با هیچ قانونی جور نیست"}},
@@ -17669,28 +17712,6 @@
         }
       }
     },
-    "Import Proxifier Profile…": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "وارد کردن پروفایل Proxifier…"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Импорт профиля Proxifier…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入 Proxifier 配置文件…"
-          }
-        }
-      }
-    },
     "New rule": {
       "localizations": {
         "fa": {
@@ -17775,28 +17796,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "已导入 %lld 条规则。请检查后点按“应用”。"
-          }
-        }
-      }
-    },
-    "Imported %lld rules. Skipped, they use another proxy or a chain: %@.": {
-      "localizations": {
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld قانون وارد شد. رد شده، چون از پروکسی یا زنجیره‌ی دیگری استفاده می‌کنند: %@."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Импортировано правил: %lld. Пропущены, так как используют другой прокси или цепочку: %@."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已导入 %lld 条规则。已跳过使用其他代理或代理链的规则：%@。"
           }
         }
       }

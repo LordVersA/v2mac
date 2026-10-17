@@ -1,15 +1,20 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import V2MacCore
 
 /// Review the existing parser's result before appending it to the active rule profile.
-struct ProxifierImportSheet: View {
+struct RuleImportSheet: View {
     @Environment(\.dismiss) private var dismiss
-    let profile: ProxifierProfile
+    let profile: RuleImport
     let save: () -> Void
+
+    /// Proxifier, Clash, sing-box, v2rayN and Shadowrocket / Surge files.
+    static let fileTypes: [UTType] = [.xml, .json, .yaml, .plainText]
+        + ["ppx", "yml", "conf", "list"].compactMap { UTType(filenameExtension: $0) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Import Proxifier profile").font(.title2.weight(.semibold))
+            Text("Import \(profile.format.rawValue) rules").font(.title2.weight(.semibold))
             Text("\(profile.rules.count) rules will be added after your existing rules. Existing rules keep their priority.")
                 .font(.callout).foregroundStyle(.secondary)
             List(profile.rules) { rule in
@@ -31,7 +36,8 @@ struct ProxifierImportSheet: View {
             }
             .listStyle(.inset)
             if !profile.skipped.isEmpty {
-                Label("Skipped rules using another proxy or chain: \(profile.skipped.joined(separator: ", ")).", systemImage: "exclamationmark.triangle")
+                Label("Skipped, V2Mac has nothing like them: \(profile.skipped.joined(separator: ", ")).", systemImage: "exclamationmark.triangle")
+                    .lineLimit(4)
                     .font(.callout).foregroundStyle(.orange)
             }
             if profile.blockQUIC {

@@ -96,7 +96,7 @@ struct CustomRulesSection: View {
                     editing = rule
                 }
                 Button("Rule Builder…", systemImage: "wand.and.stars") { model.openRuleBuilder(openWindow) }
-                Button("Import Proxifier Profile…") { importing = true }
+                Button("Import Rules…") { importing = true }
                 Spacer()
                 Button("Revert") { draft = nil; importNote = nil }.disabled(draft == nil)
                 Button("Apply") {
@@ -128,7 +128,7 @@ struct CustomRulesSection: View {
                 change { $0.removeAll { $0.id == rule.id } }
             }
         }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [UTType(filenameExtension: "ppx") ?? .xml, .xml]) { result in
+        .fileImporter(isPresented: $importing, allowedContentTypes: RuleImportSheet.fileTypes) { result in
             importProfile(result)
         }
         Section {
@@ -145,12 +145,12 @@ struct CustomRulesSection: View {
             let url = try result.get()
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            let profile = try ProxifierProfile(data: Data(contentsOf: url))
+            let profile = try RuleImport(data: Data(contentsOf: url))
             change { $0 += profile.rules }
             if profile.blockQUIC { blockQUIC = true }
             importNote = profile.skipped.isEmpty
                 ? String(localized: "Imported \(profile.rules.count) rules. Check them and click Apply.")
-                : String(localized: "Imported \(profile.rules.count) rules. Skipped, they use another proxy or a chain: \(profile.skipped.joined(separator: ", ")).")
+                : String(localized: "Imported \(profile.rules.count) rules. Skipped, V2Mac has nothing like them: \(profile.skipped.joined(separator: ", ")).")
         } catch {
             importNote = String(localized: "Could not read the profile: \(error.localizedDescription)")
         }
