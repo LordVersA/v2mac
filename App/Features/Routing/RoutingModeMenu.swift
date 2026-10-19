@@ -41,6 +41,20 @@ struct TunToggle: View {
     var showsLabel = true
 
     var body: some View {
+        if connection.tun.needsAccess {
+            HStack(spacing: 6) {
+                if showsLabel { Text("TUN").font(.caption) }
+                Button("Give Access") { connection.connectActive() }
+                    .controlSize(.small)
+            }
+            .fixedSize()
+            .help("The administrator prompt was closed. Click to ask for access again.")
+        } else {
+            toggle
+        }
+    }
+
+    private var toggle: some View {
         Toggle(isOn: Binding(
             get: { connection.tun.isEnabled },
             set: { on in connection.setTunEnabled(on) }

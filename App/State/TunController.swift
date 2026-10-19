@@ -61,6 +61,14 @@ final class TunController {
         }
     }
 
+    /// The last start failed because the user closed the administrator prompt; the TUN switch
+    /// offers to ask again.
+    var needsAccess: Bool {
+        if case .failed = state { return accessCancelled }
+        return false
+    }
+    private var accessCancelled = false
+
     var failureMessage: String? {
         if case .failed(let message) = state { return message }
         return nil
@@ -120,6 +128,7 @@ final class TunController {
         switch result {
         case .cancelled:
             fail(String(localized: "Administrator access was cancelled; the system tunnel is inactive."))
+            accessCancelled = true
             return nil
         case .failed(let message):
             fail(String(localized: "TUN mode could not start: \(message)"))
@@ -258,6 +267,7 @@ final class TunController {
     }
 
     private func fail(_ message: String) {
+        accessCancelled = false
         state = .failed(message)
         logs.append("[v2mac] \(message)")
         onFailure(message)

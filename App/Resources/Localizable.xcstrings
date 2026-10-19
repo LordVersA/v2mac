@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Give Access": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دادن دسترسی"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дать доступ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授予权限"
+          }
+        }
+      }
+    },
+    "The administrator prompt was closed. Click to ask for access again.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پنجره‌ی دسترسی مدیر بسته شد. برای درخواست دوباره‌ی دسترسی کلیک کنید."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Окно запроса прав администратора было закрыто. Нажмите, чтобы запросить доступ снова."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理员授权窗口已关闭。点击可再次请求权限。"
+          }
+        }
+      }
+    },
     "Outgoing network": {
       "localizations": {
         "fa": {"stringUnit": {"state": "translated", "value": "شبکهٔ خروجی"}},
