@@ -83,6 +83,8 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   - `-debugCleanIP YES|<transport>` opens Find Clean IP on the first server it applies to and prints the best results.
   - `-debugBackupRoundTrip <path>` (with demo data) writes a backup there, removes the servers, restores
     the file twice and prints what came back.
+  - `-debugTunCancelled YES` makes every TUN start act as if the password prompt was closed, without
+    showing it, so the Give Access button can be checked (add `-tunEnabled YES`).
   - `-debugAddCustom YES` adds four made-up servers (VLESS, Trojan, Shadowsocks) to Custom Configs
     in the dev build's own data. They do not connect; they are for trying the lists by hand.
   - `-debugDemoData YES` uses an in-memory store filled with made-up servers. Use it for UI checks

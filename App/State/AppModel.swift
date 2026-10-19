@@ -68,7 +68,13 @@ final class AppModel {
         } catch {
             fatalError("Could not open the V2Mac database: \(error)")
         }
+        #if DEBUG
+        // `-debugTunCancelled YES`: every TUN start acts as if the password prompt was closed.
+        let tun = UserDefaults.standard.bool(forKey: "debugTunCancelled") ? TunController(logs: logs, authorize: { _ in .cancelled }) : nil
+        connection = ConnectionController(logs: logs, tun: tun)
+        #else
         connection = ConnectionController(logs: logs)
+        #endif
         subscriptions = SubscriptionService(container: container, connection: connection)
         latency = LatencyService(container: container)
         ensureManualGroup()
