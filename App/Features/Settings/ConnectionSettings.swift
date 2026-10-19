@@ -27,6 +27,9 @@ struct ConnectionSettings: View {
     @AppStorage("dnsEnabled") private var dnsEnabled = false
     @AppStorage("dnsServers") private var dnsServers = DNSSettings.defaultServers.joined(separator: ", ")
     @AppStorage("dnsQueryStrategy") private var dnsQueryStrategy = DNSQueryStrategy.useIP.rawValue
+    @AppStorage("outboundInterface") private var outboundInterface = ""
+    @State private var networks: [OutgoingNetwork] = []
+    @State private var automaticName: String?
     @State private var pending: Task<Void, Never>?
     @State private var isTuning = false
 
@@ -59,6 +62,35 @@ struct ConnectionSettings: View {
                 note("With automatic selection on, these also move to the fastest other server in the group: when two checks in a row (30 seconds apart) answer slower than the delay, or when the download never reaches the speed for that many minutes while traffic flows. An idle connection never counts as slow. A server you picked yourself is switched too.")
             }
             .disabled(!autoSelectServer)
+            Section {
+                Picker("Outgoing network", selection: Binding(get: { outboundInterface }, set: { name in
+                    model.connection.setOutboundInterface(name.isEmpty ? nil : name)
+                })) {
+                    if let automatic = networks.first(where: { $0.name == automaticName }) {
+                        Text("Automatic: \(automatic.title)").tag("")
+                    } else {
+                        Text("Automatic").tag("")
+                    }
+                    Divider()
+                    ForEach(networks) { network in
+                        Text(verbatim: ([network.title] + network.details).joined(separator: " · ")).tag(network.name)
+                    }
+                    if !outboundInterface.isEmpty, !networks.contains(where: { $0.name == outboundInterface }) {
+                        Text("\(NetworkInterfaces.describe(outboundInterface).title) (not connected)").tag(outboundInterface)
+                    }
+                }
+            } footer: {
+                note("The network that connections to the server and direct traffic leave through, in TUN mode too. Automatic follows the network macOS uses. If the chosen network disconnects, V2Mac goes back to Automatic and lets you know. Delay tests use the same network.")
+            }
+            .task {
+                // shortcut: polls while the tab is open; a path monitor would only save a few cheap calls.
+                while !Task.isCancelled {
+                    let ours = model.connection.tun.interfaceName
+                    networks = NetworkInterfaces.outgoing(excluding: ours)
+                    automaticName = NetworkInterfaces.primary(excluding: ours)
+                    try? await Task.sleep(for: .seconds(3))
+                }
+            }
             Section {
                 Picker("If TUN fails", selection: $tunFailurePolicy) {
                     ForEach(TunFailurePolicy.allCases, id: \.rawValue) { policy in
@@ -200,5 +232,27 @@ struct ConnectionSettings: View {
             guard !Task.isCancelled else { return }
             model.connection.reconnectIfRunning()
         }
+    }
+}
+
+extension OutgoingNetwork {
+    /// "Wi-Fi (en0)", the kind in the app's language.
+    var title: String {
+        let kind = switch kind {
+        case .wifi: String(localized: "Wi-Fi")
+        case .ethernet: String(localized: "Ethernet")
+        case .iPhone: String(localized: "iPhone or iPad")
+        case .bluetooth: String(localized: "Bluetooth")
+        case .bridge: String(localized: "Thunderbolt Bridge")
+        case .vpn: String(localized: "VPN tunnel")
+        case .other: String(localized: "Network")
+        }
+        return "\(kind) (\(name))"
+    }
+
+    /// The hardware's name, when it says more than the kind, and the addresses.
+    var details: [String] {
+        let model = hardware.flatMap { [.wifi, .bridge, .bluetooth].contains(kind) ? nil : $0 }
+        return (model.map { [$0] } ?? []) + addresses
     }
 }

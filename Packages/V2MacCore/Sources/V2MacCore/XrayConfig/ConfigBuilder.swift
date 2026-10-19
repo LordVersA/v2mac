@@ -39,6 +39,12 @@ public struct RunOptions: Sendable, Hashable {
     public var apiPort: Int?
     /// A WARP outbound that traffic leaves through after the server (spec 9.10).
     public var warpExit: JSONValue?
+    /// The network the user picked for the core's connections (spec 8.4); nil leaves it to macOS.
+    /// In TUN mode `tun.outboundInterface` already names it.
+    public var outboundInterface: String?
+
+    /// The interface every outbound that dials out is bound to, if any.
+    var boundInterface: String? { tun?.outboundInterface ?? outboundInterface }
 
     public init(
         inbound: InboundSettings = InboundSettings(),
@@ -49,7 +55,8 @@ public struct RunOptions: Sendable, Hashable {
         dialer: DialerSettings = DialerSettings(),
         dns: DNSSettings? = nil,
         apiPort: Int? = nil,
-        warpExit: JSONValue? = nil
+        warpExit: JSONValue? = nil,
+        outboundInterface: String? = nil
     ) {
         self.inbound = inbound
         self.logLevel = logLevel
@@ -60,6 +67,7 @@ public struct RunOptions: Sendable, Hashable {
         self.dns = dns
         self.apiPort = apiPort
         self.warpExit = warpExit
+        self.outboundInterface = outboundInterface
     }
 }
 

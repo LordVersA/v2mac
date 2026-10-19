@@ -29,6 +29,36 @@ import Testing
         #expect(c["outbounds"]?[1]?["streamSettings"] == nil)
     }
 
+    @Test func chosenNetworkBindsOutboundsWithoutTun() throws {
+        let options = RunOptions(metricsPort: 20000, dialer: DialerSettings(fragment: FragmentSettings()), outboundInterface: "en9")
+        let c = try ConfigBuilder.build(outbound: ["protocol": "vless"], options: options, routing: .global)
+        let outbounds = try #require(c["outbounds"]?.arrayValue)
+        #expect(outbounds.filter { $0["protocol"] != "blackhole" }.allSatisfy { $0["streamSettings"]?["sockopt"]?["interface"] == "en9" })
+        #expect(ConfigBuilder.proxyOutbound(["protocol": "vless"], options: options)["streamSettings"]?["sockopt"]?["interface"] == "en9")
+        let custom = try ConfigBuilder.buildCustom(config: ["outbounds": [["tag": "out", "protocol": "trojan"]]], options: options, routing: .global)
+        #expect(custom["outbounds"]?[0]?["streamSettings"]?["sockopt"]?["interface"] == "en9")
+        // TUN names the interface itself.
+        var tunOptions = options
+        tunOptions.tun = link
+        #expect(ConfigBuilder.proxyOutbound(["protocol": "vless"], options: tunOptions)["streamSettings"]?["sockopt"]?["interface"] == "en7")
+    }
+
+    @Test func outgoingNetworkKinds() {
+        #expect(OutgoingNetwork.kind(name: "en0", type: "IEEE80211", hardware: "Wi-Fi") == .wifi)
+        #expect(OutgoingNetwork.kind(name: "en7", type: "Ethernet", hardware: "USB 10/100/1000 LAN") == .ethernet)
+        #expect(OutgoingNetwork.kind(name: "en8", type: "Ethernet", hardware: "iPhone USB") == .iPhone)
+        #expect(OutgoingNetwork.kind(name: "bridge0", type: "Bridge", hardware: "Thunderbolt Bridge") == .bridge)
+        #expect(OutgoingNetwork.kind(name: "utun4", type: nil, hardware: nil) == .vpn)
+        #expect(OutgoingNetwork.kind(name: "gif0", type: nil, hardware: nil) == .other)
+    }
+
+    @Test func outgoingNetworksStartWithTheDefaultOne() {
+        let networks = NetworkInterfaces.outgoing()
+        #expect(!networks.contains { $0.name == "lo0" })
+        #expect(networks.allSatisfy { !$0.addresses.isEmpty })
+        if let primary = NetworkInterfaces.primary() { #expect(networks.first?.name == primary) }
+    }
+
     @Test func tunSkipsAppRulesButKeepsHostRules() throws {
         let custom = CustomRules(rules: [
             CustomRule(name: "App", action: .block, apps: "curl"),

@@ -35,6 +35,7 @@ struct NotificationSettings: View {
                 NotificationToggle(kind: .connection)
                 NotificationToggle(kind: .reconnected)
                 NotificationToggle(kind: .tun)
+                NotificationToggle(kind: .network)
             } header: {
                 Text("Connection")
             } footer: {

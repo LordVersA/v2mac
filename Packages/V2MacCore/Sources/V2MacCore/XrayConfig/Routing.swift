@@ -115,9 +115,9 @@ extension ConfigBuilder {
         if let dns = options.dns { direct = direct.setting("settings", to: ["domainStrategy": .string(dns.queryStrategy.rawValue)]) }
         // Present whenever the settings are on, so a live switch can dial through it as well.
         var extras = dialerOutbound(options.dialer).map { [$0] } ?? []
-        if let tun = options.tun {
-            direct = binding(direct, to: tun.outboundInterface)
-            extras = extras.map { binding($0, to: tun.outboundInterface) }
+        if let interface = options.boundInterface {
+            direct = binding(direct, to: interface)
+            extras = extras.map { binding($0, to: interface) }
         }
         var config: JSONValue = [
             "log": logSection(options),
@@ -174,7 +174,7 @@ extension ConfigBuilder {
 
         out = dialingOutbounds(of: out, through: options.dialer)
         if let dns = options.dns, config["dns"] == nil { out = out.setting("dns", to: dnsSection(dns)) }
-        if let tun = options.tun { out = bindingOutbounds(of: out, to: tun.outboundInterface) }
+        if let interface = options.boundInterface { out = bindingOutbounds(of: out, to: interface) }
 
         if let routing = config["routing"], case .array(let rules)? = routing["rules"] {
             var rewritten: [JSONValue] = []
@@ -224,7 +224,7 @@ extension ConfigBuilder {
         let direct = unused("v2mac-direct"), block = unused("v2mac-block")
         var directOutbound: JSONValue = ["tag": .string(direct), "protocol": "freedom"]
         if let dns = options.dns { directOutbound = directOutbound.setting("settings", to: ["domainStrategy": .string(dns.queryStrategy.rawValue)]) }
-        if let tun = options.tun { directOutbound = binding(directOutbound, to: tun.outboundInterface) }
+        if let interface = options.boundInterface { directOutbound = binding(directOutbound, to: interface) }
         outbounds += [directOutbound, ["tag": .string(block), "protocol": "blackhole"]]
         let targets = [proxyTag: proxy, directTag: direct, blockTag: block]
         let sections = routingSections(for: plan, custom: custom)

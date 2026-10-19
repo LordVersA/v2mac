@@ -4,7 +4,7 @@ import UserNotifications
 
 /// One switch in Settings → Notifications (spec 12.6). The raw value is part of the settings key.
 enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
-    case connection, reconnected, tun
+    case connection, reconnected, tun, network
     case expiry, traffic, updateFailed, serversChanged
     case appUpdate, coreUpdate
     case testFinished
@@ -17,6 +17,7 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
         case .connection: String(localized: "Connection lost or failed")
         case .reconnected: String(localized: "Reconnected")
         case .tun: String(localized: "TUN mode stopped")
+        case .network: String(localized: "Chosen network disconnected")
         case .expiry: String(localized: "Subscription expiring")
         case .traffic: String(localized: "Traffic running out")
         case .updateFailed: String(localized: "Automatic update failed")
@@ -29,7 +30,7 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
 
     var defaultOn: Bool {
         switch self {
-        case .connection, .tun, .expiry, .traffic, .appUpdate: true
+        case .connection, .tun, .network, .expiry, .traffic, .appUpdate: true
         case .reconnected, .updateFailed, .serversChanged, .coreUpdate, .testFinished: false
         }
     }

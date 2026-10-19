@@ -33,6 +33,8 @@ final class ConnectionController {
         case lost(server: String)
         case reconnected(server: String)
         case portInUse(busy: Int, suggested: Int?)
+        /// The chosen outgoing network disconnected, so the setting went back to Automatic.
+        case networkGone(name: String)
     }
     @ObservationIgnored var onNotice: @MainActor (Notice) -> Void = { _ in }
     @ObservationIgnored var onTunFailure: @MainActor (String) -> Void = { _ in }
@@ -203,6 +205,29 @@ final class ConnectionController {
         }
     }
 
+    /// Spec 8.4, Outgoing network. Restarts a running core on the new network.
+    func setOutboundInterface(_ name: String?) {
+        guard name != Prefs.outboundInterface else { return }
+        Prefs.outboundInterface = name
+        reconnectIfRunning()
+    }
+
+    /// The network the user picked, while it is connected. One that has gone is dropped: the
+    /// setting goes back to Automatic and the user is told.
+    private func chosenInterface() -> String? {
+        guard let name = Prefs.outboundInterface else { return nil }
+        if NetworkInterfaces.isConnected(name) { return name }
+        Prefs.outboundInterface = nil
+        logs.append("[v2mac] \(name) is no longer connected; using the automatic network")
+        onNotice(.networkGone(name: name))
+        return nil
+    }
+
+    /// The interface latency tests are bound to: the chosen network, or the physical one in TUN mode.
+    var testInterface: String? {
+        Prefs.outboundInterface.flatMap { NetworkInterfaces.isConnected($0) ? $0 : nil } ?? tun.physicalInterface
+    }
+
     /// Restarts the core when it is up (mode, pack or port changed).
     func reconnectIfRunning() {
         switch phase {
@@ -274,8 +299,10 @@ final class ConnectionController {
 
     /// Wake from sleep or a network change: restart a live connection if the setting is on.
     private func systemEvent(_ reason: String) {
-        // In TUN mode the core is bound to one interface, so a network change always needs a restart.
-        guard Prefs.restartOnWakeOrNetwork || tun.isEnabled, userWantsRunning, activeServer != nil else { return }
+        let lostNetwork = Prefs.outboundInterface != nil && chosenInterface() == nil
+        // In TUN mode, or on a chosen network that went away, the core is bound to an interface,
+        // so a network change always needs a restart.
+        guard Prefs.restartOnWakeOrNetwork || tun.isEnabled || lostNetwork, userWantsRunning, activeServer != nil else { return }
         switch coreState {
         case .running, .failed:
             logs.append("[v2mac] Restarting core after \(reason)")
@@ -474,7 +501,7 @@ final class ConnectionController {
 
     private func measureCandidates(_ candidates: [ActiveServer], activeID: UUID) async -> [LatencyResult] {
         let tester = RealDelayTester(executable: executable(), assetDirectory: assetDirectory,
-                                     options: Prefs.latencyOptions, outboundInterface: tun.physicalInterface,
+                                     options: Prefs.latencyOptions, outboundInterface: testInterface,
                                      dialer: Prefs.dialer, allowInsecure: Prefs.allowInsecure)
         let targets = candidates.map { LatencyTarget(id: $0.id, config: $0.config, kind: $0.kind) }
         await killSwitch.allow(candidates.flatMap { KillSwitch.hosts(in: $0.config, kind: $0.kind) })
@@ -590,7 +617,8 @@ final class ConnectionController {
         }
         // Before the running core stops: the administrator prompt can stay open for a while.
         let requestedTun = tun.isEnabled
-        let tunLink = requestedTun ? await tun.prepare() : nil
+        let outboundInterface = chosenInterface()
+        let tunLink = requestedTun ? await tun.prepare(outboundInterface: outboundInterface) : nil
         guard commandGeneration == generation, userWantsRunning else { return }
         if requestedTun, tunLink == nil, Prefs.tunFailurePolicy.stopsProxy {
             stopForTunFailure()
@@ -603,7 +631,8 @@ final class ConnectionController {
         if custom.needsApps { custom.installedApps = await InstalledApps.all() }
         func options(metrics: Int, api: Int?) -> RunOptions {
             RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: true, metricsPort: metrics,
-                       tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api, warpExit: Prefs.warpExit)
+                       tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api, warpExit: Prefs.warpExit,
+                       outboundInterface: outboundInterface)
         }
 
         // Before the core stops as well: asking a server for its certificate takes a moment.

@@ -612,6 +612,18 @@ the bypass mode, which it then replaces), and the `direct` outbound gets
 Traffic through the server is still resolved by the server. A custom config that has a `dns`
 section keeps it; one without gets this one.
 
+**Outgoing network.** A picker, not a switch: Automatic (the default) or one of the networks
+that can carry traffic now (`NetworkInterfaces.outgoing`: up, running, with an address that is not
+link-local; the default one first, the app's own TUN left out). Each is shown as its kind in the
+app's language with its BSD name, then the hardware's name and addresses ("Ethernet (en7) · USB
+10/100/1000 LAN · 10.0.0.5"). A chosen network is stored by BSD name (`outboundInterface`) and bound
+like the physical interface in TUN mode (`streamSettings.sockopt.interface` on every outbound that
+dials out, `RunOptions.outboundInterface`); in TUN mode it replaces the default network, and the
+core asks that network's own resolvers for the server's name. Delay, speed and TCP tests use it too.
+Picking one restarts a running core. When the chosen network is no longer connected, at connect
+time or on a network change, the setting goes back to Automatic, a running core restarts on the
+default network and the "Chosen network disconnected" notification says so.
+
 **Switching without a restart.** When on, configs for outbound profiles gain
 `"api": {"tag": "api", "listen": "127.0.0.1:<free port>", "services": ["HandlerService"]}`.
 Activating another outbound profile while connected, with every other setting unchanged, runs
@@ -880,7 +892,8 @@ Xray, never an in-app core update: Xray 26.10.17 lost all UDP in the TUN inbound
 
 **Core side.** While TUN mode is on the core config gets a second inbound,
 `tun-in` (SOCKS, `127.0.0.1`, no auth, UDP on, port fixed for the session), and
-every outbound that dials out is bound to the physical interface with
+every outbound that dials out is bound to the physical interface (the
+outgoing network of section 8.4 when one is chosen) with
 `streamSettings.sockopt.interface`, so the core's own connections do not
 re-enter the TUN. Outbounds that already name an interface, that target this
 Mac, or that never dial (`blackhole`, `dns`, `loopback`) are left alone. Rules
@@ -1562,6 +1575,7 @@ launch. Each kind has a switch in Settings → Notifications:
 | Connection lost or failed | A connect fails, the core stops and all restart attempts fail, or the port is busy (with a "Use Port N" button) | On |
 | Reconnected | The core is running again after a crash, sleep or network change | Off |
 | TUN mode stopped | TUN could not start or went down by itself | On |
+| Chosen network disconnected | The outgoing network picked in Settings → Connection went away, so V2Mac went back to Automatic (section 8.4) | On |
 | Subscription expiring | 3 days and 1 day before the expiry date, and when it passes | On |
 | Traffic running out | 80%, 95% and 100% of the quota | On |
 | Automatic update failed | A scheduled update fails (first failure in a row only) | Off |

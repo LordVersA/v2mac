@@ -1,6 +1,111 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Outgoing network": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "شبکهٔ خروجی"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Исходящая сеть"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "出站网络"}}
+      }
+    },
+    "Automatic": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "خودکار"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Автоматически"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "自动"}}
+      }
+    },
+    "Automatic: %@": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "خودکار: %@"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Автоматически: %@"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "自动：%@"}}
+      }
+    },
+    "%@ (not connected)": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "%@ (متصل نیست)"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "%@ (не подключена)"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "%@（未连接）"}}
+      }
+    },
+    "Wi-Fi": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "وای‌فای"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Wi-Fi"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "Wi-Fi"}}
+      }
+    },
+    "Ethernet": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "اترنت"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Ethernet"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "以太网"}}
+      }
+    },
+    "iPhone or iPad": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "آیفون یا آیپد"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "iPhone или iPad"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "iPhone 或 iPad"}}
+      }
+    },
+    "Bluetooth": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "بلوتوث"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Bluetooth"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "蓝牙"}}
+      }
+    },
+    "Thunderbolt Bridge": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "پل تاندربولت"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Мост Thunderbolt"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "雷雳网桥"}}
+      }
+    },
+    "VPN tunnel": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "تونل VPN"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "VPN-туннель"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "VPN 隧道"}}
+      }
+    },
+    "Network": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "شبکه"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Сеть"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "网络"}}
+      }
+    },
+    "Network disconnected": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "اتصال شبکه قطع شد"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Сеть отключена"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "网络已断开"}}
+      }
+    },
+    "Chosen network disconnected": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "قطع شدن شبکهٔ انتخاب‌شده"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Выбранная сеть отключена"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "所选网络已断开"}}
+      }
+    },
+    "%@ is no longer connected. V2Mac uses the automatic network again.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "%@ دیگر متصل نیست. V2Mac دوباره از شبکهٔ خودکار استفاده می‌کند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "%@ больше не подключена. V2Mac снова использует сеть автоматически."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "%@ 已不再连接。V2Mac 重新使用自动选择的网络。"}}
+      }
+    },
+    "The network that connections to the server and direct traffic leave through, in TUN mode too. Automatic follows the network macOS uses. If the chosen network disconnects, V2Mac goes back to Automatic and lets you know. Delay tests use the same network.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "شبکه‌ای که اتصال‌ها به سرور و ترافیک مستقیم از آن خارج می‌شوند، در حالت TUN هم. خودکار همان شبکه‌ای است که macOS استفاده می‌کند. اگر شبکهٔ انتخاب‌شده قطع شود، V2Mac به خودکار برمی‌گردد و به شما خبر می‌دهد. آزمون‌های تأخیر هم از همین شبکه استفاده می‌کنند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Сеть, через которую уходят соединения с сервером и прямой трафик, в том числе в режиме TUN. «Автоматически» — та сеть, которую использует macOS. Если выбранная сеть отключится, V2Mac вернётся к автоматическому выбору и сообщит об этом. Проверки задержки используют ту же сеть."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "连接服务器的流量和直连流量从这个网络出去，TUN 模式下也是如此。“自动”跟随 macOS 使用的网络。如果所选网络断开，V2Mac 会改回“自动”并通知你。延迟测试也使用同一个网络。"}}
+      }
+    },
     "Find Clean IP": {
       "localizations": {
         "fa": {"stringUnit": {"state": "translated", "value": "یافتن IP تمیز"}},

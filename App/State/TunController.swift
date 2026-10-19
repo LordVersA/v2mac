@@ -104,9 +104,10 @@ final class TunController {
 
     /// Makes sure the helper is running and returns what the core config needs.
     /// The connection controller applies the user's failure policy when this returns nil.
-    func prepare() async -> TunLink? {
+    /// `outboundInterface` is the network the user picked; nil uses the default one.
+    func prepare(outboundInterface: String? = nil) async -> TunLink? {
         let generation = preparationGeneration
-        guard let primary = primaryInterface(interfaceName) else {
+        guard let primary = outboundInterface ?? primaryInterface(interfaceName) else {
             fail(String(localized: "TUN mode is waiting for a network connection."))
             return nil
         }
@@ -126,7 +127,7 @@ final class TunController {
         case .started:
             guard let port else { return nil }
             if state == .authorizing { state = .off }
-            return TunLink(port: port, outboundInterface: primary, resolvers: NetworkInterfaces.dnsServers())
+            return TunLink(port: port, outboundInterface: primary, resolvers: NetworkInterfaces.dnsServers(on: primary))
         }
     }
 

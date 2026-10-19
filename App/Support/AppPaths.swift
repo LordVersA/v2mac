@@ -124,6 +124,7 @@ enum Prefs {
             "proxyClientsRoute": "proxy",
             "unmatchedRoute": "mode",
             "killSwitch": false,
+            "outboundInterface": "",
             "autoUpdateSubscriptions": true,
             "subscriptionUpdateViaProxy": false,
             "defaultIntervalHours": 12,
@@ -237,6 +238,12 @@ enum Prefs {
     static var systemProxy: Bool {
         get { defaults.bool(forKey: "systemProxy") }
         set { defaults.set(newValue, forKey: "systemProxy") }
+    }
+
+    /// Spec 8.4, Outgoing network: the interface the core's connections leave through; nil is Automatic.
+    static var outboundInterface: String? {
+        get { defaults.string(forKey: "outboundInterface").flatMap { $0.isEmpty ? nil : $0 } }
+        set { defaults.set(newValue ?? "", forKey: "outboundInterface") }
     }
 
     /// Spec 9.8: block traffic outside the connection while one is wanted.

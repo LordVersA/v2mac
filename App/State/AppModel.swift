@@ -74,7 +74,7 @@ final class AppModel {
         ensureManualGroup()
         subscriptions.onMissingFavorites = { [weak self] ids in self?.missingFavoriteIDs.formUnion(ids) }
         let connection = self.connection
-        latency.physicalInterface = { connection.tun.physicalInterface }
+        latency.physicalInterface = { connection.testInterface }
         latency.beforeTesting = { hosts in await connection.killSwitch.allow(hosts) }
         connection.automaticCandidates = { [weak self] activeID in
             guard let self, let active = profile(id: activeID), let group = active.group else { return [] }
@@ -159,6 +159,10 @@ final class AppModel {
                         ?? String(localized: "Another app is using it. Choose another port in Settings."),
                     id: "connection", usePort: suggested
                 )
+            case .networkGone(let name):
+                notifications.post(.network, title: String(localized: "Network disconnected"),
+                                   body: String(localized: "\(NetworkInterfaces.describe(name).title) is no longer connected. V2Mac uses the automatic network again."),
+                                   id: "network", open: .settings(.connection))
             }
         }
         connection.onTunFailure = { message in
@@ -921,6 +925,7 @@ final class AppModel {
                 connection.onNotice(.lost(server: "Sample server"))
                 connection.onNotice(.reconnected(server: "Sample server"))
                 connection.onNotice(.portInUse(busy: 10808, suggested: 10809))
+                connection.onNotice(.networkGone(name: "en9"))
                 connection.tun.onFailure("Sample TUN failure.")
                 subscriptions.onNotice(.updateFailed(group: "Sample", message: "sample reason"))
                 subscriptions.onNotice(.serversChanged(group: "Sample", added: 2, removed: 1, activeRemoved: true))
