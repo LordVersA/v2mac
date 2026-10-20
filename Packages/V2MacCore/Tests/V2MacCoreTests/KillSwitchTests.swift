@@ -21,6 +21,37 @@ import Testing
         #expect(check.terminationStatus == 0, "\(text)")
     }
 
+    /// The helper checks the allow list on every turn of its loop: an unchanged list starts no process.
+    @Test func allowListIsReloadedOnlyWhenItChanges() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ks-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let bin = dir.appendingPathComponent("bin")
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        for tool in ["cksum", "pfctl", "grep"] {
+            let stub = bin.appendingPathComponent(tool)
+            let real = tool == "pfctl" ? "true" : "/usr/bin/\(tool) \"$@\""
+            try "#!/bin/sh\necho \(tool) >> \"\(dir.path)/calls\"\nexec \(real)\n".write(to: stub, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub.path)
+        }
+        let script = """
+        PATH="\(bin.path):/usr/bin:/bin"; STATE_DIR="\(dir.path)"; ROOT_DIR="\(dir.path)"; KS_ANCHOR=a; KS_MARKER="\(dir.path)/none"
+        \(TunHelper.killSwitchFunctions)
+        echo 1.2.3.4 > "$STATE_DIR/killswitch.allow"
+        ks_allow; ks_allow; ks_allow
+        echo 5.6.7.8 >> "$STATE_DIR/killswitch.allow"
+        ks_allow; ks_allow
+        """
+        let shell = Process()
+        shell.executableURL = URL(fileURLWithPath: "/bin/sh")
+        shell.arguments = ["-c", script]
+        try shell.run()
+        shell.waitUntilExit()
+        let calls = try String(contentsOf: dir.appendingPathComponent("calls"), encoding: .utf8).split(separator: "\n")
+        #expect(calls.filter { $0 == "pfctl" }.count == 2)
+        #expect(!calls.contains("cksum"))
+        #expect(try String(contentsOf: dir.appendingPathComponent("allow"), encoding: .utf8) == "1.2.3.4\n5.6.7.8\n")
+    }
+
     @Test func rulesEndWithTheBlockAndPassOnlyWhatTheyShould() {
         let lines = KillSwitch.rules(tunInterface: "utun123").split(separator: "\n")
         #expect(lines.last == "block return out quick all")

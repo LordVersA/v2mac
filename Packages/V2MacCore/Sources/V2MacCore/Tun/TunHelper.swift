@@ -219,7 +219,9 @@ public enum TunHelper {
     ks_allow() {
       f="$STATE_DIR/killswitch.allow"
       [ -f "$f" ] && [ ! -L "$f" ] || return 0
-      sum=$(cksum < "$f")
+      # Builtins only: it runs on every turn of the loop, and the list is a few lines.
+      sum=""
+      while IFS= read -r line || [ -n "$line" ]; do sum="$sum$line;"; done < "$f"
       [ "$sum" = "$ks_sum" ] && return 0
       ( umask 077; grep -E '^[0-9A-Fa-f:.]{2,45}$' < "$f" > "$ROOT_DIR/allow" )
       pfctl -a "$KS_ANCHOR" -t v2mac_allow -T replace -f "$ROOT_DIR/allow" > /dev/null 2>&1
