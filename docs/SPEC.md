@@ -1046,7 +1046,8 @@ wants a connection; port conflicts retain their explicit user fix.
 
 Automatic switches have a 60-second cooldown. A failed node is excluded for
 120 seconds. Every 180 seconds, fresh group tests can choose a faster node only
-if it improves delay by at least 100 ms and 25%. A manual activation pins the
+if it improves delay by at least 100 ms and 25%; these tests are skipped in
+Low Power Mode, where only a failing or slow server switches. A manual activation pins the
 chosen server until its health fails, or automation is reset/disconnected.
 Disabling automation, disconnecting, quitting or activating another server
 cancels outstanding tests and invalidates late connect results. Automatic tests

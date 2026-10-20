@@ -66,6 +66,8 @@ final class ConnectionController {
     private(set) var usage = Prefs.trafficUsage
     /// The running core's last counters, so each poll adds only what is new.
     private var lastCounters: TrafficSnapshot?
+    /// Usage is written every half minute, and when the core stops, not on every poll.
+    @ObservationIgnored private var usageSaved = ContinuousClock.now
     /// The last minute of rates, one sample per second, oldest first.
     private(set) var rateHistory: [RateSample] = []
 
@@ -357,6 +359,7 @@ final class ConnectionController {
         await tun.endSession()
         await queue?.value
         await runner.stop()
+        saveUsage()
     }
 
     /// Asks through the local proxy, a few times: the first request to a server can be slow.
@@ -559,7 +562,8 @@ final class ConnectionController {
                     requestConnect(server, mayLiveSwitch: true, selection: .degraded)
                     return
                 }
-                guard !selectionPolicy.manualOverride, Date.now >= nextOptimization else { continue }
+                // Testing the whole group costs battery and data: in Low Power Mode only failures switch.
+                guard !selectionPolicy.manualOverride, Date.now >= nextOptimization, !ProcessInfo.processInfo.isLowPowerModeEnabled else { continue }
                 nextOptimization = Date.now.addingTimeInterval(180)
                 let candidates = automaticCandidates(server.id)
                 var results = await measureCandidates(candidates, activeID: server.id)
@@ -772,6 +776,7 @@ final class ConnectionController {
             if case .failed = state, !isRecovering { tun.down() }
             statsTask?.cancel()
             statsTask = nil
+            saveUsage()
             lastCounters = nil
             downRate = 0
             upRate = 0
@@ -823,6 +828,12 @@ final class ConnectionController {
         lastCounters = snapshot
         guard Prefs.countTraffic, new.up > 0 || new.down > 0 else { return }
         usage.add(up: new.up, down: new.down)
+        guard ContinuousClock.now - usageSaved >= .seconds(30) else { return }
+        saveUsage()
+    }
+
+    private func saveUsage() {
+        usageSaved = .now
         Prefs.trafficUsage = usage
     }
 
