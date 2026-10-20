@@ -173,7 +173,7 @@ struct AddSubscriptionSheet: View {
             do {
                 let id = try await model.subscriptions.add(urlString: url, name: name, viaProxy: viaProxy)
                 model.group(id: id)?.colorName = color.rawValue
-                try? model.context.save()
+                model.save()
                 model.sidebarSelection = .group(id)
                 dismiss()
             } catch let AddSubscriptionError.duplicate(id) {

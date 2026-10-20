@@ -94,7 +94,7 @@ struct SidebarView: View {
         }
         Toggle("Auto-update", isOn: Binding(
             get: { group.autoUpdateEnabled },
-            set: { group.autoUpdateEnabled = $0; try? model.context.save() }
+            set: { group.autoUpdateEnabled = $0; model.save() }
         ))
     }
 }
@@ -206,7 +206,7 @@ struct GroupEditSheet: View {
                     let u = url.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !u.isEmpty { group.subscriptionURL = u }
                     if color != group.tint { group.colorName = color.rawValue }
-                    try? model.context.save()
+                    model.save()
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)

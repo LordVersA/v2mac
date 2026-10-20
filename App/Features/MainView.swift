@@ -74,6 +74,11 @@ struct MainView: View {
         } content: {
             AddSubscriptionSheet()
         }
+        .alert("Could not save changes", isPresented: Binding { model.saveError != nil } set: { if !$0 { model.saveError = nil } }) {
+            Button("OK") {}
+        } message: {
+            Text("They will be lost when V2Mac quits. \(model.saveError ?? "")")
+        }
         .sheet(item: $model.cleanIPScan) { CleanIPSheet(profileID: $0.id) }
         .sheet(item: $model.serverEditor) { request in
             ServerEditorSheet(request: request, profile: profile(for: request))

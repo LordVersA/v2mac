@@ -52,7 +52,17 @@ final class AppModel {
     /// whether to remove or keep them (spec 6.6).
     var missingFavoriteIDs: Set<UUID> = []
 
+    /// Set when a change could not be written, so the main window says it will be lost.
+    var saveError: String?
+
     var context: ModelContext { container.mainContext }
+
+    func save() {
+        do { try context.save() } catch {
+            logs.append("[v2mac] Could not save changes: \(error.localizedDescription)")
+            saveError = error.localizedDescription
+        }
+    }
 
     init() {
         Prefs.registerDefaults()
@@ -307,7 +317,7 @@ final class AppModel {
         for stale in (try? context.fetch(staleDescriptor)) ?? [] where stale.id != profile.id {
             context.delete(stale)
         }
-        try? context.save()
+        save()
         connection.activate(server)
     }
 
@@ -325,7 +335,7 @@ final class AppModel {
         let group = ServerGroup(name: ServerGroup.manualName, subscriptionURL: "", sortIndex: -1)
         group.autoUpdateEnabled = false
         context.insert(group)
-        try? context.save()
+        save()
     }
 
     /// Deletes a subscription. The Custom Configs group only loses its servers and stays in the sidebar.
@@ -341,7 +351,7 @@ final class AppModel {
             if sidebarSelection == .group(group.id) { sidebarSelection = .all }
             context.delete(group)
         }
-        try? context.save()
+        save()
     }
 
     /// ⌘V in the main window: text, or a picture with QR codes in it (a screenshot).
@@ -488,7 +498,7 @@ final class AppModel {
                 }
             }
         }
-        try? context.save()
+        save()
 
         let allowed = Set(Prefs.backupKeys)
         for (key, value) in backup.settings where allowed.contains(key) {
@@ -522,7 +532,7 @@ final class AppModel {
         case .edit(let id):
             guard let profile = profile(id: id) else { return }
             profile.edit(from: parsed)
-            try? context.save()
+            save()
             if connection.activeServer?.id == id, let server = ActiveServer(profile) {
                 connection.setActive(server)
                 connection.reconnectIfRunning()
@@ -531,7 +541,7 @@ final class AppModel {
             guard let group = (try? context.fetch(FetchDescriptor<ServerGroup>()))?.first(where: \.isManual) else { return }
             let profile = Profile(parsed: parsed, sortIndex: (group.profiles.map(\.sortIndex).max() ?? -1) + 1, group: group)
             context.insert(profile)
-            try? context.save()
+            save()
             searchText = ""
             sidebarSelection = .group(group.id)
             selectedProfileIDs = [profile.id]
@@ -549,7 +559,7 @@ final class AppModel {
         }
         selectedProfileIDs.subtract(ids)
         for profile in targets { context.delete(profile) }
-        try? context.save()
+        save()
     }
 
     // MARK: Favorites
@@ -560,7 +570,7 @@ final class AppModel {
             profile.isFavorite = favorite
             if !favorite { releaseFavorite(profile) }
         }
-        try? context.save()
+        save()
     }
 
     /// Answers the question about favorites their subscription dropped: remove them, or keep
@@ -579,7 +589,7 @@ final class AppModel {
                 profile.keptAfterRemoval = true
             }
         }
-        try? context.save()
+        save()
     }
 
     /// A server its subscription dropped was only there as a favorite: it goes with the star,
@@ -596,7 +606,7 @@ final class AppModel {
         var reordered = groups
         reordered.move(fromOffsets: source, toOffset: destination)
         for (index, group) in reordered.enumerated() { group.sortIndex = index }
-        try? context.save()
+        save()
     }
 
     func updateSelection(viaProxy: Bool) {
@@ -710,7 +720,7 @@ final class AppModel {
             }
         }
         if UserDefaults.standard.bool(forKey: "debugShowFavorites") { sidebarSelection = .favorites }
-        try? context.save()
+        save()
         // `-debugSelect <part of a name>`: that server selected, so the inspector shows it.
         if let part = UserDefaults.standard.string(forKey: "debugSelect"),
            let match = (try? context.fetch(FetchDescriptor<Profile>()))?.first(where: { $0.name.contains(part) }) {
@@ -752,7 +762,7 @@ final class AppModel {
                 context.insert(p)
                 if i == target { last = p }
             }
-            try? context.save()
+            save()
             connection.setActive(last.flatMap(ActiveServer.init))
             revealActiveServer()
             print("[v2mac-debug] reveal: sidebar \(sidebarSelection), selected \(selectedProfileIDs.count)")
@@ -806,7 +816,7 @@ final class AppModel {
             do {
                 try makeBackup().fileData().write(to: URL(fileURLWithPath: path))
                 for group in (try? context.fetch(FetchDescriptor<ServerGroup>())) ?? [] where !group.isManual { context.delete(group) }
-                try? context.save()
+                save()
                 let emptied = counts()
                 let added = restore(try Backup.read(Data(contentsOf: URL(fileURLWithPath: path))))
                 print("[v2mac-debug] backup: before \(before); emptied \(emptied); added \(added.groups) groups, \(added.servers) servers; after \(counts())")

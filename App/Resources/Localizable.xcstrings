@@ -1,6 +1,72 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Could not save changes": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ذخیره‌ی تغییرات ممکن نشد"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось сохранить изменения"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存更改"
+          }
+        }
+      }
+    },
+    "They will be lost when V2Mac quits. %@": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "با بستن V2Mac از بین می‌روند. %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Они пропадут после выхода из V2Mac. %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出 V2Mac 后这些更改将丢失。%@"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "باشه"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ОК"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
+        }
+      }
+    },
     "Give Access": {
       "localizations": {
         "fa": {
