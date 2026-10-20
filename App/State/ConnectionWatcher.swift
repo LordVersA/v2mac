@@ -85,7 +85,6 @@ final class ConnectionWatcher {
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     /// Access log lines since the last flush: a burst of lines updates the window once, not per line.
     @ObservationIgnored private var pending: [Connection] = []
-    @ObservationIgnored private var paths: [Int32: String] = [:]
     /// TUN mode: what each site resolves to, to find the app's own connection (`NetFlow.tunClient`).
     @ObservationIgnored private var resolved: [String: Set<String>] = [:]
     @ObservationIgnored private var resolving: Set<String> = []
@@ -149,7 +148,7 @@ final class ConnectionWatcher {
             }
         }
         if list.count > limit { list.removeFirst(list.count - limit) }
-        if seenHosts.count > limit { seenHosts = Self.trimmed(seenHosts, to: limit) }
+        if seenHosts.count > limit { seenHosts = Self.trimmed(seenHosts, to: limit * 9 / 10) }
         connections = list
         hosts = seenHosts
     }
@@ -213,7 +212,7 @@ final class ConnectionWatcher {
             }
         }
         connections = list
-        if apps.count > limit { apps = Self.trimmed(apps, to: limit) }
+        if apps.count > limit { apps = Self.trimmed(apps, to: limit * 9 / 10) }
     }
 
     /// Looks a site up as the app did: in TUN mode this asks the core's resolver, through the tunnel.
@@ -229,11 +228,9 @@ final class ConnectionWatcher {
     }
 
     private func app(of pid: Int32) -> String? {
-        if let known = paths[pid] { return known }
+        // Not cached by pid: macOS reuses pids, so a remembered name would label a new process.
         guard let path = SocketOwners.path(of: pid) else { return nil }
-        let app = SocketOwners.appBundle(of: path) ?? path
-        paths[pid] = app
-        return app
+        return SocketOwners.appBundle(of: path) ?? path
     }
 
     private static func trimmed(_ seen: [String: Seen], to limit: Int) -> [String: Seen] {
