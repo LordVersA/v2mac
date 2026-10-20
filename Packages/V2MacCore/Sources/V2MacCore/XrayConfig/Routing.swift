@@ -96,6 +96,11 @@ extension ConfigBuilder {
             tail = tail.filter { $0["network"] == nil } + [["type": "field", "network": "tcp,udp", "outboundTag": .string(route.tag)]]
         }
         guard hasIPRules else { return (["domainStrategy": "AsIs", "rules": .array(customRules + tail)], nil) }
+        // The core's own DoH lookups would otherwise follow the catch-all out of the tunnel.
+        if plan == .rulesOnly {
+            let resolvers: JSONValue = .array(dohServers.compactMap { URL(string: $0)?.host.map { .string($0) } })
+            tail.insert(["type": "field", "ip": resolvers, "outboundTag": .string(proxyTag)], at: 0)
+        }
         // Without this, non-matching domains would be resolved by the local resolver,
         // leaking queries and risking a false `geoip:private` match on poisoned networks.
         let dns: JSONValue = [

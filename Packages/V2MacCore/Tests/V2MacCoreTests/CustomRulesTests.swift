@@ -69,6 +69,16 @@ import Testing
         #expect(rules.last?["network"]?.stringValue == "tcp,udp")
     }
 
+    @Test func rulesOnlySendsTheCoreResolverThroughTheProxy() throws {
+        let c = try build(.rulesOnly, lists(proxy: "geoip:us"))
+        let servers = ConfigBuilder.dohServers.compactMap { URL(string: $0)?.host }
+        #expect(c["dns"] != nil)
+        let rules = try #require(c["routing"]?["rules"]?.arrayValue)
+        let resolver = try #require(rules.firstIndex { $0["ip"]?.arrayValue == servers.map { .string($0) } })
+        #expect(rules[resolver]["outboundTag"] == "proxy")
+        #expect(resolver < rules.firstIndex { $0["network"] == "tcp,udp" }!)
+    }
+
     @Test func unmatchedRouteEndsTheRules() throws {
         var custom = lists(proxy: "a.com")
         custom.unmatchedRoute = .block
