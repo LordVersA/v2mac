@@ -56,7 +56,7 @@ brew install --cask lordversa/tap/v2mac
 - **مسیریابی:** Global، Bypass regions (ایران، چین، روسیه)، Rules Only و Direct، به‌همراه قوانین Proxy / Direct / Block بر اساس سایت و برنامه.
 - **جایگزین Proxifier:** قانون برای هر برنامه، وارد کردن پروفایل `.ppx`، Rule Builder تصویری و نمای زندهٔ Connections.
 - **Cloudflare WARP:** به‌عنوان سرور مستقل یا زنجیرشده پشت سرور شما.
-- **macOS:** پنل نوار منو، Shortcuts، Siri، Control Center، اعلان‌ها، پشتیبان‌گیری و بازگردانی. انگلیسی، فارسی، چینی و روسی.
+- **macOS:** پنل نوار منو، Shortcuts، Siri، Spotlight، Control Center، ویجت دسکتاپ، پیشنهاد دامنه با Apple Intelligence، Touch ID، اعلان‌ها، پشتیبان‌گیری و بازگردانی. انگلیسی، فارسی، چینی و روسی.
 
 ## تصاویر برنامه
 

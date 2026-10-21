@@ -156,6 +156,122 @@
           }
         }
       }
+    },
+    "Connect ${applicationName} to ${server}": {
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Connect ${applicationName} to ${server}",
+              "Use ${server} in ${applicationName}"
+            ]
+          }
+        },
+        "fa": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName} را به ${server} وصل کن",
+              "از ${server} در ${applicationName} استفاده کن"
+            ]
+          }
+        },
+        "zh-Hans": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "将${applicationName}连接到${server}",
+              "在${applicationName}中使用${server}"
+            ]
+          }
+        },
+        "ru": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Подключи ${applicationName} к ${server}",
+              "Используй ${server} в ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Connect ${applicationName} to the fastest server": {
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Connect ${applicationName} to the fastest server",
+              "Find the fastest ${applicationName} server"
+            ]
+          }
+        },
+        "fa": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName} را به سریع‌ترین سرور وصل کن",
+              "سریع‌ترین سرور ${applicationName} را پیدا کن"
+            ]
+          }
+        },
+        "zh-Hans": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "将${applicationName}连接到最快的服务器",
+              "查找最快的${applicationName}服务器"
+            ]
+          }
+        },
+        "ru": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Подключи ${applicationName} к самому быстрому серверу",
+              "Найди самый быстрый сервер ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Update ${applicationName} subscriptions": {
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Update ${applicationName} subscriptions"
+            ]
+          }
+        },
+        "fa": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "اشتراک‌های ${applicationName} را به‌روز کن"
+            ]
+          }
+        },
+        "zh-Hans": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "更新${applicationName}订阅"
+            ]
+          }
+        },
+        "ru": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Обнови подписки ${applicationName}"
+            ]
+          }
+        }
+      }
     }
   },
   "version": "1.0"

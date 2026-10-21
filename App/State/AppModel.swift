@@ -1,4 +1,6 @@
+import AppIntents
 import AppKit
+import CoreSpotlight
 import Observation
 import ServiceManagement
 import SwiftData
@@ -139,6 +141,7 @@ final class AppModel {
         wireNotifications()
         restoreActiveServer()
         wireControls()
+        watchServerIndex()
         if Prefs.reconnectOnLaunch, Prefs.wasRunning, connection.activeServer != nil {
             connection.connectActive()
         }
@@ -262,6 +265,7 @@ final class AppModel {
         }
         if let connect = ControlBridge.pendingRequest() { ControlBridge.handler?(connect) }
         publishControlState()
+        publishWidgetStatus()
     }
 
     private func publishControlState() {
@@ -280,6 +284,58 @@ final class AppModel {
         }
     }
 
+    /// Spec 12.4: what the desktop widget shows besides on/off.
+    private func publishWidgetStatus() {
+        withObservationTracking {
+            var exit = ""
+            if case .known(let info) = connection.exit {
+                exit = ([info.flag, info.city ?? info.countryCode].compactMap { $0 } + [info.ip]).joined(separator: " ")
+            }
+            let phase: ControlBridge.Status.Phase = switch connection.phase {
+            case .off: .off
+            case .connecting, .switching: .connecting
+            case .connected: .connected
+            case .failed: .failed
+            }
+            let status = ControlBridge.Status(phase: phase, server: connection.activeServer?.name ?? "", exit: exit)
+            if status != ControlBridge.status {
+                ControlBridge.status = status
+                WidgetCenter.shared.reloadTimelines(ofKind: ControlBridge.widgetKind)
+            }
+        } onChange: { [weak self] in
+            Task { @MainActor in self?.publishWidgetStatus() }
+        }
+    }
+
+    // MARK: Spotlight
+
+    @ObservationIgnored private var indexTask: Task<Void, Never>?
+    @ObservationIgnored private var indexedServers: [ServerEntity]?
+
+    /// Spec 12.4: servers in Spotlight and in Siri's phrases follow the list, a few seconds after
+    /// a change is saved. Delay results are saved often too, so an unchanged list is not sent again.
+    private func watchServerIndex() {
+        NotificationCenter.default.addObserver(forName: ModelContext.didSave, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleServerIndex() }
+        }
+        scheduleServerIndex()
+    }
+
+    private func scheduleServerIndex() {
+        indexTask?.cancel()
+        indexTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled, let self else { return }
+            let servers = ServerEntity.all()
+            guard servers != indexedServers else { return }
+            indexedServers = servers
+            let index = CSSearchableIndex.default()
+            try? await index.deleteAppEntities(ofType: ServerEntity.self)
+            try? await index.indexAppEntities(servers)
+            V2MacShortcuts.updateAppShortcutParameters()
+        }
+    }
+
     // MARK: Active server
 
     private func restoreActiveServer() {
@@ -289,7 +345,11 @@ final class AppModel {
 
     /// Opens the list the active server belongs to, with its row selected and scrolled into view.
     func revealActiveServer() {
-        guard let id = connection.activeServer?.id, let profile = profile(id: id) else { return }
+        if let id = connection.activeServer?.id { reveal(id) }
+    }
+
+    func reveal(_ id: UUID) {
+        guard let profile = profile(id: id) else { return }
         // A search could be hiding the row.
         searchText = ""
         sidebarSelection = profile.group.map { .group($0.id) } ?? .all
@@ -625,6 +685,24 @@ final class AppModel {
     func testSpeed(_ ids: [UUID]? = nil) { latency.testSpeed(ids ?? testTargets()) }
     func testTCP(_ ids: [UUID]? = nil) { latency.testTCP(ids ?? testTargets()) }
 
+    /// Spec 12.4: the real delay of a group's servers, or of all, for Shortcuts actions. Fastest
+    /// first, only those that answered; the results show in the list too.
+    func measureDelays(groupID: UUID?) async -> [(id: UUID, ms: Int)] {
+        let profiles = (try? context.fetch(FetchDescriptor<Profile>())) ?? []
+        let targets = profiles.filter { !$0.isStale && (groupID == nil || $0.group?.id == groupID) }
+            .compactMap { p in p.config.map { LatencyTarget(id: p.id, config: $0, kind: p.kind) } }
+        await latency.beforeTesting(targets.flatMap { KillSwitch.hosts(in: $0.config, kind: $0.kind) })
+        let collector = AutomaticLatencyResults()
+        await latency.tester(options: Prefs.latencyOptions).run(targets) { await collector.append($0) }
+        let store = LatencyStore(modelContainer: container)
+        var answered: [(id: UUID, ms: Int)] = []
+        for result in await collector.results {
+            try? await store.apply(id: result.id, outcome: result.outcome, kind: "real")
+            if case .ok(let ms) = result.outcome { answered.append((result.id, ms)) }
+        }
+        return answered.sorted { $0.ms < $1.ms }
+    }
+
     // MARK: Windows
 
     func openMainWindow(_ openWindow: OpenWindowAction) {
@@ -868,6 +946,28 @@ final class AppModel {
         setvbuf(stdout, nil, _IOLBF, 0)
         let defaults = UserDefaults.standard
         snapshotHook()
+        // `-debugIntent servers|test|fastest|exit`: runs that Shortcuts action and prints what it found.
+        if let name = defaults.string(forKey: "debugIntent") {
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                switch name {
+                case "servers":
+                    let groups = (try? await GroupQuery().suggestedEntities()) ?? []
+                    let matches = (try? await ServerQuery().entities(matching: String(ServerEntity.all().first?.name.prefix(4) ?? ""))) ?? []
+                    print("[v2mac-debug] intent servers: \(ServerEntity.all().count), groups: \(groups.map(\.name)), matching: \(matches.count)")
+                case "test":
+                    let results = await measureDelays(groupID: nil)
+                    print("[v2mac-debug] intent test: \(results.count) answered, fastest \(results.first.map { "\($0.ms) ms" } ?? "none")")
+                case "fastest":
+                    _ = try? await ConnectToFastestIntent().perform()
+                    print("[v2mac-debug] intent fastest: active \(connection.activeServer?.name ?? "none")")
+                case "exit":
+                    _ = try? await GetExitIPIntent().perform()
+                    print("[v2mac-debug] intent exit: \(connection.exit)")
+                default: break
+                }
+            }
+        }
         // `-debugCleanIP YES|<transport>` opens Find Clean IP on the first server it applies to.
         if let wanted = defaults.string(forKey: "debugCleanIP") {
             let all = (try? context.fetch(FetchDescriptor<Profile>(sortBy: [SortDescriptor(\.sortIndex)]))) ?? []

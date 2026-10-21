@@ -14,7 +14,7 @@ struct BackupSection: View {
     var body: some View {
         Section {
             HStack {
-                Button("Export Backup…") { BackupFlow.export(model) }
+                Button("Export Backup…") { Task { await BackupFlow.export(model) } }
                 Button("Restore Backup…") { BackupFlow.restore(model, from: nil) }
             }
         } header: {
@@ -29,7 +29,8 @@ struct BackupSection: View {
 /// The panels and questions around a backup; `AppModel` does the work.
 @MainActor
 enum BackupFlow {
-    static func export(_ model: AppModel) {
+    static func export(_ model: AppModel) async {
+        guard await OwnerCheck.confirm(String(localized: "export a backup with your servers")) else { return }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.v2macBackup]
         panel.nameFieldStringValue = "V2Mac \(Date().formatted(.iso8601.year().month().day())).\(Backup.fileExtension)"

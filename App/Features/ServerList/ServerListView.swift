@@ -442,8 +442,11 @@ private struct ServerTable: View {
             Button("Connect") { model.activate(profileID: id) }
             if let link = profiles.first(where: { $0.id == id })?.originalLink {
                 Button("Copy Share Link") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(link, forType: .string)
+                    Task {
+                        guard await OwnerCheck.confirm(OwnerCheck.shareLinkReason) else { return }
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(link, forType: .string)
+                    }
                 }
             }
         }

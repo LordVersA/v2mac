@@ -50,7 +50,7 @@ Or download the DMG from the [latest release](https://github.com/LordVersA/v2mac
 - **Routing:** Global, Bypass regions (Iran, China, Russia), Rules Only and Direct, plus Proxy / Direct / Block rules by site and by app.
 - **Proxifier alternative:** per-app rules, `.ppx` profile import, a visual Rule Builder and a live Connections view.
 - **Cloudflare WARP:** as its own server or chained behind yours.
-- **macOS:** menu bar panel, Shortcuts, Siri, Control Center, notifications, backup and restore. English, Persian, Chinese and Russian.
+- **macOS:** menu bar panel, Shortcuts, Siri, Spotlight, Control Center, a desktop widget, Apple Intelligence domain suggestions, Touch ID, notifications, backup and restore. English, Persian, Chinese and Russian.
 
 ## Screenshots
 

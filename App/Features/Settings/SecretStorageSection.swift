@@ -3,11 +3,16 @@ import SwiftUI
 
 struct SecretStorageSection: View {
     @Environment(AppModel.self) private var model
+    @AppStorage(OwnerCheck.key) private var requireOwner = false
     private let secrets = SecretStore.shared
 
     var body: some View {
         Section {
             Toggle("Store secrets in Apple Keychain", isOn: Binding(get: { secrets.usesKeychain }, set: { setKeychain($0) }))
+            Toggle(isOn: Binding(get: { requireOwner }, set: { on in setRequireOwner(on) })) {
+                Text("Ask for Touch ID before sharing servers")
+                Text("Before a share link is copied or shown as a QR code, and before a backup is exported. Without Touch ID, macOS asks for your login password.")
+            }
             if secrets.hasLegacyAdministratorPassword {
                 Text("An older version saved an administrator password. V2Mac no longer reads or uses it. Remove the old Keychain entry; macOS may ask for permission.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -30,6 +35,14 @@ struct SecretStorageSection: View {
         } footer: {
             Text("Off by default. The local proxy password and WARP credentials are encrypted in a file with a key stored on this Mac. Apps running as your user can decrypt it. Keychain adds macOS access controls and may ask for your login password, including after app updates. V2Mac never collects or stores your administrator password.")
                 .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    /// Turning it off needs the same check, or anyone at the Mac could just switch it off.
+    private func setRequireOwner(_ on: Bool) {
+        Task {
+            if !on, !(await OwnerCheck.confirm(String(localized: "stop asking before sharing servers"))) { return }
+            requireOwner = on
         }
     }
 

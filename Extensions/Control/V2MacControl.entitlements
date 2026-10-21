@@ -3,5 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>com.apple.security.app-sandbox</key><true/>
+	<!-- The status widget reads what the app publishes in its defaults (ControlBridge.status). -->
+	<key>com.apple.security.temporary-exception.shared-preference.read-only</key>
+	<array>
+		<string>io.github.lordversa.v2mac</string>
+		<string>io.github.lordversa.v2mac.dev</string>
+	</array>
 </dict>
 </plist>

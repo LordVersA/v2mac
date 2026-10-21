@@ -763,6 +763,11 @@ the rule profile menu.
   Add opens a sheet with a searchable, alphabetized installed-app checklist or a
   domain-per-line field, and a route choice. Invalid domains, IP addresses and
   technical matchers cannot be saved through that field; Advanced handles those.
+  When Apple Intelligence is available (`SystemLanguageModel.default.isAvailable`), the
+  domain field has a "Suggest Domains" request: the on-device model (Foundation
+  Models, guided generation into `SuggestedDomains`, at most 20) names the domains the
+  described services use. Suggestions that are not plain domains are dropped, the rest
+  are added to the field once each, and nothing is saved until the user clicks Add.
   App rules' TUN limitation is stated beside the Apps list and in the add sheet.
   Import opens a file chooser and reviews `RuleImport`'s rules, skipped
   names and Block QUIC setting before appending to the active profile. Existing
@@ -1529,9 +1534,27 @@ Empty search: "No servers match".
 
 **Shortcuts actions** (`App/Support/Intents.swift`): Connect, Disconnect, Turn
 Connection On or Off, Set TUN Mode, Set Routing Mode, Set System Proxy, Set Kill
-Switch, and Get Connection Status (returns a line of text). They appear in Shortcuts,
-Spotlight and Siri; the Shortcuts app can bind any of them to a keyboard shortcut that
-works in every app.
+Switch, Get Connection Status (returns a line of text), Connect to Server, Connect to
+Fastest Server, Test Server Delay (returns the servers that answered, fastest first),
+Update Subscriptions and Get Exit IP Address (the address of the last exit check). They
+appear in Shortcuts, Spotlight and Siri; the Shortcuts app can bind any of them to a
+keyboard shortcut that works in every app. Servers are `ServerEntity` (favorites first,
+servers a subscription dropped left out unless favorite) and groups `GroupEntity`, so
+Siri phrases name a server ("Connect V2Mac to …"). Fastest and Test Server Delay measure
+real delay with the list's tester (`AppModel.measureDelays`), a group's servers or all,
+and store the results as a list test would. Servers are indexed in Spotlight
+(`IndexedEntity`); picking one runs `ShowServerIntent`, which opens the main window with
+it selected. The index and Siri's server names are rebuilt three seconds after a save
+that changed the list (`AppModel.watchServerIndex`).
+
+**Widget.** The same extension offers a small desktop and Notification Center widget
+(`StatusWidget`): the glyph, Off / Connecting… / Connected / Failed, the active server,
+the exit (flag, city, IP) and a power button that runs `SetConnectionIntent`. The app
+keeps the state in its own defaults (`widgetStatus`, `ControlBridge.status`) and reloads
+the widget when it changes; the sandboxed extension reads that one domain through the
+`temporary-exception.shared-preference.read-only` entitlement (release and dev ids). It
+shows Off when the app no longer holds the Darwin state name, so a quit or crashed app
+does not read as connected.
 
 **Control Center.** The widget extension `V2MacControl` (`Extensions/Control`, sandboxed,
 as WidgetKit requires; signed with its entitlements by `make-dmg.sh`) offers one switch,
@@ -1668,7 +1691,7 @@ too) is base64 text, 76 characters a line, of one JSON object (`Backup`, package
   routing mode, TUN switch, pack intervals, User-Agent and the enabled region packs.
 
 Not in it: the local proxy password, the registered WARP credentials,
-the Keychain storage choice, the active and recent servers, traffic totals, delays.
+the Keychain storage choice, the Touch ID setting, the active and recent servers, traffic totals, delays.
 
 A restore asks first, saying when and with which version the file was made and how many
 subscriptions and servers it holds. It adds and never removes: a subscription that is not
@@ -1763,6 +1786,7 @@ another address) has no app or bytes. At most 1,000 rows and 2,000 log lines are
 | | Check for app updates | On |
 | | Privileged helper: status, Enable Helper…, Open Login Items, Remove Helper. Removal stops the current connection; ad-hoc builds explain the per-session fallback | Not registered |
 | | Store secrets in Apple Keychain: opt in after a notice about the macOS password prompt; otherwise use the encrypted local file | Off |
+| | Ask for Touch ID before sharing servers: copying a share link, showing its QR code and exporting a backup ask for Touch ID or the login password first (`OwnerCheck`, LocalAuthentication); one check covers a minute, and turning it off needs one too. Not in backups | Off |
 | | Backup: Export Backup…, Restore Backup… (section 12.9) | — |
 | Proxy | Port | 10808 |
 | | Set as system proxy, with its dot (section 9.9) | Off |

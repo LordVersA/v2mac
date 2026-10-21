@@ -1,3 +1,4 @@
+import FoundationModels
 import SwiftUI
 import V2MacCore
 
@@ -11,6 +12,9 @@ struct SimpleRuleAddSheet: View {
     @State private var hosts = ""
     @State private var action = CustomRule.Action.proxy
     @State private var isLoading = true
+    @State private var request = ""
+    @State private var isSuggesting = false
+    @State private var suggestionError: String?
     let save: ([RuleEntry], CustomRule.Action) -> Void
 
     init(initialKind: RuleEntry.Kind, save: @escaping ([RuleEntry], CustomRule.Action) -> Void) {
@@ -22,11 +26,11 @@ struct SimpleRuleAddSheet: View {
         hosts.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
-    private var invalidHosts: [String] {
-        hostLines.filter {
-            let parsed = RuleMatchers(parsing: $0)
-            return !parsed.invalid.isEmpty || parsed.domains.count != 1 || !parsed.ips.isEmpty || SeenGroup.isTechnical(RuleEntry(.host, $0))
-        }
+    private var invalidHosts: [String] { hostLines.filter { !Self.isDomain($0) } }
+
+    private static func isDomain(_ line: String) -> Bool {
+        let parsed = RuleMatchers(parsing: line)
+        return parsed.invalid.isEmpty && parsed.domains.count == 1 && parsed.ips.isEmpty && !SeenGroup.isTechnical(RuleEntry(.host, line))
     }
 
     private var entries: [RuleEntry] {
@@ -74,6 +78,7 @@ struct SimpleRuleAddSheet: View {
                 Text("App rules apply to proxy connections. TUN uses host rules.")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
+                if SystemLanguageModel.default.isAvailable { suggestionField }
                 Text("One domain per line. Use *.example.com to include subdomains.")
                     .font(.callout).foregroundStyle(.secondary)
                 TextField("example.com\n*.example.org", text: $hosts, axis: .vertical)
@@ -105,10 +110,70 @@ struct SimpleRuleAddSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 520, height: 570)
+        .frame(width: 520, height: 600)
         .task {
             apps = await InstalledApps.all().sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
             isLoading = false
         }
     }
+
+    // MARK: Suggestions (Apple Intelligence, on this Mac)
+
+    private var suggestionField: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                TextField("Describe the sites, such as “Netflix and YouTube”", text: $request)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(suggest)
+                Button("Suggest Domains", systemImage: "sparkles", action: suggest)
+                    .disabled(request.trimmingCharacters(in: .whitespaces).isEmpty || isSuggesting)
+            }
+            if isSuggesting {
+                ProgressView().controlSize(.small)
+            } else if let suggestionError {
+                Text(suggestionError).font(.caption).foregroundStyle(.red)
+            } else {
+                Text("Apple Intelligence suggests domains on this Mac. Check them before adding: the list can be wrong or incomplete.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// Tried against the on-device model: without the examples it gives only the main domain,
+    /// without "each domain once" it can repeat one until the count runs out.
+    private static let instructions = """
+        You list the domain names that internet services use, so a proxy app can route them. \
+        For each service, give its main domain and the other domains it loads content from. \
+        Example: for "Netflix" answer netflix.com, nflxvideo.net, nflximg.net, nflxext.com, nflxso.net. \
+        For "YouTube": youtube.com, googlevideo.com, ytimg.com, youtu.be, ggpht.com. \
+        Give bare domains only, without www, paths or IP addresses. \
+        List each domain once. Never guess a domain you do not know.
+        """
+
+    private func suggest() {
+        let request = request.trimmingCharacters(in: .whitespaces)
+        guard !request.isEmpty, !isSuggesting else { return }
+        isSuggesting = true
+        suggestionError = nil
+        Task {
+            defer { isSuggesting = false }
+            do {
+                let session = LanguageModelSession(instructions: Self.instructions)
+                let answer = try await session.respond(to: request, generating: SuggestedDomains.self).content
+                let found = answer.domains.map { $0.lowercased().trimmingCharacters(in: .whitespaces) }.filter(Self.isDomain)
+                guard !found.isEmpty else { return suggestionError = String(localized: "No domains were suggested. Try naming the service differently.") }
+                var lines = hostLines
+                for domain in found where !lines.contains(domain) { lines.append(domain) }
+                hosts = lines.joined(separator: "\n")
+            } catch {
+                suggestionError = error.localizedDescription
+            }
+        }
+    }
+}
+
+@Generable
+struct SuggestedDomains {
+    @Guide(description: "Every domain the services use: their main site, video and image servers (CDNs), APIs and short links", .count(1...20))
+    var domains: [String]
 }

@@ -20331,6 +20331,842 @@
           }
         }
       }
+    },
+    "%lld servers answered. The fastest is %@, at %lld ms.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld سرور پاسخ دادند. سریع‌ترین %@ است، با %lld میلی‌ثانیه."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个服务器有响应。最快的是 %@，%lld 毫秒。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ответили серверов: %lld. Самый быстрый — %@, %lld мс."
+          }
+        }
+      }
+    },
+    "Apple Intelligence suggests domains on this Mac. Check them before adding: the list can be wrong or incomplete.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence روی همین مک دامنه پیشنهاد می‌دهد. پیش از افزودن آن‌ها را بررسی کنید: فهرست ممکن است نادرست یا ناقص باشد."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence 在本机上建议域名。添加前请检查：列表可能有误或不完整。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence предлагает домены прямо на этом Mac. Проверьте их перед добавлением: список может быть неточным или неполным."
+          }
+        }
+      }
+    },
+    "Ask for Touch ID before sharing servers": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پیش از اشتراک‌گذاری سرورها Touch ID بخواه"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共享服务器前要求 Touch ID"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запрашивать Touch ID перед передачей серверов"
+          }
+        }
+      }
+    },
+    "Before a share link is copied or shown as a QR code, and before a backup is exported. Without Touch ID, macOS asks for your login password.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پیش از کپی کردن پیوند اشتراک یا نمایش کد QR آن، و پیش از برون‌بری نسخهٔ پشتیبان. بدون Touch ID، macOS گذرواژهٔ ورود شما را می‌خواهد."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在复制分享链接或显示其二维码之前，以及导出备份之前。没有 Touch ID 时，macOS 会要求输入登录密码。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перед копированием ссылки или показом QR-кода и перед экспортом резервной копии. Без Touch ID macOS запросит пароль для входа."
+          }
+        }
+      }
+    },
+    "Connect to ${server}": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتصال به ${server}"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接到 ${server}"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключиться к ${server}"
+          }
+        }
+      }
+    },
+    "Connect to Fastest": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتصال به سریع‌ترین"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接最快的"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "К самому быстрому"
+          }
+        }
+      }
+    },
+    "Connect to Fastest Server": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتصال به سریع‌ترین سرور"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接最快的服务器"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключиться к самому быстрому серверу"
+          }
+        }
+      }
+    },
+    "Connect to Server": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتصال به سرور"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接到服务器"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключиться к серверу"
+          }
+        }
+      }
+    },
+    "Connect to the fastest server in ${group}": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتصال به سریع‌ترین سرور در ${group}"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接 ${group} 中最快的服务器"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключиться к самому быстрому серверу в ${group}"
+          }
+        }
+      }
+    },
+    "Connecting to %@, at %lld ms.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در حال اتصال به %@، با %lld میلی‌ثانیه."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在连接 %@，%lld 毫秒。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключение к %@, %lld мс."
+          }
+        }
+      }
+    },
+    "Could not update %@.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "به‌روزرسانی %@ ممکن نشد."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法更新 %@。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось обновить: %@."
+          }
+        }
+      }
+    },
+    "Describe the sites, such as “Netflix and YouTube”": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سایت‌ها را توصیف کنید، مثلاً «Netflix و YouTube»"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描述网站，例如“Netflix 和 YouTube”"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Опишите сайты, например «Netflix и YouTube»"
+          }
+        }
+      }
+    },
+    "Downloads the server lists of one subscription, or of all of them.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فهرست سرورهای یک اشتراک یا همهٔ اشتراک‌ها را دانلود می‌کند."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载一个或全部订阅的服务器列表。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загружает списки серверов одной подписки или всех."
+          }
+        }
+      }
+    },
+    "Every server when empty.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اگر خالی باشد، همهٔ سرورها."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "留空时为所有服务器。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Если пусто — все серверы."
+          }
+        }
+      }
+    },
+    "Every subscription when empty.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اگر خالی باشد، همهٔ اشتراک‌ها."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "留空时为所有订阅。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Если пусто — все подписки."
+          }
+        }
+      }
+    },
+    "Get Exit IP Address": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دریافت نشانی IP خروجی"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "获取出口 IP 地址"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Получить IP-адрес выхода"
+          }
+        }
+      }
+    },
+    "Group": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "گروه"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分组"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Группа"
+          }
+        }
+      }
+    },
+    "Makes a server the active one and connects to it.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "یک سرور را فعال می‌کند و به آن وصل می‌شود."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将一个服务器设为当前服务器并连接。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Делает сервер активным и подключается к нему."
+          }
+        }
+      }
+    },
+    "Measures the real delay of the servers in a group, or of every server, and returns those that answered, fastest first.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تأخیر واقعی سرورهای یک گروه یا همهٔ سرورها را می‌سنجد و آن‌هایی را که پاسخ دادند، از سریع‌ترین، برمی‌گرداند."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测量一个分组或所有服务器的真实延迟，并按从快到慢返回有响应的服务器。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Измеряет реальную задержку серверов группы или всех серверов и возвращает ответившие, начиная с самого быстрого."
+          }
+        }
+      }
+    },
+    "Measures the servers in a group, or every server, and connects to the one with the lowest real delay.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سرورهای یک گروه یا همهٔ سرورها را می‌سنجد و به سروری با کمترین تأخیر واقعی وصل می‌شود."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测量一个分组或所有服务器，并连接真实延迟最低的那个。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Измеряет серверы группы или все серверы и подключается к серверу с наименьшей реальной задержкой."
+          }
+        }
+      }
+    },
+    "No domains were suggested. Try naming the service differently.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دامنه‌ای پیشنهاد نشد. نام سرویس را به شکل دیگری بنویسید."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有建议任何域名。请换个说法描述该服务。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Домены не предложены. Попробуйте назвать сервис иначе."
+          }
+        }
+      }
+    },
+    "No server answered.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هیچ سروری پاسخ نداد."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有服务器响应。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ни один сервер не ответил."
+          }
+        }
+      }
+    },
+    "Opens V2Mac with a server selected.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac را با یک سرور انتخاب‌شده باز می‌کند."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 V2Mac 并选中一个服务器。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открывает V2Mac с выбранным сервером."
+          }
+        }
+      }
+    },
+    "Returns the public IP address traffic comes out at, as V2Mac last checked it after connecting.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نشانی IP عمومی‌ای را که ترافیک از آن خارج می‌شود برمی‌گرداند، همان‌طور که V2Mac آخرین بار پس از اتصال بررسی کرد."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回流量出口的公网 IP 地址，即 V2Mac 连接后最近一次检查的结果。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Возвращает публичный IP-адрес выхода трафика, как V2Mac проверил его после подключения."
+          }
+        }
+      }
+    },
+    "Show Server": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نمایش سرور"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示服务器"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать сервер"
+          }
+        }
+      }
+    },
+    "Subscriptions updated.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اشتراک‌ها به‌روز شدند."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅已更新。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подписки обновлены."
+          }
+        }
+      }
+    },
+    "Suggest Domains": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پیشنهاد دامنه"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建议域名"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Предложить домены"
+          }
+        }
+      }
+    },
+    "Test Server Delay": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "آزمون تأخیر سرور"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试服务器延迟"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверить задержку серверов"
+          }
+        }
+      }
+    },
+    "Test the servers in ${group}": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "آزمون سرورهای ${group}"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试 ${group} 中的服务器"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверить серверы в ${group}"
+          }
+        }
+      }
+    },
+    "That server is no longer in V2Mac.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "آن سرور دیگر در V2Mac نیست."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该服务器已不在 V2Mac 中。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этого сервера больше нет в V2Mac."
+          }
+        }
+      }
+    },
+    "Through the Proxy": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "از طریق پراکسی"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过代理"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Через прокси"
+          }
+        }
+      }
+    },
+    "Update ${group}": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "به‌روزرسانی ${group}"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新 ${group}"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обновить ${group}"
+          }
+        }
+      }
+    },
+    "Update Subscriptions": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "به‌روزرسانی اشتراک‌ها"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新订阅"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обновить подписки"
+          }
+        }
+      }
+    },
+    "V2Mac does not know the exit address. Connect first.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac نشانی خروجی را نمی‌داند. ابتدا وصل شوید."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac 尚不知道出口地址。请先连接。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac не знает адрес выхода. Сначала подключитесь."
+          }
+        }
+      }
+    },
+    "V2Mac is not ready.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac آماده نیست."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac 尚未就绪。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V2Mac не готов."
+          }
+        }
+      }
+    },
+    "export a backup with your servers": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "یک نسخهٔ پشتیبان از سرورهای شما برون‌بری کند"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出包含你的服务器的备份"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "экспортировать резервную копию с вашими серверами"
+          }
+        }
+      }
+    },
+    "show a server's share link": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پیوند اشتراک یک سرور را نشان دهد"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示服务器的分享链接"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "показать ссылку на сервер"
+          }
+        }
+      }
+    },
+    "stop asking before sharing servers": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دیگر پیش از اشتراک‌گذاری سرورها نپرسد"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在共享服务器前不再询问"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "перестать спрашивать перед передачей серверов"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

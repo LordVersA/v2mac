@@ -30,6 +30,34 @@ enum ControlBridge {
         setState(of: stateName, to: connected ? 1 : 0)
     }
 
+    // MARK: Desktop widget
+
+    static let widgetKind = "io.github.lordversa.v2mac.status"
+
+    /// What the widget shows besides on/off. The app keeps it in its own defaults; the sandboxed
+    /// extension reads that domain through a read-only exception in its entitlements.
+    struct Status: Equatable {
+        enum Phase: String { case off, connecting, connected, failed }
+        var phase: Phase
+        var server: String
+        var exit: String
+    }
+
+    private static var defaults: UserDefaults {
+        Bundle.main.bundleIdentifier == appID ? .standard : UserDefaults(suiteName: appID) ?? .standard
+    }
+
+    static var status: Status {
+        get {
+            let saved = defaults.dictionary(forKey: "widgetStatus") as? [String: String] ?? [:]
+            var phase = saved["phase"].flatMap(Status.Phase.init) ?? .off
+            // The app was quit or crashed while connected: it no longer holds the state name.
+            if phase != .failed, !isConnected { phase = .off }
+            return Status(phase: phase, server: saved["server"] ?? "", exit: phase == .off ? "" : saved["exit"] ?? "")
+        }
+        set { defaults.set(["phase": newValue.phase.rawValue, "server": newValue.server, "exit": newValue.exit], forKey: "widgetStatus") }
+    }
+
     /// A request: the time it was made, doubled, plus one for "connect".
     @MainActor static func request(connect: Bool) {
         if let handler { return handler(connect) }
@@ -81,6 +109,10 @@ struct SetConnectionIntent: SetValueIntent {
     static let isDiscoverable = false
 
     @Parameter(title: "Connected") var value: Bool
+
+    init() {}
+
+    init(value: Bool) { self.value = value }
 
     @MainActor func perform() async throws -> some IntentResult {
         ControlBridge.request(connect: value)

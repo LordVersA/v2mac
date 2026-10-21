@@ -88,10 +88,10 @@ struct InspectorView: View {
                 }
                 .contentTransition(.symbolEffect(.replace))
                 .help(profile.isFavorite ? "Remove from Favorites" : "Add to Favorites")
-                CopyButton("Copy Share Link", systemImage: "link") { profile.originalLink ?? "" }
+                CopyButton("Copy Share Link", systemImage: "link", ownerReason: OwnerCheck.shareLinkReason) { profile.originalLink ?? "" }
                     .disabled(profile.originalLink == nil)
                     .help("Copy share link")
-                Button("QR Code", systemImage: "qrcode") { showQR = true }
+                Button("QR Code", systemImage: "qrcode") { Task { showQR = await OwnerCheck.confirm(OwnerCheck.shareLinkReason) } }
                     .disabled(profile.originalLink == nil)
                     .help("Show QR code")
                     .popover(isPresented: $showQR, arrowEdge: .bottom) {
