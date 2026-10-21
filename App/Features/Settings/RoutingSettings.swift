@@ -41,6 +41,7 @@ struct RoutingSettings: View {
             }
             Button("Open Rule Editor…", systemImage: "arrow.triangle.branch") { model.openRuleEditor(openWindow) }
             CustomRulesSection()
+            ResetSettingsSection(tab: .routing)
         }
         .formStyle(.grouped)
     }

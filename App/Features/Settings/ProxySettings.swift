@@ -84,6 +84,10 @@ struct ProxySettings: View {
                         .font(.caption).foregroundStyle(.orange)
                 }
             }
+            ResetSettingsSection(tab: .proxy) {
+                portText = String(Prefs.port)
+                password = Prefs.proxyPassword
+            }
         }
         .formStyle(.grouped)
         .animation(.default, value: allowLAN)

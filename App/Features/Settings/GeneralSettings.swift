@@ -36,6 +36,8 @@ struct GeneralSettings: View {
             SecretStorageSection()
             BackupSection()
             DiagnosticsSection()
+            ResetSettingsSection(tab: .general)
+            ResetSettingsSection(tab: nil)
         }
         .formStyle(.grouped)
         .onAppear { loginEnabled = SMAppService.mainApp.status == .enabled }

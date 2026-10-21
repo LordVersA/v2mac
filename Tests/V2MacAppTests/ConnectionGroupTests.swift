@@ -75,7 +75,7 @@ struct ConnectionGroupTests {
 
     @Test func routeFilterCombinesWithSearchAndOpenStateBeforeGrouping() throws {
         var proxy = connection(1, host: "api.example.com", process: "curl")
-        proxy.action = .proxy; proxy.sent = 10; proxy.usesProxySetting = true
+        proxy.action = .proxy; proxy.sent = 10; proxy.proxySettingRoute = .proxy
         var direct = connection(2, host: "www.example.com")
         direct.action = .direct; direct.sent = 20; direct.end = .now
         var block = connection(3, host: "ads.example.com")

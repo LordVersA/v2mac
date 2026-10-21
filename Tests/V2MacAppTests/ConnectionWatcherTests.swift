@@ -10,7 +10,7 @@ struct ConnectionWatcherTests {
         watcher.hasConfigFallback = true
         watcher.outboundActions = ["server": .proxy, "v2mac-direct": .direct]
         watcher.modeOutbounds = ["v2mac-direct"]
-        watcher.customRules = CustomRules(proxyClientsSkipRules: true)
+        watcher.customRules = CustomRules(proxyClientsRoute: .proxy)
         watcher.watch()
         defer { watcher.unwatch() }
         for (inbound, outbound) in [("mixed-in", "server"), ("tun-in", "server"), ("tun-in", "v2mac-direct")] {
@@ -27,7 +27,7 @@ struct ConnectionWatcherTests {
     @Test func proxySettingKeepsItsOriginAndDoesNotDiscoverRules() async throws {
         let watcher = ConnectionWatcher()
         watcher.routingMode = .global
-        watcher.customRules = CustomRules(proxyClientsSkipRules: true)
+        watcher.customRules = CustomRules(proxyClientsRoute: .proxy)
         watcher.watch()
         defer { watcher.unwatch() }
         watcher.record(try #require(SeenConnection(line: "x from 127.0.0.1:50000 accepted tcp:example.com:443 [mixed-in -> proxy]")))
@@ -47,7 +47,7 @@ struct ConnectionWatcherTests {
         watcher.routingMode = mode
         watcher.customRules = CustomRules(rules: [CustomRule(name: "Direct", action: .direct, hosts: "example.com"),
                                                   CustomRule(name: "Block", action: .block, hosts: "ads.example.com")],
-                                          proxyClientsSkipRules: skip)
+                                          proxyClientsRoute: skip ? .proxy : nil)
         watcher.watch()
         defer { watcher.unwatch() }
         for inbound in ConfigBuilder.trafficInboundTags {

@@ -107,6 +107,31 @@ enum Prefs {
             + ["routingMode", "tunEnabled", "packUpdateIntervals", "userAgent"] + legacyRuleKeys
     }
 
+    /// Spec 13: what "Reset to Defaults" clears on each Settings tab; the getters then fall back to
+    /// the registered defaults. `AppModel.resetSettings` also tells the connection.
+    static func resetKeys(_ tab: SettingsTab) -> [String] {
+        switch tab {
+        case .general: ["reconnectOnLaunch", "restartOnWakeOrNetwork", "checkAppUpdates", "countTraffic", "logLevel", "logConnections"]
+        case .proxy: ["proxyPort", "allowLAN", "proxyUsername", "proxyClientsRoute", "systemProxy"]
+        case .routing: ["routingMode", "unmatchedRoute"]
+        case .connection:
+            ["liveSwitch", "autoSelectServer", "switchOnDelay", "switchDelayMs", "switchOnSlowSpeed", "switchSpeedKBps",
+             "switchSpeedMinutes", "tunFailurePolicy", "killSwitch", "allowInsecure", "checkExit", "menuBarCountry",
+             "menuBarSpeed", "fragmentEnabled", "fragmentPackets", "fragmentLength", "fragmentInterval", "noiseEnabled",
+             "noisePacket", "noiseDelay", "dnsEnabled", "dnsServers", "dnsQueryStrategy", "outboundInterface"]
+        case .warp: ["warpExit"]
+        case .servers:
+            ["autoUpdateSubscriptions", "subscriptionUpdateViaProxy", "defaultIntervalHours", "userAgent",
+             "latencyURL", "latencyTimeout", "latencyConcurrency", "speedTestURL"]
+        case .notifications: NotificationKind.allCases.map(\.key)
+        case .core, .about: []
+        }
+    }
+
+    /// Settings no reset touches: the user's rules (edited in the Rule Editor, not on a tab), the
+    /// TUN switch (in the connection bar) and each region pack's update interval.
+    static let keptOnReset = Set(["customRuleList", "ruleProfiles", "activeRuleProfile", "blockQUIC", "tunEnabled", "packUpdateIntervals"] + legacyRuleKeys)
+
     private static var defaultValues: [String: Any] {
         [
             "proxyPort": defaultPort,

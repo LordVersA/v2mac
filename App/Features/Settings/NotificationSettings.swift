@@ -61,6 +61,7 @@ struct NotificationSettings: View {
             } footer: {
                 note("Sent when a delay or speed test ends while V2Mac is in the background.")
             }
+            ResetSettingsSection(tab: .notifications)
         }
         .formStyle(.grouped)
         .task { await notifications.refreshAuthorization() }

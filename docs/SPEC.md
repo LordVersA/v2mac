@@ -1776,6 +1776,16 @@ another address) has no app or bytes. At most 1,000 rows and 2,000 log lines are
 
 ## 13. Settings
 
+**Reset.** Every tab with settings ends with "Reset to Defaults…", and General also has
+"Reset All Settings…"; both ask first. A reset removes the tab's keys
+(`Prefs.resetKeys`), so the registered defaults apply again, and then restarts a running
+connection once. Proxy also turns the system proxy off and clears the username and
+password; Routing goes back to Global; Connection turns the kill switch off. Kept: servers
+and subscriptions, rules and rule profiles, Block QUIC, region packs and their update
+intervals, the TUN switch, the WARP account, language, the Keychain and Touch ID choices
+and the login item (`Prefs.keptOnReset`; a test checks that every setting with a default
+is in one list or the other).
+
 | Tab | Setting | Default |
 |---|---|---|
 | General | Language: Same as the system / English / فارسی / 简体中文 / Русский. Stored as the app's own `AppleLanguages`; takes effect when V2Mac opens again ("Restart Now"). Persian lays the app out right to left: macOS does not do that for a language it does not offer itself, so `AppLanguage.applyLayoutDirection` sets `AppleTextDirection` and `NSForceRightToLeftWritingDirection` in the argument domain at launch | Same as the system |

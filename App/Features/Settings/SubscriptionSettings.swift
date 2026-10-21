@@ -39,6 +39,7 @@ struct SubscriptionSettings: View {
             } footer: {
                 Text("The speed test downloads a large file through each server. It stops as soon as the speed levels off, so the whole file is never fetched.")
             }
+            ResetSettingsSection(tab: .servers)
         }
         .formStyle(.grouped)
     }

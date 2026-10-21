@@ -21167,6 +21167,226 @@
           }
         }
       }
+    },
+    "Reset All Settings…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بازنشانی همهٔ تنظیمات…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重置所有设置…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сбросить все настройки…"
+          }
+        }
+      }
+    },
+    "Reset to Defaults…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بازگشت به پیش‌فرض‌ها…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复默认设置…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сбросить по умолчанию…"
+          }
+        }
+      }
+    },
+    "Reset all settings?": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "همهٔ تنظیمات بازنشانی شوند؟"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要重置所有设置吗？"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сбросить все настройки?"
+          }
+        }
+      }
+    },
+    "Reset these settings?": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "این تنظیمات بازنشانی شوند؟"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要重置这些设置吗？"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сбросить эти настройки?"
+          }
+        }
+      }
+    },
+    "Reset All": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بازنشانی همه"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部重置"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сбросить все"
+          }
+        }
+      }
+    },
+    "Reset": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بازنشانی"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重置"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сбросить"
+          }
+        }
+      }
+    },
+    "Every setting goes back to its default, the proxy username and password are removed and the system proxy and kill switch are turned off. Your servers, subscriptions, rules, WARP account and language are kept.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "همهٔ تنظیمات به پیش‌فرض برمی‌گردند، نام کاربری و گذرواژهٔ پراکسی حذف می‌شوند و پراکسی سیستم و Kill Switch خاموش می‌شوند. سرورها، اشتراک‌ها، قوانین، حساب WARP و زبان شما حفظ می‌شوند."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有设置都会恢复为默认值，代理用户名和密码会被删除，系统代理和终止开关会被关闭。你的服务器、订阅、规则、WARP 账户和语言会保留。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Все настройки вернутся к значениям по умолчанию, имя пользователя и пароль прокси будут удалены, системный прокси и kill switch выключены. Серверы, подписки, правила, аккаунт WARP и язык сохранятся."
+          }
+        }
+      }
+    },
+    "The settings on this tab go back to their defaults, the proxy username and password are removed and the system proxy is turned off.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنظیمات این برگه به پیش‌فرض برمی‌گردند، نام کاربری و گذرواژهٔ پراکسی حذف می‌شوند و پراکسی سیستم خاموش می‌شود."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此标签页的设置会恢复为默认值，代理用户名和密码会被删除，系统代理会被关闭。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки этой вкладки вернутся к значениям по умолчанию, имя пользователя и пароль прокси будут удалены, системный прокси выключен."
+          }
+        }
+      }
+    },
+    "The settings on this tab go back to their defaults and the kill switch is turned off.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنظیمات این برگه به پیش‌فرض برمی‌گردند و Kill Switch خاموش می‌شود."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此标签页的设置会恢复为默认值，终止开关会被关闭。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки этой вкладки вернутся к значениям по умолчанию, kill switch будет выключен."
+          }
+        }
+      }
+    },
+    "The settings on this tab go back to their defaults.": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنظیمات این برگه به پیش‌فرض برمی‌گردند."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此标签页的设置会恢复为默认值。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки этой вкладки вернутся к значениям по умолчанию."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

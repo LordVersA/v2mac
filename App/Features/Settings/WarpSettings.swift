@@ -69,6 +69,7 @@ struct WarpSettings: View {
             if let message = warp.errorMessage {
                 Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red).font(.callout)
             }
+            ResetSettingsSection(tab: .warp)
         }
         .formStyle(.grouped)
         .disabled(warp.isBusy)

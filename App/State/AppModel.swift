@@ -307,6 +307,31 @@ final class AppModel {
         }
     }
 
+    // MARK: Reset settings
+
+    /// Spec 13: puts one Settings tab, or all of them, back to the defaults. Servers, rules, the
+    /// WARP account, language, Keychain and Touch ID choices and the login item are kept.
+    func resetSettings(_ tab: SettingsTab?) {
+        let tabs = tab.map { [$0] } ?? SettingsTab.allCases
+        for tab in tabs {
+            // First, so the system-wide changes are undone the way their switches undo them.
+            switch tab {
+            case .proxy:
+                connection.setSystemProxyEnabled(false)
+                do { try Prefs.setProxyPassword("") } catch { logs.append("[v2mac] Could not clear the proxy password: \(error.localizedDescription)") }
+            case .routing: connection.setRoutingMode(.global)
+            case .connection: connection.setKillSwitchEnabled(false)
+            default: break
+            }
+            for key in Prefs.resetKeys(tab) { UserDefaults.standard.removeObject(forKey: key) }
+            if tab == .connection {
+                connection.autoSelectionChanged()
+                connection.tunFailurePolicyChanged()
+            }
+        }
+        connection.reconnectIfRunning()
+    }
+
     // MARK: Spotlight
 
     @ObservationIgnored private var indexTask: Task<Void, Never>?

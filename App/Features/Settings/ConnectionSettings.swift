@@ -168,6 +168,7 @@ struct ConnectionSettings: View {
             } footer: {
                 note("Separate servers with commas. They are used for routing decisions and for traffic that goes direct; traffic through a server is resolved by that server. A full Xray config with its own DNS keeps it.")
             }
+            ResetSettingsSection(tab: .connection)
         }
         .formStyle(.grouped)
         .animation(.default, value: fragmentEnabled)
