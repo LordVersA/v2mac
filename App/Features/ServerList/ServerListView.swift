@@ -129,6 +129,12 @@ struct ServerListView: View {
 
     @ToolbarContentBuilder
     private func toolbar(model: AppModel, latency: LatencyService, isTesting: Bool, isUpdating: Bool) -> some ToolbarContent {
+        if model.updates.availableAppUpdate != nil {
+            ToolbarItem {
+                UpdateButton()
+            }
+            ToolbarSpacer(.fixed)
+        }
         ToolbarItem {
             Button { model.showAddSheet = true } label: {
                 Label("Add", systemImage: "plus")

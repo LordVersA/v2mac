@@ -4,24 +4,7 @@ import UniformTypeIdentifiers
 
 struct MainView: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.openSettings) private var openSettings
     @Query(sort: \ServerGroup.sortIndex) private var groups: [ServerGroup]
-
-    /// Opens Settings on the tab where the update can be installed.
-    private func updateButton(_ title: LocalizedStringKey, tab: SettingsTab) -> some View {
-        Button {
-            model.openSettings(openSettings, tab: tab)
-        } label: {
-            Image(systemName: "arrow.down.circle.fill")
-                .background {
-                    Circle()
-                        .fill(AngularGradient(colors: [.red, .orange, .yellow, .green, .cyan, .blue, .purple, .red], center: .center))
-                        .blur(radius: 5)
-                }
-        }
-        .help(title)
-        .accessibilityLabel(title)
-    }
 
     private func profile(for request: ServerEditorRequest) -> Profile? {
         switch request.target {
@@ -60,13 +43,6 @@ struct MainView: View {
             for url in urls { url.isFileURL ? model.importFile(url) : model.importText(url.absoluteString) }
             return !urls.isEmpty
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                if model.updates.availableAppUpdate != nil {
-                    updateButton("Software Update Available", tab: .general)
-                }
-            }
-        }
         .sheet(isPresented: $model.showAddSheet) {
             if model.opensEditorAfterAddSheet {
                 model.opensEditorAfterAddSheet = false
@@ -87,5 +63,30 @@ struct MainView: View {
         .sheet(isPresented: $model.showRegionsSheet) {
             RegionPacksView()
         }
+    }
+}
+
+/// A glowing icon that shows its text while the pointer is over it; opens Settings to install.
+struct UpdateButton: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openSettings) private var openSettings
+    @State private var hovering = false
+
+    var body: some View {
+        Button { model.openSettings(openSettings, tab: .general) } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .background {
+                        Circle()
+                            .fill(AngularGradient(colors: [.red, .orange, .yellow, .green, .cyan, .blue, .purple, .red], center: .center))
+                            .blur(radius: 5)
+                    }
+                if hovering {
+                    Text("Software Update Available").fixedSize()
+                }
+            }
+        }
+        .onHover { hovering in withAnimation(.snappy) { self.hovering = hovering } }
+        .accessibilityLabel("Software Update Available")
     }
 }
