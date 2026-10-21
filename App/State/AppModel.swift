@@ -1019,6 +1019,16 @@ final class AppModel {
                 print("[v2mac-debug] login item \(action) failed: \(error)")
             }
         }
+        // `-debugSandboxSpike <dir>`: sandbox spike 0.1, runs <dir>/helper on <dir>/vm/{linux,initrd.gz}
+        // as V2Mac's child and prints its exit code (helper output goes to the same stdout).
+        if let dir = defaults.string(forKey: "debugSandboxSpike") {
+            let url = URL(fileURLWithPath: dir)
+            let helper = Process()
+            helper.executableURL = url.appending(path: "helper")
+            helper.arguments = [url.appending(path: "vm/linux").path, url.appending(path: "vm/initrd.gz").path]
+            helper.terminationHandler = { print("[v2mac-debug] sandbox spike exit \($0.terminationStatus)") }
+            do { try helper.run() } catch { print("[v2mac-debug] sandbox spike failed: \(error)") }
+        }
         windowRequestHook()
         // `-debugQueueTests <part of a subscription name>`: a speed test of that subscription, then a
         // real delay test of every other server asked for while it runs, as from the menu bar and
