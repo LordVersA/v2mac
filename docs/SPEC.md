@@ -2,7 +2,7 @@
 
 Status: agreed design, ready for implementation
 Date: 2026-10-09
-Target: macOS 26+, Apple Silicon, Swift 6 / SwiftUI, Xray-core v26.10.10
+Target: macOS 26+, Apple Silicon, Swift 6 / SwiftUI, Xray-core v26.10.21
 
 v2mac is a small, native macOS menu bar app that acts as a shell around
 [Xray-core](https://github.com/XTLS/Xray-core). It imports subscription links,
@@ -798,7 +798,8 @@ section) writes a rule in three steps: the action (Proxy, Direct, Block, or a
 common setup that fills in the rest); what to match; a review. What to match
 comes from three panes:
 
-- Countries: every two-letter list in `geoip.dat`, searchable by local or
+- Countries: every two-letter list in `geoip.dat` (since Xray 26.10.21 the bundled
+  file has only CN, IR and RU), searchable by local or
   English name and code, and on a map (a click on a country adds or removes it,
   found by MapKit reverse geocoding). Each country gives `geoip:<cc>`,
   `domain:<tld>` (`uk` for GB) and `geosite:category-<cc>` / `geosite:<cc>`
@@ -893,7 +894,11 @@ restarts the core.
 auto`, sniffing that overrides the destination) and a SOCKS outbound to a
 loopback port of the core, bound to `lo0`: left to `autoOutboundsInterface` it is bound
 to the physical interface, where UDP to loopback is dropped. The forwarder always runs the bundled
-Xray, never an in-app core update: Xray 26.10.17 lost all UDP in the TUN inbound. Server and subscription configs never run as root.
+Xray, never an in-app core update: Xray 26.10.17 lost all UDP in the TUN inbound. The
+integration test `forwarderCarriesUDPAndTCPThroughARealTun` runs the forwarder as root
+(CI has password-free `sudo`; it is skipped elsewhere) with routes for TEST-NET-1 only and
+sends a DNS query and an HTTP request through the real TUN; it fails on 26.10.17, so a core
+pin must pass it. Server and subscription configs never run as root.
 
 **Core side.** While TUN mode is on the core config gets a second inbound,
 `tun-in` (SOCKS, `127.0.0.1`, no auth, UDP on, port fixed for the session), and

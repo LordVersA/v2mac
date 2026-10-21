@@ -360,7 +360,8 @@ import Testing
 
     @Test(.tags(.integration), .enabled(if: TestSupport.coreAvailable)) func bundledFile() {
         let index = GeoIPIndex(contentsOf: TestSupport.vendorCore.appendingPathComponent("geoip.dat"))
-        #expect(index.country(of: "8.8.8.8") == "US")
+        // Since Xray 26.10.21 the bundled file has only the CN, IR and RU country lists.
+        #expect(index.country(of: "223.5.5.5") == "CN")
     }
 }
 
