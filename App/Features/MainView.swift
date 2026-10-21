@@ -9,14 +9,18 @@ struct MainView: View {
 
     /// Opens Settings on the tab where the update can be installed.
     private func updateButton(_ title: LocalizedStringKey, tab: SettingsTab) -> some View {
-        Button(title, systemImage: "arrow.down.circle.fill") {
+        Button {
             model.openSettings(openSettings, tab: tab)
+        } label: {
+            Image(systemName: "arrow.down.circle.fill")
+                .background {
+                    Circle()
+                        .fill(AngularGradient(colors: [.red, .orange, .yellow, .green, .cyan, .blue, .purple, .red], center: .center))
+                        .blur(radius: 5)
+                }
         }
-        // Toolbars show only the icon by default.
-        .labelStyle(.titleAndIcon)
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.capsule)
-        .tint(.blue)
+        .help(title)
+        .accessibilityLabel(title)
     }
 
     private func profile(for request: ServerEditorRequest) -> Profile? {
@@ -60,9 +64,6 @@ struct MainView: View {
             ToolbarItemGroup(placement: .primaryAction) {
                 if model.updates.availableAppUpdate != nil {
                     updateButton("Software Update Available", tab: .general)
-                }
-                if model.updates.availableCoreUpdate != nil {
-                    updateButton("Xray Update Available", tab: .core)
                 }
             }
         }

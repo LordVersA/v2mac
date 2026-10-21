@@ -1582,7 +1582,6 @@ launch. Each kind has a switch in Settings → Notifications:
 | Automatic update failed | A scheduled update fails (first failure in a row only) | Off |
 | Servers added or removed | A scheduled update changed the server list | Off |
 | V2Mac update available | The background check finds a release, once per release; also a Homebrew upgrade that failed after the app quit for it | On |
-| Xray core update available | Same, for the core | Off |
 | Delay test finished | A test ends while the app is in the background | Off |
 
 Rules:

@@ -223,11 +223,6 @@ final class AppModel {
                 Prefs.setAnnouncedTag(tag, "notifiedAppTag")
                 notifications.post(.appUpdate, title: String(localized: "V2Mac \(VersionCompare.normalized(tag)) is available"),
                                    body: String(localized: "Open Settings to install it."), id: "appUpdate", open: .settings(.general))
-            case .core(let tag):
-                guard Prefs.announcedTag("notifiedCoreTag") != tag else { return }
-                Prefs.setAnnouncedTag(tag, "notifiedCoreTag")
-                notifications.post(.coreUpdate, title: String(localized: "Xray core \(tag) is available"),
-                                   body: String(localized: "Open Settings to install it."), id: "coreUpdate", open: .settings(.core))
             }
         }
 
@@ -948,7 +943,6 @@ final class AppModel {
                 subscriptions.onNotice(.expiry(group: "Sample", level: .soon, expiresAt: Date().addingTimeInterval(2.5 * 86400)))
                 subscriptions.onNotice(.traffic(group: "Sample", level: .low, used: 85 << 30, total: 100 << 30))
                 updates.onFound(.app("v9.9.9"))
-                updates.onFound(.core("v99.0.0"))
                 latency.onFinished(12, nil)
                 try? await Task.sleep(for: .seconds(4))
                 let delivered = await UNUserNotificationCenter.current().deliveredNotifications().map(\.request.content.title)

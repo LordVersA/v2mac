@@ -6,7 +6,7 @@ import UserNotifications
 enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
     case connection, reconnected, tun, network
     case expiry, traffic, updateFailed, serversChanged
-    case appUpdate, coreUpdate
+    case appUpdate
     case testFinished
 
     var id: String { rawValue }
@@ -23,7 +23,6 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
         case .updateFailed: String(localized: "Automatic update failed")
         case .serversChanged: String(localized: "Servers added or removed")
         case .appUpdate: String(localized: "V2Mac update available")
-        case .coreUpdate: String(localized: "Xray core update available")
         case .testFinished: String(localized: "Delay test finished")
         }
     }
@@ -31,7 +30,7 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
     var defaultOn: Bool {
         switch self {
         case .connection, .tun, .network, .expiry, .traffic, .appUpdate: true
-        case .reconnected, .updateFailed, .serversChanged, .coreUpdate, .testFinished: false
+        case .reconnected, .updateFailed, .serversChanged, .testFinished: false
         }
     }
 

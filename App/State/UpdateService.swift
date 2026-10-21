@@ -30,7 +30,6 @@ final class UpdateService {
     /// A background check found a newer release (spec 12.6).
     enum Found: Equatable {
         case app(String)
-        case core(String)
     }
     @ObservationIgnored var onFound: @MainActor (Found) -> Void = { _ in }
     /// A `brew upgrade` failed after the app quit for it; the old version reopened.
@@ -60,7 +59,7 @@ final class UpdateService {
     private var schedulerTask: Task<Void, Never>?
 
     #if DEBUG
-    /// `-debugFakeUpdates YES`: shows both update buttons without a real release.
+    /// `-debugFakeUpdates YES`: shows the update button without a real release.
     func fakeUpdates() {
         appStatus = .available(AppRelease(tag: "v9.9.9", pageURL: URL(string: "https://example.com")!))
         coreStatus = .available(CoreRelease(tag: "v99.0.0", publishedAt: nil, assetURL: URL(string: "https://example.com/x.zip")!, checksumURL: URL(string: "https://example.com/x.sha")!))
@@ -112,28 +111,16 @@ final class UpdateService {
         coreVersion = await SystemInfo.coreVersion(at: AppPaths.coreExecutable).map(VersionCompare.normalized)
     }
 
-    /// `manual` shows progress and errors and ignores the once-per-24-hours throttle and the
-    /// Settings switch; the background check stays silent unless it finds something.
-    func checkCore(manual: Bool = true) async {
+    /// Only on demand, from Settings → Core.
+    func checkCore() async {
         guard coreStatus != .checking, coreStatus != .installing else { return }
-        if !manual {
-            guard UserDefaults.standard.bool(forKey: "checkAppUpdates") else { return }
-            if let last = Prefs.lastCoreUpdateCheck, Date().timeIntervalSince(last) < 24 * 3600 { return }
-        }
-        let previous = coreStatus
-        if manual { coreStatus = .checking }
+        coreStatus = .checking
         if coreVersion == nil { await refreshCoreInfo() }
         do {
             let release = try await CoreUpdater.discover(downloader: downloader)
-            Prefs.lastCoreUpdateCheck = Date()
-            if VersionCompare.isNewer(release.tag, than: coreVersion ?? "") {
-                coreStatus = .available(release)
-                if !manual { onFound(.core(release.tag)) }
-            } else if manual {
-                coreStatus = .upToDate
-            }
+            coreStatus = VersionCompare.isNewer(release.tag, than: coreVersion ?? "") ? .available(release) : .upToDate
         } catch {
-            coreStatus = manual ? .failed(error.localizedDescription) : previous
+            coreStatus = .failed(error.localizedDescription)
         }
     }
 
@@ -293,7 +280,6 @@ final class UpdateService {
             try? await Task.sleep(for: .seconds(10))
             while !Task.isCancelled {
                 await self?.checkApp()
-                await self?.checkCore(manual: false)
                 try? await Task.sleep(for: .seconds(3600))
             }
         }

@@ -53,7 +53,6 @@ struct NotificationSettings: View {
             }
             Section("Updates") {
                 NotificationToggle(kind: .appUpdate)
-                NotificationToggle(kind: .coreUpdate)
             }
             Section {
                 NotificationToggle(kind: .testFinished)

@@ -160,10 +160,6 @@ enum Prefs {
         ]
     }
 
-    static var lastCoreUpdateCheck: Date? {
-        get { defaults.object(forKey: "lastCoreUpdateCheck") as? Date }
-        set { defaults.set(newValue, forKey: "lastCoreUpdateCheck") }
-    }
 
     /// Spec 12.8: count traffic for the session and the total.
     static var countTraffic: Bool { defaults.bool(forKey: "countTraffic") }
