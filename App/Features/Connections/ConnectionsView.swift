@@ -211,10 +211,35 @@ struct ConnectionsView: View {
         }
         .alternatingRowBackgrounds()
         .contextMenu(forSelectionType: Row.ID.self) { ids in
-            if ids.count == 1, let connection = rows.first(where: { $0.id == ids.first })?.connection {
-                Button("Go to Configuration", systemImage: "arrow.right.circle") { goToConfiguration(connection) }
+            let shown = grouping == .none ? rows : groups + groups.flatMap(\.children)
+            let picked = shown.filter { ids.contains($0.id) }
+            // Context menus drop the icons unless asked.
+            Group {
+                if picked.count == 1, let connection = picked[0].connection {
+                    ConnectionMenu(connection: connection, route: route) { goToConfiguration(connection) }
+                } else if picked.count == 1, let group = picked[0].group {
+                    Section(group.title) {
+                        RoutePicker(title: "Route", entry: group.entry, route: route)
+                        Button("Copy Name", systemImage: "doc.on.doc") { ConnectionMenu.copy(group.title) }
+                    }
+                } else if picked.count > 1 {
+                    let connections = picked.flatMap { $0.connection.map { [$0] } ?? $0.group?.connections ?? [] }
+                    Button("Copy Targets", systemImage: "doc.on.doc") {
+                        ConnectionMenu.copy(connections.map(\.target).joined(separator: "\n"))
+                    }
+                    Button("Copy Details", systemImage: "doc.text") {
+                        ConnectionMenu.copy(connections.map(ConnectionMenu.details).joined(separator: "\n\n"))
+                    }
+                }
             }
+            .labelStyle(.titleAndIcon)
         }
+    }
+
+    /// The simple editor's move: the entry leaves every simple rule and joins the one for `action`.
+    private func route(_ entry: RuleEntry, _ action: CustomRule.Action?) {
+        Prefs.customRuleList = SimpleRules.move([entry], to: action, in: Prefs.customRuleList)
+        model.connection.reconnectIfRunning()
     }
 
     /// The rule that routed the row in Advanced, or the setting that did: the app's proxy setting
@@ -239,6 +264,129 @@ struct ConnectionsView: View {
 
     private func matches(_ row: ConnectionWatcher.Connection) -> Bool {
         row.matches(search: search, onlyOpen: filter == .open, action: actionFilter)
+    }
+}
+
+/// Everything known about one connection: open or show its app, route its app or host, and copy
+/// any detail. Built only when the menu opens, so it costs nothing while the table updates.
+private struct ConnectionMenu: View {
+    let connection: ConnectionWatcher.Connection
+    let route: (RuleEntry, CustomRule.Action?) -> Void
+    let goToConfiguration: () -> Void
+
+    var body: some View {
+        let c = connection
+        Section(c.appName.isEmpty ? String(localized: "Unknown app") : c.appName) {
+            if let app = c.app, app.hasSuffix(".app") {
+                Button("Open \(c.appName)", systemImage: "arrow.up.forward.app") {
+                    NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: app), configuration: .init())
+                }
+            }
+            if let path = c.app ?? c.executable {
+                Button("Show in Finder", systemImage: "folder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+                }
+                RoutePicker(title: "Route This App", entry: RuleEntry(.app, path), route: route)
+            }
+        }
+        Section(c.target) {
+            if let url = browserURL {
+                Button("Open in Browser", systemImage: "safari") { NSWorkspace.shared.open(url) }
+            }
+            RoutePicker(title: "Route This Host", entry: RuleEntry(.host, c.host), route: route)
+            Button("Go to Configuration", systemImage: "arrow.right.circle", action: goToConfiguration)
+        }
+        Section {
+            Menu("Details", systemImage: "info.circle") {
+                // Each line shows a value with its name below; choosing it copies the value.
+                ForEach(Self.fields(c), id: \.name) { field in
+                    Button { Self.copy(field.value) } label: {
+                        Text(verbatim: field.value)
+                        Text(field.name)
+                    }
+                }
+            }
+            Menu("Copy", systemImage: "doc.on.doc") {
+                Button("Target") { Self.copy(c.target) }
+                Button("Host") { Self.copy(c.host) }
+                if let address = c.remoteAddress { Button("IP Address") { Self.copy(address) } }
+                if let app = c.app, app != c.executable { Button("App Path") { Self.copy(app) } }
+                if let executable = c.executable { Button("Executable Path") { Self.copy(executable) } }
+                if let pid = c.pid { Button("Process ID") { Self.copy(String(pid)) } }
+                Divider()
+                Button("All Details") { Self.copy(Self.details(c)) }
+            }
+        }
+    }
+
+    /// Web ports only, so a click never hands a mail or game server to the browser.
+    private var browserURL: URL? {
+        switch connection.port {
+        case 443, nil: URL(string: "https://\(connection.host)")
+        case 80: URL(string: "http://\(connection.host)")
+        default: nil
+        }
+    }
+
+    static func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    /// Name and value of every known detail, in the order the Details menu lists them.
+    @MainActor static func fields(_ c: ConnectionWatcher.Connection) -> [(name: String, value: String)] {
+        let rule = c.skipsRules ? String(localized: "App's proxy setting")
+            : c.matchedRule?.name ?? (c.configFallback ? String(localized: "Config fallback") : c.routingMode?.title)
+        let candidates: [(String, String?)] = [
+            (String(localized: "Application"), c.appName.isEmpty ? nil : c.appName),
+            (String(localized: "Target"), c.target),
+            (String(localized: "IP Address"), c.remoteAddress),
+            (String(localized: "Status"), c.isOpen ? String(localized: "Open") : String(localized: "Closed")),
+            (String(localized: "Opened"), c.start.formatted(date: .abbreviated, time: .standard)),
+            (String(localized: "Closed"), c.end?.formatted(date: .abbreviated, time: .standard)),
+            (String(localized: "Duration"), StatusCell.duration(c.lifetime)),
+            (String(localized: "Sent"), c.untracked ? nil : c.sent.formatted(ConnectionsView.bytes)),
+            (String(localized: "Received"), c.untracked ? nil : c.received.formatted(ConnectionsView.bytes)),
+            (String(localized: "Route"), c.action.map { RuleList($0).title } ?? c.outbound),
+            (String(localized: "Rule"), rule),
+            (String(localized: "Inbound"), c.inbound),
+            (String(localized: "Outbound"), c.outbound),
+            (String(localized: "Source Port"), c.sourcePort.map(String.init)),
+            (String(localized: "Process"), c.process),
+            (String(localized: "Process ID"), c.pid.map { String($0) }),
+            (String(localized: "Executable Path"), c.executable),
+            (String(localized: "App Path"), c.app == c.executable ? nil : c.app),
+        ]
+        return candidates.compactMap { name, value in value.map { (name, $0) } }
+    }
+
+    @MainActor static func details(_ c: ConnectionWatcher.Connection) -> String {
+        fields(c).map { "\($0.name): \($0.value)" }.joined(separator: "\n")
+    }
+}
+
+/// Proxy, Direct or Block for one app or host, ticked where it is now, as in the simple rule editor.
+private struct RoutePicker: View {
+    let title: LocalizedStringKey
+    let entry: RuleEntry
+    let route: (RuleEntry, CustomRule.Action?) -> Void
+
+    var body: some View {
+        Picker(selection: Binding { current } set: { route(entry, $0) }) {
+            ForEach(CustomRule.Action.allCases, id: \.self) { Text(RuleList($0).title).tag(Optional($0)) }
+            Divider()
+            Text("Use the Routing Mode").tag(CustomRule.Action?.none)
+        } label: {
+            Label(title, systemImage: "arrow.triangle.branch")
+        }
+    }
+
+    private var current: CustomRule.Action? {
+        let rules = Prefs.customRuleList
+        return switch entry.kind {
+        case .host: SimpleRules.action(forHost: entry.text, in: rules)
+        case .app: SimpleRules.action(forApp: entry.text, bundleID: ConnectionGroup.bundleID(of: entry.text), in: rules)
+        }
     }
 }
 

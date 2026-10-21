@@ -35,6 +35,9 @@ final class ConnectionWatcher {
         /// The `.app` folder, or the executable for command-line tools.
         var app: String?
         var process: String?
+        /// The program that holds the connection, and its pid, once its `nettop` row is found.
+        var executable: String?
+        var pid: Int32?
         var end: Date?
         var sent: Int64 = 0
         var received: Int64 = 0
@@ -199,7 +202,10 @@ final class ConnectionWatcher {
                 if !NetFlow.isLoopback(flow.remoteAddress) { list[index].remoteAddress = flow.remoteAddress }
                 claimed.insert(flow.key)
                 list[index].process = flow.process
-                list[index].app = app(of: flow.pid)
+                list[index].pid = flow.pid
+                // Not cached by pid: macOS reuses pids, so a remembered name would label a new process.
+                list[index].executable = SocketOwners.path(of: flow.pid)
+                list[index].app = list[index].executable.map { SocketOwners.appBundle(of: $0) ?? $0 }
                 if !row.usesProxySetting, let app = list[index].app { apps[app, default: Seen(id: app)].note(row.outbound) }
                 // The open line was logged before the app was known.
                 if let event = events.lastIndex(where: { $0.connection.id == row.id }) { events[event].connection = list[index] }
@@ -225,12 +231,6 @@ final class ConnectionWatcher {
             if resolved.count > limit { resolved = [:] }
             resolved[host] = addresses
         }
-    }
-
-    private func app(of pid: Int32) -> String? {
-        // Not cached by pid: macOS reuses pids, so a remembered name would label a new process.
-        guard let path = SocketOwners.path(of: pid) else { return nil }
-        return SocketOwners.appBundle(of: path) ?? path
     }
 
     private static func trimmed(_ seen: [String: Seen], to limit: Int) -> [String: Seen] {
