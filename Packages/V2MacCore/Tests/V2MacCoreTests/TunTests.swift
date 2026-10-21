@@ -862,6 +862,63 @@ struct TunIntegrationTests {
         #expect(stats.downlink > 0)
         await runner.stop()
     }
+
+    /// The forwarder's own TUN inbound, run as root the way TUN mode runs it, but routing only
+    /// TEST-NET-1 (192.0.2.0/24) so the rest of this Mac's traffic is left alone. Xray 26.10.17
+    /// lost every UDP packet here while all the tests above passed, so a core update must pass
+    /// this one. Needs `sudo` without a password: CI has it; locally, run `sudo -v` first.
+    @Test(.enabled(if: TestSupport.canSudo)) func forwarderCarriesUDPAndTCPThroughARealTun() async throws {
+        let primary = try #require(NetworkInterfaces.primary(), "needs a network connection")
+        let dir = try TestSupport.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let tunPort = try PortUtil.freePort()
+        let options = RunOptions(
+            inbound: InboundSettings(port: try PortUtil.freePort()), metricsPort: try PortUtil.freePort(),
+            tun: TunLink(port: tunPort, outboundInterface: primary)
+        )
+        let core = CoreRunner(executable: TestSupport.xray, assetDirectory: TestSupport.vendorCore, runDirectory: dir)
+        try await core.start(config: try ConfigBuilder.build(outbound: ["protocol": "freedom"], options: options, routing: .global), readyPort: options.inbound.port)
+
+        let name = "utun239"
+        let real = ConfigBuilder.tunForwarder(interfaceName: name, corePort: tunPort)
+        let inbound = try #require(real["inbounds"]?[0])
+        let settings = try #require(inbound["settings"]).setting("autoSystemRoutingTable", to: ["192.0.2.0/24"])
+        let file = dir.appendingPathComponent("forwarder.json")
+        try real.setting("inbounds", to: [inbound.setting("settings", to: settings)]).data().write(to: file)
+        let forwarder = Process()
+        forwarder.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
+        forwarder.arguments = ["-n", TestSupport.xray.path, "run", "-c", file.path]
+        let output = Pipe()
+        forwarder.standardOutput = output
+        forwarder.standardError = output
+        try forwarder.run()
+        defer {
+            // sudo passes the signal on to the forwarder.
+            forwarder.terminate()
+            forwarder.waitUntilExit()
+        }
+
+        var routed = false
+        for _ in 0..<50 where !routed {
+            try await Task.sleep(for: .milliseconds(200))
+            routed = TestSupport.run("/sbin/route", ["-n", "get", "192.0.2.53"]).contains("interface: \(name)")
+        }
+        try #require(routed, "the forwarder did not route TEST-NET-1 into \(name)")
+
+        // UDP: a lookup sent to an address in the TUN is answered by the core's resolver.
+        let answer = await Task.detached { Result { try SocksUDP.lookUpDirect("example.com", server: [192, 0, 2, 53]) } }.value
+        // TCP: the forwarder sniffs the Host header, so the core dials the real site.
+        let http = TestSupport.run("/usr/bin/curl", ["-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "15",
+                                                     "-H", "Host: www.gstatic.com", "http://192.0.2.1/generate_204"])
+        await core.stop()
+
+        switch answer {
+        case .success(let answer): #expect(answer.rcode == 0 && answer.answers > 0, "example.com through \(name): \(answer)")
+        case .failure(let error): Issue.record("no DNS answer through \(name): \(error)")
+        }
+        #expect(http == "204", "HTTP through \(name) returned \(http)")
+    }
 }
 
 /// A DNS query sent the way the TUN forwarder sends one: as a SOCKS5 UDP datagram into `tun-in`.
@@ -890,10 +947,7 @@ enum SocksUDP {
         guard reply.count >= 10, reply[1] == 0 else { throw Failure(description: "UDP ASSOCIATE refused: \(reply)") }
         let relayPort = Int(reply[8]) << 8 | Int(reply[9])
 
-        var query: [UInt8] = [0x12, 0x34, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 0]
-        for label in name.split(separator: ".") { query.append(UInt8(label.utf8.count)); query += Array(label.utf8) }
-        query += [0, 0, 1, 0, 1]
-        let datagram: [UInt8] = [0, 0, 0, 1] + resolver + [0, 53] + query
+        let datagram: [UInt8] = [0, 0, 0, 1] + resolver + [0, 53] + query(name)
 
         let udp = socket(AF_INET, SOCK_DGRAM, 0)
         defer { close(udp) }
@@ -905,11 +959,38 @@ enum SocksUDP {
             } }
         }
         guard sent == datagram.count else { throw Failure(description: "send failed") }
+        // 10 bytes of SOCKS header, then the DNS message.
+        return try answer(udp, skipping: 10)
+    }
+
+    /// A plain query to `server`, the way an app on this Mac sends one.
+    static func lookUpDirect(_ name: String, server: [UInt8]) throws -> Answer {
+        let udp = socket(AF_INET, SOCK_DGRAM, 0)
+        defer { close(udp) }
+        try timeouts(udp)
+        var address = loopback(port: 53)
+        address.sin_addr.s_addr = server.withUnsafeBytes { $0.load(as: in_addr_t.self) }
+        let message = query(name)
+        let sent = message.withUnsafeBytes { bytes in
+            withUnsafePointer(to: &address) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                sendto(udp, bytes.baseAddress, bytes.count, 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            } }
+        }
+        guard sent == message.count else { throw Failure(description: "send failed") }
+        return try answer(udp, skipping: 0)
+    }
+
+    private static func query(_ name: String) -> [UInt8] {
+        var query: [UInt8] = [0x12, 0x34, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 0]
+        for label in name.split(separator: ".") { query.append(UInt8(label.utf8.count)); query += Array(label.utf8) }
+        return query + [0, 0, 1, 0, 1]
+    }
+
+    private static func answer(_ udp: Int32, skipping header: Int) throws -> Answer {
         var buffer = [UInt8](repeating: 0, count: 2048)
         let count = recv(udp, &buffer, buffer.count, 0)
-        // 10 bytes of SOCKS header, then the DNS message.
-        guard count > 22, buffer[10] == 0x12, buffer[11] == 0x34 else { throw Failure(description: "no DNS answer (\(count) bytes)") }
-        return Answer(rcode: Int(buffer[13] & 0x0F), answers: Int(buffer[16]) << 8 | Int(buffer[17]))
+        guard count > header + 12, buffer[header] == 0x12, buffer[header + 1] == 0x34 else { throw Failure(description: "no DNS answer (\(count) bytes)") }
+        return Answer(rcode: Int(buffer[header + 3] & 0x0F), answers: Int(buffer[header + 6]) << 8 | Int(buffer[header + 7]))
     }
 
     private static func loopback(port: Int) -> sockaddr_in {

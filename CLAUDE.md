@@ -54,6 +54,9 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   - Tests use Swift Testing (`@Suite`, `@Test`, `#expect`), not XCTest.
   - Suites tagged `.integration` start the real `Vendor/core/xray` and are silently skipped when it
     is missing, so a green run without `fetch-core.sh` has not exercised them. Some need the network.
+  - `forwarderCarriesUDPAndTCPThroughARealTun` runs the TUN forwarder as root and only where `sudo`
+    needs no password (CI). It caught Xray 26.10.17's lost TUN UDP; never pin a core it fails on.
+    Locally run `sudo -v` in the same terminal first, or it is skipped.
 - There is no linter and no app-target test bundle. All testable logic belongs in the package.
 - Local DMG: `Scripts/make-dmg.sh` (ad-hoc signed, output in `dist/`).
   - The DMG window (background picture, icon positions, size) comes from two committed files in

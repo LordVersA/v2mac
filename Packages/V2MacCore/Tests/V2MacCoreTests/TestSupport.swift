@@ -18,6 +18,23 @@ enum TestSupport {
     static var xray: URL { vendorCore.appendingPathComponent("xray") }
     static var coreAvailable: Bool { FileManager.default.isExecutableFile(atPath: xray.path) }
 
+    /// Tests that need root run only where `sudo` asks for no password, as on CI.
+    static let canSudo: Bool = run("/usr/bin/sudo", ["-n", "true"], status: true) == "0"
+
+    /// Runs a tool and returns what it printed, or with `status` its exit status.
+    static func run(_ tool: String, _ arguments: [String], status: Bool = false) -> String {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: tool)
+        p.arguments = arguments
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = pipe
+        guard (try? p.run()) != nil else { return "" }
+        let out = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        p.waitUntilExit()
+        return status ? String(p.terminationStatus) : out
+    }
+
     static func makeTempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("v2mac-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
