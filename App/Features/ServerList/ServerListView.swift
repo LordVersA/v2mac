@@ -133,6 +133,7 @@ struct ServerListView: View {
             ToolbarItem {
                 UpdateButton()
             }
+            .sharedBackgroundVisibility(.hidden)
             ToolbarSpacer(.fixed)
         }
         ToolbarItem {
