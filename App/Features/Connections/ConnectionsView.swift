@@ -93,23 +93,17 @@ struct ConnectionsView: View {
                                 Text(RuleList(action).title).tag(Optional(action))
                             }
                         }
+                        .pickerStyle(.inline)
+                        Picker("Group by", selection: $grouping) {
+                            ForEach(Grouping.allCases) { Text($0.title).tag($0) }
+                        }
+                        .pickerStyle(.inline)
                     } label: {
                         Label(actionFilter.map { RuleList($0).title } ?? String(localized: "All"), systemImage: "line.3.horizontal.decrease")
                     }
                     .labelStyle(.titleAndIcon)
                     .fixedSize()
                     .help("Filter by route")
-                }
-                ToolbarItem {
-                    Menu {
-                        Picker("Group by", selection: $grouping) {
-                            ForEach(Grouping.allCases) { Text($0.title).tag($0) }
-                        }
-                    } label: {
-                        Text(grouping.title)
-                    }
-                    .fixedSize()
-                    .help("Group by")
                 }
                 ToolbarItem {
                     Button("Clear", systemImage: "trash") { watcher.clear() }
