@@ -50,6 +50,7 @@ brew install --cask lordversa/tap/v2mac
 - **Маршрутизация:** Global, Bypass regions (Иран, Китай, Россия), Rules Only и Direct, плюс правила Proxy / Direct / Block по сайтам и приложениям.
 - **Замена Proxifier:** правила для приложений, импорт профилей `.ppx`, визуальный Rule Builder и живой список соединений.
 - **Cloudflare WARP:** как отдельный сервер или в цепочке за вашим.
+- **Безопасная песочница (бета):** приложения в мини-ВМ, у каждой свой сервер и без утечек при обрыве; каждое приложение — отдельное приложение Mac. Скачивается только при первом открытии.
 - **macOS:** панель в строке меню, Команды, Siri, Spotlight, Пункт управления, виджет на рабочем столе, подсказки доменов Apple Intelligence, Touch ID, уведомления, резервное копирование. Английский, персидский, китайский и русский.
 
 ## Скриншоты
@@ -78,6 +79,7 @@ brew install --cask lordversa/tap/v2mac
 | [Подключение](https://github.com/LordVersA/v2mac/wiki/ru-Connecting) | TUN, системный прокси, kill switch, проверка выхода, WARP |
 | [Маршрутизация](https://github.com/LordVersA/v2mac/wiki/ru-Routing) | Режимы, свои правила, импорт из Proxifier, Rule Builder |
 | [Соединения](https://github.com/LordVersA/v2mac/wiki/ru-Connections) | Живой список соединений и карта |
+| [Безопасная песочница](https://github.com/LordVersA/v2mac/wiki/ru-Sandbox) | Мини-ВМ, приложения песочницы, выходы, магазин |
 | [Строка меню и быстрые команды](https://github.com/LordVersA/v2mac/wiki/ru-Menu-Bar-and-Shortcuts) | Панель, клавиатура, Команды, уведомления |
 | [Справочник настроек](https://github.com/LordVersA/v2mac/wiki/ru-Settings-Reference) | Все настройки, резервная копия, приватность |
 | [Решение проблем и FAQ](https://github.com/LordVersA/v2mac/wiki/ru-Troubleshooting-and-FAQ) | Частые проблемы и вопросы |

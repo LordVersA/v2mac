@@ -56,6 +56,7 @@ brew install --cask lordversa/tap/v2mac
 - **مسیریابی:** Global، Bypass regions (ایران، چین، روسیه)، Rules Only و Direct، به‌همراه قوانین Proxy / Direct / Block بر اساس سایت و برنامه.
 - **جایگزین Proxifier:** قانون برای هر برنامه، وارد کردن پروفایل `.ppx`، Rule Builder تصویری و نمای زندهٔ Connections.
 - **Cloudflare WARP:** به‌عنوان سرور مستقل یا زنجیرشده پشت سرور شما.
+- **سندباکس امن (بتا):** اجرای برنامه‌ها در ماشین‌های مجازی کوچک، هر کدام با سرور خودش و بدون نشت در صورت قطعی؛ هر برنامه مثل یک برنامهٔ جداگانهٔ مک. فقط با اولین باز کردن دانلود می‌شود.
 - **macOS:** پنل نوار منو، Shortcuts، Siri، Spotlight، Control Center، ویجت دسکتاپ، پیشنهاد دامنه با Apple Intelligence، Touch ID، اعلان‌ها، پشتیبان‌گیری و بازگردانی. انگلیسی، فارسی، چینی و روسی.
 
 ## تصاویر برنامه
@@ -88,6 +89,7 @@ brew install --cask lordversa/tap/v2mac
 | [اتصال](https://github.com/LordVersA/v2mac/wiki/fa-Connecting) | TUN، پراکسی سیستم، کیل‌سوییچ، بررسی خروجی، WARP |
 | [مسیریابی](https://github.com/LordVersA/v2mac/wiki/fa-Routing) | حالت‌ها، قوانین سفارشی، وارد کردن از Proxifier، Rule Builder |
 | [اتصال‌ها](https://github.com/LordVersA/v2mac/wiki/fa-Connections) | فهرست زندهٔ اتصال‌ها و نقشه |
+| [سندباکس امن](https://github.com/LordVersA/v2mac/wiki/fa-Sandbox) | ماشین‌های مجازی کوچک، برنامه‌های سندباکس، خروجی‌ها، فروشگاه |
 | [نوار منو و میان‌برها](https://github.com/LordVersA/v2mac/wiki/fa-Menu-Bar-and-Shortcuts) | پنل، صفحه‌کلید، Shortcuts، اعلان‌ها |
 | [مرجع تنظیمات](https://github.com/LordVersA/v2mac/wiki/fa-Settings-Reference) | همهٔ تنظیمات، پشتیبان‌گیری، حریم خصوصی |
 | [عیب‌یابی و پرسش‌های رایج](https://github.com/LordVersA/v2mac/wiki/fa-Troubleshooting-and-FAQ) | مشکلات و پرسش‌های رایج |

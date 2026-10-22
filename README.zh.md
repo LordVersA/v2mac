@@ -50,6 +50,7 @@ brew install --cask lordversa/tap/v2mac
 - **路由：** Global、Bypass regions（伊朗、中国、俄罗斯）、Rules Only 和 Direct，以及按网站和应用的 Proxy / Direct / Block 规则。
 - **Proxifier 替代品：** 按应用分流、导入 `.ppx` 配置、可视化 Rule Builder 和实时连接视图。
 - **Cloudflare WARP：** 作为独立服务器或串接在你的服务器之后。
+- **安全沙盒（测试版）：** 在迷你虚拟机中运行应用，每个虚拟机使用自己的服务器，断线即断网，每个应用都是独立的 Mac 应用。仅在首次打开时下载。
 - **macOS 集成：** 菜单栏面板、快捷指令、Siri、Spotlight、控制中心、桌面小组件、Apple Intelligence 域名建议、Touch ID、通知、备份与恢复。支持英语、波斯语、中文和俄语。
 
 ## 截图
@@ -78,6 +79,7 @@ brew install --cask lordversa/tap/v2mac
 | [连接](https://github.com/LordVersA/v2mac/wiki/zh-Connecting) | TUN、系统代理、Kill Switch、出口检测、WARP |
 | [路由](https://github.com/LordVersA/v2mac/wiki/zh-Routing) | 模式、自定义规则、导入 Proxifier、Rule Builder |
 | [连接列表](https://github.com/LordVersA/v2mac/wiki/zh-Connections) | 实时连接列表和地图 |
+| [安全沙盒](https://github.com/LordVersA/v2mac/wiki/zh-Sandbox) | 迷你虚拟机、沙盒应用、出口、商店 |
 | [菜单栏与快捷方式](https://github.com/LordVersA/v2mac/wiki/zh-Menu-Bar-and-Shortcuts) | 面板、键盘、快捷指令、通知 |
 | [设置参考](https://github.com/LordVersA/v2mac/wiki/zh-Settings-Reference) | 所有设置、备份、隐私 |
 | [故障排除与常见问题](https://github.com/LordVersA/v2mac/wiki/zh-Troubleshooting-and-FAQ) | 常见问题与解答 |
