@@ -8,6 +8,7 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
     case expiry, traffic, updateFailed, serversChanged
     case appUpdate
     case testFinished
+    case sandboxReady, sandboxExitDown
 
     var id: String { rawValue }
     var key: String { "notify_\(rawValue)" }
@@ -24,15 +25,20 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
         case .serversChanged: String(localized: "Servers added or removed")
         case .appUpdate: String(localized: "V2Mac update available")
         case .testFinished: String(localized: "Delay test finished")
+        case .sandboxReady: String(localized: "Sandbox downloaded")
+        case .sandboxExitDown: String(localized: "Sandbox exit stopped working")
         }
     }
 
     var defaultOn: Bool {
         switch self {
-        case .connection, .tun, .network, .expiry, .traffic, .appUpdate: true
+        case .connection, .tun, .network, .expiry, .traffic, .appUpdate, .sandboxReady, .sandboxExitDown: true
         case .reconnected, .updateFailed, .serversChanged, .testFinished: false
         }
     }
+
+    /// Kinds the sandbox helper may post through the link (spec 12.11).
+    var isSandbox: Bool { self == .sandboxReady || self == .sandboxExitDown }
 
     /// The window already shows these, so they stay out of the way while the app is in front.
     var isQuietWhileActive: Bool {

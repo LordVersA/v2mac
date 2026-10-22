@@ -181,7 +181,11 @@ final class ConnectionController {
         guard on != tun.isEnabled else { return }
         tun.setEnabled(on)
         reconnectIfRunning()
+        onTunChanged()
     }
+
+    /// The physical interface binding changed: the sandbox's exits are handed out again.
+    var onTunChanged: () -> Void = {}
 
     /// Spec 9.9. Takes effect at once while a connection is wanted.
     func setSystemProxyEnabled(_ on: Bool) {

@@ -27,6 +27,7 @@ final class AppModel {
     let updates = UpdateService()
     let warp = WarpService()
     let notifications = NotificationService()
+    let sandbox = SandboxService()
 
     var sidebarSelection: SidebarItem = .all
     var selectedProfileIDs: Set<UUID> = []
@@ -112,6 +113,20 @@ final class AppModel {
         regionPacks.downloadRoutes = routes
         regionPacks.onChangeInUse = { connection.reconnectIfRunning() }
         updates.downloadRoutes = routes
+        sandbox.downloadRoutes = routes
+        // Sandbox plan §4: mini VMs exit through share-link servers and standalone JSON configs; V2Mac lets the kill switch pass them.
+        sandbox.serverList = { [weak self] in
+            let profiles = ((try? self?.context.fetch(FetchDescriptor<Profile>(sortBy: [SortDescriptor(\.name)]))) ?? []).filter { p in p.config.flatMap { SandboxLink.exitOutbound($0, kind: p.kind) } != nil }
+            return (profiles.map { .init(id: $0.id.uuidString, name: $0.name) }, connection.activeServer?.id.uuidString)
+        }
+        sandbox.outboundJSON = { [weak self] id in
+            guard let uuid = UUID(uuidString: id), let profile = self?.profile(id: uuid),
+                  let server = ActiveServer(profile), let exit = SandboxLink.exitOutbound(server.config, kind: server.kind) else { return nil }
+            await connection.killSwitch.allow(KillSwitch.hosts(in: exit, kind: .outbound))
+            let json = SandboxLink.outbound(exit, tag: "proxy", interface: connection.testInterface)
+            return (try? json.data()).map { String(decoding: $0, as: UTF8.self) }
+        }
+        connection.onTunChanged = { [weak self] in self?.sandbox.serversChanged() }
         updates.isCoreRunning = { connection.isRunning }
         updates.restartCore = { connection.reconnectIfRunning() }
         warp.route = { routes()[0] }
@@ -183,6 +198,9 @@ final class AppModel {
                                    body: String(localized: "\(NetworkInterfaces.describe(name).title) is no longer connected. V2Mac uses the automatic network again."),
                                    id: "network", open: .settings(.connection))
             }
+        }
+        sandbox.onNotice = { kind, text in
+            notifications.post(kind, title: kind.title, body: text, id: kind.rawValue)
         }
         connection.onTunFailure = { message in
             notifications.post(.tun, title: String(localized: "TUN mode stopped"), body: message, id: "tun")
@@ -966,6 +984,39 @@ final class AppModel {
         }
     }
 
+    /// `-debugSandbox install|boot|stop|remove` (with `-debugSandboxPin <pin.json>`): downloads and
+    /// installs the pinned sandbox; boots its VM (and keeps it running); boots and then stops it;
+    /// runs the leak probes (the report arrives as a `probe` link line); or removes it. Prints each step and the VM's states; the helper's own lines share stdout.
+    private func sandboxHook(_ action: String) {
+        let sandbox = self.sandbox
+        let start = ContinuousClock.now
+        sandbox.onEvent = { event in print("[v2mac-debug] sandbox link: \(event) after \(ContinuousClock.now - start)") }
+        Task {
+            guard sandbox.pin != nil else { return print("[v2mac-debug] sandbox: no pin") }
+            switch action {
+            case "install":
+                sandbox.download()
+                while case .downloading = sandbox.phase { try? await Task.sleep(for: .milliseconds(200)) }
+                print("[v2mac-debug] sandbox install: \(sandbox.phase), \(sandbox.diskUsage()) bytes on disk")
+            case "boot", "stop":
+                sandbox.open()
+                while sandbox.vmState != "running", ContinuousClock.now - start < .seconds(60) { try? await Task.sleep(for: .milliseconds(100)) }
+                print("[v2mac-debug] sandbox boot: \(sandbox.vmState) after \(ContinuousClock.now - start)")
+                guard action == "stop" else { return }
+                await sandbox.stop()
+                print("[v2mac-debug] sandbox stop: helper running \(sandbox.isRunning), after \(ContinuousClock.now - start)")
+            case "probe":
+                sandbox.open()
+                sandbox.probe()
+            case "remove":
+                await sandbox.remove()
+                print("[v2mac-debug] sandbox remove: \(sandbox.phase), folder exists \(FileManager.default.fileExists(atPath: sandbox.files.root.path))")
+            default:
+                print("[v2mac-debug] sandbox: unknown action \(action)")
+            }
+        }
+    }
+
     /// `-debugAddSubscription <url> -debugActivateFirst YES` for scripted verification.
     private func runDebugHooks() {
         setvbuf(stdout, nil, _IOLBF, 0)
@@ -1019,6 +1070,7 @@ final class AppModel {
                 print("[v2mac-debug] login item \(action) failed: \(error)")
             }
         }
+        if let action = defaults.string(forKey: "debugSandbox") { sandboxHook(action) }
         windowRequestHook()
         // `-debugQueueTests <part of a subscription name>`: a speed test of that subscription, then a
         // real delay test of every other server asked for while it runs, as from the menu bar and
@@ -1227,6 +1279,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let model = Self.model else { return .terminateNow }
         Task { @MainActor in
+            // Sandbox plan "Quit": the helper never outlives V2Mac, so its open apps are asked about first.
+            if await model.sandbox.appsOpen() {
+                let alert = NSAlert()
+                alert.messageText = String(localized: "Quit the sandbox apps too?")
+                alert.informativeText = String(localized: "Apps open in the Secure Sandbox close when V2Mac quits.")
+                alert.addButton(withTitle: String(localized: "Quit All"))
+                alert.addButton(withTitle: String(localized: "Cancel"))
+                guard alert.runModal() == .alertFirstButtonReturn else { return sender.reply(toApplicationShouldTerminate: false) }
+            }
+            await model.sandbox.stop()
             await model.connection.shutdown()
             sender.reply(toApplicationShouldTerminate: true)
         }

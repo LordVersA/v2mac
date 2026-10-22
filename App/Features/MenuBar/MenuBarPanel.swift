@@ -305,6 +305,15 @@ struct MenuBarPanel: View {
             HStack {
                 Button("Open V2Mac", systemImage: "macwindow") { model.openMainWindow(openWindow) }
                 Spacer()
+                if model.sandbox.pin != nil {
+                    Button("Sandbox", systemImage: "shield.lefthalf.filled") {
+                        // The entry sheet belongs to the main window.
+                        if model.sandbox.phase != .installed { model.openMainWindow(openWindow) }
+                        model.sandbox.open()
+                    }
+                    .labelStyle(.iconOnly)
+                    .help("Open the Secure Sandbox")
+                }
                 Button("Settings", systemImage: "gearshape") { model.openSettings(openSettings) }
                     .labelStyle(.iconOnly)
                     .help("Settings")

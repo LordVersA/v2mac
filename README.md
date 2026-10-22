@@ -50,6 +50,7 @@ Or download the DMG from the [latest release](https://github.com/LordVersA/v2mac
 - **Routing:** Global, Bypass regions (Iran, China, Russia), Rules Only and Direct, plus Proxy / Direct / Block rules by site and by app.
 - **Proxifier alternative:** per-app rules, `.ppx` profile import, a visual Rule Builder and a live Connections view.
 - **Cloudflare WARP:** as its own server or chained behind yours.
+- **Secure Sandbox (beta):** run apps in mini VMs, each with its own server and fail-closed, every app as its own Mac app. Downloaded only when you first open it.
 - **macOS:** menu bar panel, Shortcuts, Siri, Spotlight, Control Center, a desktop widget, Apple Intelligence domain suggestions, Touch ID, notifications, backup and restore. English, Persian, Chinese and Russian.
 
 ## Screenshots
@@ -78,6 +79,7 @@ The **[V2Mac Wiki](https://github.com/LordVersA/v2mac/wiki)** covers everything 
 | [Connecting](https://github.com/LordVersA/v2mac/wiki/Connecting) | TUN, system proxy, kill switch, exit check, WARP |
 | [Routing](https://github.com/LordVersA/v2mac/wiki/Routing) | Modes, custom rules, Proxifier import, Rule Builder |
 | [Connections](https://github.com/LordVersA/v2mac/wiki/Connections) | Live connection list and map |
+| [Secure Sandbox](https://github.com/LordVersA/v2mac/wiki/Sandbox) | Mini VMs, sandbox apps, exits, store |
 | [Menu Bar and Shortcuts](https://github.com/LordVersA/v2mac/wiki/Menu-Bar-and-Shortcuts) | Panel, keyboard, Shortcuts, notifications |
 | [Settings Reference](https://github.com/LordVersA/v2mac/wiki/Settings-Reference) | Every setting, backup, privacy |
 | [Troubleshooting and FAQ](https://github.com/LordVersA/v2mac/wiki/Troubleshooting-and-FAQ) | Common problems and questions |

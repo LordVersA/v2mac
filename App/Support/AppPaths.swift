@@ -123,6 +123,7 @@ enum Prefs {
         case .servers:
             ["autoUpdateSubscriptions", "subscriptionUpdateViaProxy", "defaultIntervalHours", "userAgent",
              "latencyURL", "latencyTimeout", "latencyConcurrency", "speedTestURL"]
+        case .sandbox: ["sandboxRAMCapMB"]
         case .notifications: NotificationKind.allCases.map(\.key)
         case .core, .about: []
         }
@@ -182,12 +183,16 @@ enum Prefs {
             "logLevel": XrayLogLevel.warning.rawValue,
             "logConnections": false,
             "countTraffic": true,
+            "sandboxRAMCapMB": SandboxFiles.defaultRAMCapMB(physicalMemory: ProcessInfo.processInfo.physicalMemory),
         ]
     }
 
 
     /// Spec 12.8: count traffic for the session and the total.
     static var countTraffic: Bool { defaults.bool(forKey: "countTraffic") }
+
+    /// Sandbox plan "Resources": memory the sandbox VM may use, from the next start.
+    static var sandboxRAMCapMB: Int { defaults.integer(forKey: "sandboxRAMCapMB") }
 
     static var trafficUsage: TrafficUsage {
         get { defaults.data(forKey: "trafficUsage").flatMap { try? JSONDecoder().decode(TrafficUsage.self, from: $0) } ?? TrafficUsage() }

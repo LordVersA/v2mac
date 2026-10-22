@@ -83,6 +83,9 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     With `rule-builder`, `-debugRuleBuilder <step>[:<source>]` (`targets:countries`, `review`) shows a step.
     With `rule-editor`, `-debugProxifierImport <path>` opens the import review on that file (any format `RuleImport` reads).
     With `connection`, `-debugFragmentTuner YES` opens Find Settings and prints the result.
+  - `-debugSandbox install|boot|stop|probe|remove` with `-debugSandboxPin <pin.json>` (from `../sandbox`,
+    `Scripts/package.sh <url>`, served with e.g. `python3 -m http.server` in `../sandbox/out`) drives
+    the Secure Sandbox (spec 12.11); the helper's `[v2mac-sandbox]` lines share stdout.
   - `-debugIntent servers|test|fastest|exit` runs that Shortcuts action (or its query) on the dev data and prints the result.
   - `-debugCleanIP YES|<transport>` opens Find Clean IP on the first server it applies to and prints the best results.
   - `-debugBackupRoundTrip <path>` (with demo data) writes a backup there, removes the servers, restores
@@ -108,8 +111,8 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   `macos-26`. Watch it with `gh run watch` after pushing.
 - The menu bar glyph PDFs in the asset catalog are generated: edit the SVGs in `Design/` and run
   `Scripts/make-glyphs.sh` (needs `rsvg-convert`).
-- **Update the wiki with every user-visible change.** It is cloned at `../v2mac.wiki`
-  (`https://github.com/LordVersA/v2mac.wiki.git`; clone it there if missing, `git pull` first).
+- **Update the wiki with every user-visible change.** It is cloned at `../wiki`
+  (`../Scripts/clone-all.sh` clones it if missing; `git pull` first; rules in `../wiki/CLAUDE.md`).
   Edit the page that covers the feature in English and in its `fa-`, `zh-` and `ru-` copies, and commit
   in the wiki repo. Pushing publishes it: push when the user asks, as with the main repo.
 - `README.fa.md`, `README.zh.md` and `README.ru.md` are the Persian, Chinese and Russian translations of `README.md`. Change them together.
