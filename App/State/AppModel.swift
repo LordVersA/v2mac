@@ -114,16 +114,16 @@ final class AppModel {
         regionPacks.onChangeInUse = { connection.reconnectIfRunning() }
         updates.downloadRoutes = routes
         sandbox.downloadRoutes = routes
-        // Sandbox plan §4: mini VMs exit through share-link servers; V2Mac lets the kill switch pass them.
+        // Sandbox plan §4: mini VMs exit through share-link servers and standalone JSON configs; V2Mac lets the kill switch pass them.
         sandbox.serverList = { [weak self] in
-            let profiles = ((try? self?.context.fetch(FetchDescriptor<Profile>(sortBy: [SortDescriptor(\.name)]))) ?? []).filter { $0.kind == .outbound }
+            let profiles = ((try? self?.context.fetch(FetchDescriptor<Profile>(sortBy: [SortDescriptor(\.name)]))) ?? []).filter { p in p.config.flatMap { SandboxLink.exitOutbound($0, kind: p.kind) } != nil }
             return (profiles.map { .init(id: $0.id.uuidString, name: $0.name) }, connection.activeServer?.id.uuidString)
         }
         sandbox.outboundJSON = { [weak self] id in
             guard let uuid = UUID(uuidString: id), let profile = self?.profile(id: uuid),
-                  let server = ActiveServer(profile), server.kind == .outbound else { return nil }
-            await connection.killSwitch.allow(KillSwitch.hosts(in: server.config, kind: server.kind))
-            let json = SandboxLink.outbound(server.config, tag: "proxy", interface: connection.testInterface)
+                  let server = ActiveServer(profile), let exit = SandboxLink.exitOutbound(server.config, kind: server.kind) else { return nil }
+            await connection.killSwitch.allow(KillSwitch.hosts(in: exit, kind: .outbound))
+            let json = SandboxLink.outbound(exit, tag: "proxy", interface: connection.testInterface)
             return (try? json.data()).map { String(decoding: $0, as: UTF8.self) }
         }
         connection.onTunChanged = { [weak self] in self?.sandbox.serversChanged() }

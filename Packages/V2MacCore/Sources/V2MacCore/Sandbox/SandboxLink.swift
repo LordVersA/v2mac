@@ -49,6 +49,17 @@ public enum SandboxLink {
         case probe(String)
     }
 
+    /// The outbound a server can be a sandbox exit through: a share-link server itself, or a JSON config's
+    /// first proxy outbound when it stands alone. nil when the config chains outbounds (`dialerProxy`,
+    /// `proxySettings`), which one outbound can't carry: that server is no exit.
+    public static func exitOutbound(_ config: JSONValue, kind: ProfileKind) -> JSONValue? {
+        guard kind == .custom else { return config }
+        let local: Set<String> = ["freedom", "blackhole", "dns", "loopback"]
+        guard let first = config["outbounds"]?.arrayValue?.first(where: { !local.contains($0["protocol"]?.stringValue ?? "") }),
+              first["proxySettings"] == nil, first["streamSettings"]?["sockopt"]?["dialerProxy"] == nil else { return nil }
+        return first
+    }
+
     /// A server's outbound as the sandbox core runs it (plan §4: "outbound vm-A"): tagged, without
     /// `allowInsecure`, and bound to `interface` so it never loops into V2Mac's own TUN.
     /// shortcut: no dialer (fragment/noise) chain; add it when the sandbox core gets a dialer outbound.

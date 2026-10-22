@@ -87,4 +87,14 @@ import Testing
         #expect(out["streamSettings"]?["sockopt"]?["interface"]?.stringValue == "en0")
         #expect(SandboxLink.outbound(server, tag: "vm-a", interface: nil)["streamSettings"] == nil)
     }
+
+    @Test func jsonConfigsExitThroughTheirStandaloneProxy() {
+        let proxy: JSONValue = ["protocol": "vless", "tag": "proxy"]
+        let config: JSONValue = ["outbounds": [["protocol": "freedom", "tag": "direct"], proxy, ["protocol": "blackhole"]]]
+        #expect(SandboxLink.exitOutbound(config, kind: .custom) == proxy)
+        #expect(SandboxLink.exitOutbound(proxy, kind: .outbound) == proxy)
+        let chained: JSONValue = ["outbounds": [["protocol": "vless", "streamSettings": ["sockopt": ["dialerProxy": "frag"]]], ["protocol": "freedom", "tag": "frag"]]]
+        #expect(SandboxLink.exitOutbound(chained, kind: .custom) == nil)
+        #expect(SandboxLink.exitOutbound(["outbounds": [["protocol": "freedom"]]], kind: .custom) == nil)
+    }
 }
