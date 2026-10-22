@@ -25,6 +25,10 @@ final class SandboxService {
 
     var downloadRoutes: () -> [FetchRoute] = { [.direct] }
     var onNotice: (NotificationKind, String) -> Void = { _, _ in }
+    /// The servers a mini VM can pick as its exit, and the active one's id.
+    var serverList: () -> ([SandboxLink.Server], String?) = { ([], nil) }
+    /// A server's ready outbound JSON (sandbox plan §4), or nil for one that can't be an exit.
+    var outboundJSON: (String) async -> String? = { _ in nil }
     /// Debug hooks follow the link.
     var onEvent: (SandboxLink.ToApp) -> Void = { _ in }
 
@@ -123,7 +127,8 @@ final class SandboxService {
         helper = pid
         let link = FileHandle(fileDescriptor: fds[0], closeOnDealloc: true)
         self.link = link
-        send(.hello(version: SandboxLink.version, ramCapMB: Prefs.sandboxRAMCapMB))
+        send(.hello(version: SandboxLink.version, ramCapMB: Prefs.sandboxRAMCapMB, core: AppPaths.coreExecutable.path))
+        serversChanged()
         nonisolated(unsafe) var reader = SandboxLink.Reader<SandboxLink.ToApp>()
         link.readabilityHandler = { handle in
             let data = handle.availableData
@@ -154,7 +159,10 @@ final class SandboxService {
         case .notice(let kind, let text):
             // Only the sandbox's own kinds; the helper can't post as another part of V2Mac.
             if let kind = NotificationKind(rawValue: kind), kind.isSandbox { onNotice(kind, text) }
-        case .outbound, .download: break // sandbox plan M2
+        case .outbound(let id):
+            Task { send(.outbound(id: id, json: await outboundJSON(id))) }
+        case .probe: break // debug hooks read it from onEvent
+        case .download: break // sandbox plan M5
         }
     }
 
@@ -181,6 +189,16 @@ final class SandboxService {
         quitReply?.resume(returning: false)
         quitReply = nil
     }
+
+    /// Sends the server list again; the helper then asks for every exit anew, so a changed server,
+    /// TUN mode or network binding reaches the mini VMs without restarting them.
+    func serversChanged() {
+        let (servers, active) = serverList()
+        send(.servers(servers, active: active))
+    }
+
+    /// Debug builds: the helper runs the leak probes and answers with `probe` (sandbox plan M2).
+    func probe() { send(.probe) }
 
     func ramCapChanged() { send(.settings(ramCapMB: Prefs.sandboxRAMCapMB)) }
 

@@ -114,6 +114,19 @@ final class AppModel {
         regionPacks.onChangeInUse = { connection.reconnectIfRunning() }
         updates.downloadRoutes = routes
         sandbox.downloadRoutes = routes
+        // Sandbox plan §4: mini VMs exit through share-link servers; V2Mac lets the kill switch pass them.
+        sandbox.serverList = { [weak self] in
+            let profiles = ((try? self?.context.fetch(FetchDescriptor<Profile>(sortBy: [SortDescriptor(\.name)]))) ?? []).filter { $0.kind == .outbound }
+            return (profiles.map { .init(id: $0.id.uuidString, name: $0.name) }, connection.activeServer?.id.uuidString)
+        }
+        sandbox.outboundJSON = { [weak self] id in
+            guard let uuid = UUID(uuidString: id), let profile = self?.profile(id: uuid),
+                  let server = ActiveServer(profile), server.kind == .outbound else { return nil }
+            await connection.killSwitch.allow(KillSwitch.hosts(in: server.config, kind: server.kind))
+            let json = SandboxLink.outbound(server.config, tag: "proxy", interface: connection.testInterface)
+            return (try? json.data()).map { String(decoding: $0, as: UTF8.self) }
+        }
+        connection.onTunChanged = { [weak self] in self?.sandbox.serversChanged() }
         updates.isCoreRunning = { connection.isRunning }
         updates.restartCore = { connection.reconnectIfRunning() }
         warp.route = { routes()[0] }
@@ -973,7 +986,7 @@ final class AppModel {
 
     /// `-debugSandbox install|boot|stop|remove` (with `-debugSandboxPin <pin.json>`): downloads and
     /// installs the pinned sandbox; boots its VM (and keeps it running); boots and then stops it;
-    /// or removes it. Prints each step and the VM's states; the helper's own lines share stdout.
+    /// runs the leak probes (the report arrives as a `probe` link line); or removes it. Prints each step and the VM's states; the helper's own lines share stdout.
     private func sandboxHook(_ action: String) {
         let sandbox = self.sandbox
         let start = ContinuousClock.now
@@ -992,6 +1005,9 @@ final class AppModel {
                 guard action == "stop" else { return }
                 await sandbox.stop()
                 print("[v2mac-debug] sandbox stop: helper running \(sandbox.isRunning), after \(ContinuousClock.now - start)")
+            case "probe":
+                sandbox.open()
+                sandbox.probe()
             case "remove":
                 await sandbox.remove()
                 print("[v2mac-debug] sandbox remove: \(sandbox.phase), folder exists \(FileManager.default.fileExists(atPath: sandbox.files.root.path))")

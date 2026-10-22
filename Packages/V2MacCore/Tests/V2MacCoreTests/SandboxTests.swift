@@ -5,7 +5,8 @@ import Testing
 @Suite struct SandboxTests {
     @Test func linkMessagesRoundTripAcrossSplitFrames() throws {
         let sent: [SandboxLink.ToHelper] = [
-            .hello(version: 1, ramCapMB: 4096),
+            .hello(version: 2, ramCapMB: 4096, core: "/x/xray"),
+            .probe,
             .servers([.init(id: "a", name: "Frankfurt")], active: "a"),
             .outbound(id: "a", json: nil),
             .quitRequest,
@@ -77,5 +78,13 @@ import Testing
         try files.verify(pin)
         try Data("changed".utf8).write(to: files.executable)
         #expect(throws: SandboxInstallError.helperChanged) { try files.verify(pin) }
+    }
+
+    @Test func handedOutOutboundIsTaggedAndBound() {
+        let server: JSONValue = ["protocol": "vless", "settings": ["vnext": [["address": "1.2.3.4", "port": 443]]]]
+        let out = SandboxLink.outbound(server, tag: "vm-a", interface: "en0")
+        #expect(out["tag"]?.stringValue == "vm-a")
+        #expect(out["streamSettings"]?["sockopt"]?["interface"]?.stringValue == "en0")
+        #expect(SandboxLink.outbound(server, tag: "vm-a", interface: nil)["streamSettings"] == nil)
     }
 }

@@ -6,7 +6,7 @@ import Foundation
 /// and anything that does not decode is a closed link.
 public enum SandboxLink {
     /// Bumped on an incompatible change; V2Mac and the sandbox it pins always match.
-    public static let version = 1
+    public static let version = 2
     public static let maxFrame = 1 << 20
 
     public struct Server: Codable, Sendable, Equatable {
@@ -17,7 +17,8 @@ public enum SandboxLink {
 
     /// V2Mac → helper.
     public enum ToHelper: Codable, Sendable, Equatable {
-        case hello(version: Int, ramCapMB: Int)
+        /// `core`: V2Mac's xray, which the helper runs as the sandbox core (plan: "Sandbox core").
+        case hello(version: Int, ramCapMB: Int, core: String)
         case settings(ramCapMB: Int)
         case servers([Server], active: String?)
         case outbound(id: String, json: String?)
@@ -27,6 +28,8 @@ public enum SandboxLink {
         case quitRequest
         /// Shut everything down and exit.
         case quit
+        /// Debug builds: run the leak probes in a probe mini VM; answered with `probe`.
+        case probe
     }
 
     /// Helper → V2Mac.
@@ -38,6 +41,16 @@ public enum SandboxLink {
         case download(request: Int, url: URL, sha256: String)
         case notice(kind: String, text: String)
         case quitReply(appsOpen: Bool)
+        /// The probe report, one line per check.
+        case probe(String)
+    }
+
+    /// A server's outbound as the sandbox core runs it (plan §4: "outbound vm-A"): tagged, without
+    /// `allowInsecure`, and bound to `interface` so it never loops into V2Mac's own TUN.
+    /// shortcut: no dialer (fragment/noise) chain; add it when the sandbox core gets a dialer outbound.
+    public static func outbound(_ outbound: JSONValue, tag: String, interface: String?) -> JSONValue {
+        let tagged = InsecureTLS.stripping(outbound).setting("tag", to: .string(tag))
+        return interface.map { ConfigBuilder.binding(tagged, to: $0) } ?? tagged
     }
 
     public struct FrameTooLarge: Error, Equatable {}
