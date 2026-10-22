@@ -6,8 +6,9 @@ import Foundation
 /// and anything that does not decode is a closed link.
 public enum SandboxLink {
     /// Bumped on an incompatible change; V2Mac and the sandbox it pins always match.
-    public static let version = 2
+    public static let version = 3
     public static let maxFrame = 1 << 20
+    public static let maxFetch = 1 << 20
 
     public struct Server: Codable, Sendable, Equatable {
         public var id: String
@@ -39,6 +40,9 @@ public enum SandboxLink {
         case vmState(String)
         case outbound(id: String)
         case download(request: Int, url: URL, sha256: String)
+        /// A small signed file (the store index and its signature, at most `maxFetch`), answered with
+        /// `downloaded`; the helper checks the signature, so no hash is known in advance.
+        case fetch(request: Int, url: URL)
         case notice(kind: String, text: String)
         case quitReply(appsOpen: Bool)
         /// The probe report, one line per check.

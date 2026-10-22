@@ -1805,6 +1805,11 @@ section covers only V2Mac's part, which is all the sandbox code V2Mac has (`Sand
   does not decode closes the link, and V2Mac then terminates the helper. The helper exits when the
   link closes, so it never outlives V2Mac. Helper notices may only use the sandbox's own
   notification kinds.
+- **Store downloads** (sandbox plan §7). `download(url, sha256)`: a plugin layer, fetched through
+  the usual routes (resumed) into `sandbox/cache/<sha256>` and handed back only when its SHA-256
+  matches; at most 4 GB. `fetch(url)`: the store index or its signature, at most 1 MB, into
+  `sandbox/cache/fetch-<n>` (the helper checks the signature). Both take https only (debug builds
+  also `http://127.0.0.1`) and answer with `downloaded(path)`, or no path on any failure.
 - **Quit.** On quit V2Mac asks the helper whether sandbox apps are open (2 seconds to answer);
   if so it asks "Quit the sandbox apps too?" (Quit All / Cancel). It then sends `quit` and waits
   up to 15 seconds for the helper to stop its VM before killing it.

@@ -162,8 +162,60 @@ final class SandboxService {
         case .outbound(let id):
             Task { send(.outbound(id: id, json: await outboundJSON(id))) }
         case .probe: break // debug hooks read it from onEvent
-        case .download: break // sandbox plan M5
+        case .download(let request, let url, let sha256):
+            Task { send(.downloaded(request: request, path: await fetchLayer(url, sha256: sha256)?.path)) }
+        case .fetch(let request, let url):
+            Task { send(.downloaded(request: request, path: await fetchSmall(url, request: request)?.path)) }
         }
+    }
+
+    /// Largest plugin layer the helper may ask for.
+    static let maxLayer: Int64 = 4 << 30
+
+    /// A plugin layer for the helper (sandbox plan §7 "Install"): fetched through the usual routes into
+    /// `sandbox/cache/<sha256>` and handed over only when its hash matches, so the route doesn't matter.
+    private func fetchLayer(_ url: URL, sha256: String) async -> URL? {
+        guard sha256.count == 64, sha256.allSatisfy({ $0.isHexDigit && !$0.isUppercase }), Self.allowed(url) else { return nil }
+        let cache = files.root.appendingPathComponent("cache", isDirectory: true)
+        let file = cache.appendingPathComponent(sha256)
+        let partial = file.appendingPathExtension("part")
+        let hash = { (f: URL) in await Task.detached { try? SandboxFiles.sha256(of: f) }.value }
+        if await hash(file) == sha256 { return file }
+        try? FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        do {
+            try await ResumableDownload(routes: downloadRoutes()).fetch(url, to: partial, expectedSize: Self.maxLayer)
+        } catch {
+            return nil
+        }
+        guard await hash(partial) == sha256 else {
+            try? FileManager.default.removeItem(at: partial)
+            return nil
+        }
+        try? FileManager.default.removeItem(at: file)
+        return (try? FileManager.default.moveItem(at: partial, to: file)) != nil ? file : nil
+    }
+
+    /// The store index or its signature, fresh each time, into `sandbox/cache/fetch-<request>`.
+    private func fetchSmall(_ url: URL, request: Int) async -> URL? {
+        guard Self.allowed(url) else { return nil }
+        let cache = files.root.appendingPathComponent("cache", isDirectory: true)
+        let file = cache.appendingPathComponent("fetch-\(request)")
+        try? FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(at: file) // a leftover would be resumed, not replaced
+        do {
+            try await ResumableDownload(routes: downloadRoutes()).fetch(url, to: file, expectedSize: Int64(SandboxLink.maxFetch))
+            return file
+        } catch {
+            return nil
+        }
+    }
+
+    /// https only; debug builds also take a store served on 127.0.0.1.
+    private static func allowed(_ url: URL) -> Bool {
+        #if DEBUG
+        if url.scheme == "http", url.host == "127.0.0.1" { return true }
+        #endif
+        return url.scheme == "https"
     }
 
     private func send(_ message: SandboxLink.ToHelper) {
