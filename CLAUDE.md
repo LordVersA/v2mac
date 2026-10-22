@@ -83,6 +83,9 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     With `rule-builder`, `-debugRuleBuilder <step>[:<source>]` (`targets:countries`, `review`) shows a step.
     With `rule-editor`, `-debugProxifierImport <path>` opens the import review on that file (any format `RuleImport` reads).
     With `connection`, `-debugFragmentTuner YES` opens Find Settings and prints the result.
+  - `-debugSandbox install|boot|stop|remove` with `-debugSandboxPin <pin.json>` (from `../sandbox`,
+    `Scripts/package.sh <url>`, served with e.g. `python3 -m http.server` in `../sandbox/out`) drives
+    the Secure Sandbox (spec 12.11); the helper's `[v2mac-sandbox]` lines share stdout.
   - `-debugIntent servers|test|fastest|exit` runs that Shortcuts action (or its query) on the dev data and prints the result.
   - `-debugCleanIP YES|<transport>` opens Find Clean IP on the first server it applies to and prints the best results.
   - `-debugBackupRoundTrip <path>` (with demo data) writes a backup there, removes the servers, restores

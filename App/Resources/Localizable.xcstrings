@@ -21387,6 +21387,198 @@
           }
         }
       }
+    },
+    "Sandbox": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سندباکس"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Песочница"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "沙盒"}}
+      }
+    },
+    "Open the Secure Sandbox": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "باز کردن سندباکس امن"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Открыть безопасную песочницу"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "打开安全沙盒"}}
+      }
+    },
+    "Secure Sandbox": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سندباکس امن"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Безопасная песочница"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "安全沙盒"}}
+      }
+    },
+    "Secure Sandbox (beta)": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سندباکس امن (بتا)"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Безопасная песочница (бета)"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "安全沙盒（测试版）"}}
+      }
+    },
+    "Run apps in mini VMs, each with its own server. Every app opens as its own Mac app, and nothing it does can reach the internet except through the server you pick for it.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "برنامه‌ها را در ماشین‌های مجازی کوچک اجرا کنید، هر کدام با سرور خودش. هر برنامه مثل یک برنامهٔ جداگانهٔ مک باز می‌شود و هیچ کاری از آن جز از راه سروری که برایش انتخاب می‌کنید به اینترنت نمی‌رسد."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Запускайте приложения в мини-ВМ, у каждой свой сервер. Каждое приложение открывается как отдельное приложение Mac и выходит в интернет только через выбранный для него сервер."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "在迷你虚拟机中运行应用，每个虚拟机使用自己的服务器。每个应用都作为独立的 Mac 应用打开，除了通过你为它选择的服务器，它无法访问互联网。"}}
+      }
+    },
+    "Memory": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "حافظه"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Память"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "内存"}}
+      }
+    },
+    "up to %@ while it runs": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "تا %@ هنگام اجرا"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "до %@ во время работы"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "运行时最多 %@"}}
+      }
+    },
+    "Open Sandbox": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "باز کردن سندباکس"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Открыть песочницу"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "打开沙盒"}}
+      }
+    },
+    "Resources": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "منابع"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Ресурсы"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "资源"}}
+      }
+    },
+    "Memory limit": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سقف حافظه"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Лимит памяти"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "内存上限"}}
+      }
+    },
+    "The sandbox starts when you open it and stops 5 minutes after its last window closes. A new limit applies from its next start.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سندباکس با باز کردنش روشن می‌شود و ۵ دقیقه پس از بسته شدن آخرین پنجره‌اش خاموش می‌شود. سقف جدید از اجرای بعدی اعمال می‌شود."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Песочница запускается при открытии и останавливается через 5 минут после закрытия последнего окна. Новый лимит действует со следующего запуска."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "沙盒在你打开时启动，并在最后一个窗口关闭 5 分钟后停止。新的上限从下次启动起生效。"}}
+      }
+    },
+    "Storage": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "فضای ذخیره‌سازی"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Хранилище"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "存储"}}
+      }
+    },
+    "Disk space used": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "فضای اشغال‌شده"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Занято на диске"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "已用磁盘空间"}}
+      }
+    },
+    "Remove Sandbox…": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "حذف سندباکس…"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Удалить песочницу…"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "移除沙盒…"}}
+      }
+    },
+    "Removing deletes the sandbox, every mini VM with its data, and the sandbox apps. It can be downloaded again later.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "حذف، سندباکس، همهٔ ماشین‌های مجازی کوچک با داده‌هایشان و برنامه‌های سندباکس را پاک می‌کند. بعداً می‌توان دوباره آن را دانلود کرد."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Удаление стирает песочницу, все мини-ВМ с их данными и приложения песочницы. Её можно скачать снова позже."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "移除会删除沙盒、所有迷你虚拟机及其数据以及沙盒应用。之后可以重新下载。"}}
+      }
+    },
+    "Remove the sandbox?": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سندباکس حذف شود؟"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Удалить песочницу?"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "要移除沙盒吗？"}}
+      }
+    },
+    "Every mini VM and its data will be deleted.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "همهٔ ماشین‌های مجازی کوچک و داده‌هایشان پاک می‌شوند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Все мини-ВМ и их данные будут удалены."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "所有迷你虚拟机及其数据都将被删除。"}}
+      }
+    },
+    "Sandbox downloaded": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سندباکس دانلود شد"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Песочница скачана"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "沙盒已下载"}}
+      }
+    },
+    "Sandbox exit stopped working": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "خروجی سندباکس از کار افتاد"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Выход песочницы перестал работать"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "沙盒出口已停止工作"}}
+      }
+    },
+    "The Secure Sandbox is ready to open.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سندباکس امن آمادهٔ باز شدن است."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Безопасная песочница готова к открытию."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "安全沙盒已可打开。"}}
+      }
+    },
+    "A mini VM whose exit stops working is blocked until you pick another server; it never switches by itself.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "ماشین مجازی کوچکی که خروجی‌اش از کار بیفتد تا وقتی سرور دیگری انتخاب کنید مسدود می‌ماند؛ هرگز خودش سرور را عوض نمی‌کند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Мини-ВМ, чей выход перестал работать, блокируется, пока вы не выберете другой сервер; сама она сервер не меняет."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "出口停止工作的迷你虚拟机会被阻断，直到你选择另一台服务器；它从不自行切换。"}}
+      }
+    },
+    "Quit the sandbox apps too?": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "برنامه‌های سندباکس هم بسته شوند؟"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Закрыть и приложения песочницы?"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "也退出沙盒应用吗？"}}
+      }
+    },
+    "Apps open in the Secure Sandbox close when V2Mac quits.": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "برنامه‌های باز در سندباکس امن با بستن V2Mac بسته می‌شوند."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Приложения, открытые в безопасной песочнице, закрываются при выходе из V2Mac."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "V2Mac 退出时，安全沙盒中打开的应用会关闭。"}}
+      }
+    },
+    "Quit All": {
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "بستن همه"}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Закрыть все"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "全部退出"}}
+      }
+    },
+    "The downloaded sandbox does not match the one this V2Mac expects.": {
+      "extractionState": "manual",
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سندباکس دانلودشده با آنچه این V2Mac انتظار دارد یکی نیست."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Скачанная песочница не совпадает с той, которую ожидает этот V2Mac."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "下载的沙盒与此 V2Mac 期望的不一致。"}}
+      }
+    },
+    "The downloaded sandbox could not be unpacked.": {
+      "extractionState": "manual",
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "سندباکس دانلودشده باز نشد."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Не удалось распаковать скачанную песочницу."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法解压下载的沙盒。"}}
+      }
+    },
+    "The sandbox helper on disk was changed. Remove the sandbox and download it again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "fa": {"stringUnit": {"state": "translated", "value": "برنامهٔ کمکی سندباکس روی دیسک تغییر کرده است. سندباکس را حذف و دوباره دانلود کنید."}},
+        "ru": {"stringUnit": {"state": "translated", "value": "Помощник песочницы на диске был изменён. Удалите песочницу и скачайте её снова."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "磁盘上的沙盒辅助程序已被更改。请移除沙盒并重新下载。"}}
+      }
     }
   },
   "version": "1.0"

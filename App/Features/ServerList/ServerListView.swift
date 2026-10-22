@@ -176,6 +176,15 @@ struct ServerListView: View {
                 }
             }
         }
+        if model.sandbox.pin != nil {
+            ToolbarSpacer(.fixed)
+            ToolbarItem {
+                Button { model.sandbox.open() } label: {
+                    Label("Sandbox", systemImage: "shield.lefthalf.filled")
+                }
+                .help("Open the Secure Sandbox")
+            }
+        }
         ToolbarSpacer(.fixed)
         ToolbarItem {
             Button { model.showInspector.toggle() } label: {

@@ -14,11 +14,14 @@ struct SettingsView: View {
             ConnectionSettings().tabItem { Label("Connection", systemImage: "bolt.horizontal") }.tag(SettingsTab.connection)
             WarpSettings().tabItem { Label("WARP", systemImage: "cloud") }.tag(SettingsTab.warp)
             SubscriptionSettings().tabItem { Label("Servers", systemImage: "tray.and.arrow.down") }.tag(SettingsTab.servers)
+            if model.sandbox.pin != nil {
+                SandboxSettings().tabItem { Label("Sandbox", systemImage: "shield.lefthalf.filled") }.tag(SettingsTab.sandbox)
+            }
             NotificationSettings().tabItem { Label("Notifications", systemImage: "bell") }.tag(SettingsTab.notifications)
             CoreSettings().tabItem { Label("Core", systemImage: "cpu") }.tag(SettingsTab.core)
             AboutSettings().tabItem { Label("About", systemImage: "info.circle") }.tag(SettingsTab.about)
         }
         // Narrower, some tabs go to an overflow menu; Russian tab names need more room than the others.
-        .frame(width: Bundle.main.preferredLocalizations.first == "ru" ? 780 : 630, height: 440)
+        .frame(width: (Bundle.main.preferredLocalizations.first == "ru" ? 780 : 630) + (model.sandbox.pin != nil ? 90 : 0), height: 440)
     }
 }

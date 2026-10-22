@@ -63,6 +63,7 @@ struct MainView: View {
         .sheet(isPresented: $model.showRegionsSheet) {
             RegionPacksView()
         }
+        .sheet(isPresented: Bindable(model.sandbox).showEntrySheet) { SandboxEntrySheet() }
     }
 }
 

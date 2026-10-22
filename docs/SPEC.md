@@ -1611,6 +1611,8 @@ launch. Each kind has a switch in Settings → Notifications:
 | Servers added or removed | A scheduled update changed the server list | Off |
 | V2Mac update available | The background check finds a release, once per release; also a Homebrew upgrade that failed after the app quit for it | On |
 | Delay test finished | A test ends while the app is in the background | Off |
+| Sandbox downloaded | The sandbox download is checked and installed (section 12.11) | On |
+| Sandbox exit stopped working | A mini VM's exit stops passing traffic; sent by the sandbox helper | On |
 
 Rules:
 
@@ -1779,6 +1781,38 @@ resolver, as the app did), not linked to another row, and not the core's own.
 A row never linked (very short connections close first; a TUN app may have used
 another address) has no app or bytes. At most 1,000 rows and 2,000 log lines are kept.
 
+### 12.11 Secure Sandbox (beta)
+
+The sandbox's design and plan live in the sandbox repo (`../sandbox/docs/PLAN.md`); this
+section covers only V2Mac's part, which is all the sandbox code V2Mac has (`SandboxService`,
+`SandboxLink`, `SandboxFiles`).
+
+- **Pin.** A V2Mac build accepts exactly one sandbox release, a `SandboxPin` (zip URL, its
+  SHA-256 and size, and the SHA-256 of the helper's executable). Without a pin nothing of the
+  sandbox is shown. Releases have none until the first locked sandbox release; Debug builds take
+  one from `-debugSandboxPin <pin.json>` (written by the sandbox repo's `Scripts/package.sh`).
+- **Entry.** "Sandbox" in the main window toolbar and the menu bar panel. Before it is installed
+  a sheet in the main window says what it is, the download size and the memory it may use, with
+  Download (progress, Cancel). Once installed, the button opens the helper's Sandbox window.
+- **Download.** `V2MacSandbox.zip` goes to `sandbox/download.part` through the usual routes
+  (local proxy if connected, then direct; spec 11), resuming a partial file with a `Range`
+  request. The zip must match the pin, is unpacked with `ditto` into a staging folder, and the
+  helper replaces the old one only after its executable matches the pin too.
+- **Launch.** Before every launch the executable is hashed again. V2Mac starts it with
+  `posix_spawn`, one end of a socketpair as fd 3, stdout/stderr inherited and every other
+  descriptor closed. There is no listening socket, so no other process can talk to the helper.
+- **Link.** `SandboxLink`: 4-byte big-endian length + JSON, at most 1 MB a frame; anything that
+  does not decode closes the link, and V2Mac then terminates the helper. The helper exits when the
+  link closes, so it never outlives V2Mac. Helper notices may only use the sandbox's own
+  notification kinds.
+- **Quit.** On quit V2Mac asks the helper whether sandbox apps are open (2 seconds to answer);
+  if so it asks "Quit the sandbox apps too?" (Quit All / Cancel). It then sends `quit` and waits
+  up to 15 seconds for the helper to stop its VM before killing it.
+- **Settings → Sandbox** (only with a pin): memory limit (2 GB up to half the Mac's memory,
+  default a quarter, 2–8 GB; applies from the VM's next start), disk space used, and Remove,
+  which after one confirm stops the helper and deletes `sandbox/` and
+  `~/Applications/V2Mac Sandbox/`.
+
 ## 13. Settings
 
 **Reset.** Every tab with settings ends with "Reset to Defaults…", and General also has
@@ -1888,12 +1922,17 @@ and can be retried. These legacy credentials are never reused to authorize the h
 ├─ assets/
 │  ├─ geoip.dat, geosite.dat     symlinks to the bundle, or updated copies
 │  └─ region-<id>-geoip.dat, region-<id>-geosite.dat
-└─ run/
-   ├─ config.json                0600, exists only while running
-   ├─ xray.pid
-   ├─ tun.session, tun.on        flag files for the root helper (section 9.5)
-   ├─ proxy.on                   the port the system proxy should use (section 9.9)
-   └─ killswitch.on, killswitch.allow   the kill switch's request and servers (section 9.8)
+├─ run/
+│  ├─ config.json                0600, exists only while running
+│  ├─ xray.pid
+│  ├─ tun.session, tun.on        flag files for the root helper (section 9.5)
+│  ├─ proxy.on                   the port the system proxy should use (section 9.9)
+│  └─ killswitch.on, killswitch.allow   the kill switch's request and servers (section 9.8)
+└─ sandbox/                      0700, only once the sandbox is downloaded (section 12.11)
+   ├─ download.part              a partial download, kept for resuming
+   ├─ V2Mac Sandbox.app          the helper (its kernel and rootfs inside)
+   ├─ data.img                   the VM's data disk, sparse
+   └─ vm.log                     the VM's console
 
 /var/run/v2mac-tun-<uid>/        root-owned, exists only while the root helper runs
 ├─ xray, config.json             the copies the helper runs
