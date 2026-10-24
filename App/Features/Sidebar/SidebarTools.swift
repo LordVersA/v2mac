@@ -1,16 +1,19 @@
 import SwiftUI
 
-/// The tools at the foot of the sidebar: the rule editor and the connections window.
+/// The tools at the foot of the sidebar: the connections window, the rule editor and the sandbox.
 struct SidebarTools: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-                SidebarGlassButton(title: "Rule Editor", systemImage: "arrow.triangle.branch") { model.openRuleEditor(openWindow) }
+            VStack(alignment: .leading, spacing: 8) {
                 SidebarGlassButton(title: "Connections", systemImage: "point.3.connected.trianglepath.dotted") {
                     model.openConnections(openWindow)
+                }
+                SidebarGlassButton(title: "Rule Editor", systemImage: "arrow.triangle.branch") { model.openRuleEditor(openWindow) }
+                if model.sandbox.pin != nil {
+                    SidebarGlassButton(title: "Sandbox", systemImage: "shield.lefthalf.filled") { model.sandbox.open() }
                 }
             }
         }
