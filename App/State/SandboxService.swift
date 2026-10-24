@@ -21,6 +21,8 @@ final class SandboxService {
     /// The helper's VM: "stopped", "booting", "running" or "stopping".
     private(set) var vmState = "stopped"
     var isRunning: Bool { helper != nil }
+    /// From a click that has to launch the helper until it says hello (its window opens right after).
+    private(set) var isOpening = false
     var showEntrySheet = false
 
     var downloadRoutes: () -> [FetchRoute] = { [.direct] }
@@ -60,9 +62,11 @@ final class SandboxService {
     func open() {
         guard phase == .installed else { return showEntrySheet = true }
         do {
+            if helper == nil { isOpening = true }
             try launchIfNeeded()
             send(.openWindow)
         } catch {
+            isOpening = false
             phase = .failed(error.localizedDescription)
             showEntrySheet = true
         }
@@ -151,6 +155,7 @@ final class SandboxService {
         onEvent(message)
         switch message {
         case .hello(let version):
+            isOpening = false
             if version != SandboxLink.version { linkClosed() }
         case .vmState(let state): vmState = state
         case .quitReply(let appsOpen):
@@ -235,6 +240,7 @@ final class SandboxService {
         exitSource?.cancel()
         exitSource = nil
         helper = nil
+        isOpening = false
         link?.readabilityHandler = nil
         link = nil
         vmState = "stopped"

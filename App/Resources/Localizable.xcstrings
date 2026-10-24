@@ -8206,6 +8206,28 @@
         }
       }
     },
+    "Loading…": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در حال بارگذاری…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在载入…"
+          }
+        }
+      }
+    },
     "Local Proxy": {
       "localizations": {
         "fa": {

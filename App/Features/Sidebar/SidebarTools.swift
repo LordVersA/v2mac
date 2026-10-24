@@ -13,7 +13,8 @@ struct SidebarTools: View {
                 }
                 SidebarGlassButton(title: "Rule Editor", systemImage: "arrow.triangle.branch") { model.openRuleEditor(openWindow) }
                 if model.sandbox.pin != nil {
-                    SidebarGlassButton(title: "Sandbox", systemImage: "shield.lefthalf.filled") { model.sandbox.open() }
+                    SidebarGlassButton(title: "Sandbox", systemImage: "shield.lefthalf.filled", loading: model.sandbox.isOpening,
+                                       badge: model.sandbox.phase == .installed ? nil : "arrow.down.circle.fill") { model.sandbox.open() }
                 }
             }
         }
@@ -23,9 +24,13 @@ struct SidebarTools: View {
 }
 
 /// An icon on glass whose name slides out beside it, with a soft glow, while the pointer is over it.
+/// While `loading`, a spinner and "Loading…" with light sweeping across the glass; `badge` is a small
+/// symbol beside the icon (the sandbox's "not installed").
 struct SidebarGlassButton: View {
     let title: LocalizedStringKey
     let systemImage: String
+    var loading = false
+    var badge: String?
     let action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -33,10 +38,20 @@ struct SidebarGlassButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.title3.weight(.semibold))
-                    .symbolEffect(.bounce, value: isHovering)
-                if isHovering {
+                if loading {
+                    ProgressView().controlSize(.small)
+                    Text("Loading…").fontWeight(.medium).fixedSize()
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                } else {
+                    Image(systemName: systemImage)
+                        .font(.title3.weight(.semibold))
+                        .symbolEffect(.bounce, value: isHovering)
+                    if let badge {
+                        Image(systemName: badge).font(.caption.weight(.semibold)).foregroundStyle(.tint)
+                            .padding(.leading, -4).accessibilityHidden(true)
+                    }
+                }
+                if isHovering && !loading {
                     Text(title)
                         .fontWeight(.medium)
                         .fixedSize()
@@ -45,9 +60,12 @@ struct SidebarGlassButton: View {
             }
             .padding(.horizontal, 12)
             .frame(height: 36)
+            .overlay { if loading && !reduceMotion { GlassSweep() } }
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)
+        .disabled(loading)
+        .animation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0.2), value: loading)
         .glassEffect(.regular.tint(isHovering ? Color.accentColor.opacity(0.25) : nil).interactive(), in: .capsule)
         .shadow(color: Color.accentColor.opacity(isHovering ? 0.55 : 0), radius: isHovering ? 12 : 0)
         .onHover { hovering in
@@ -55,5 +73,22 @@ struct SidebarGlassButton: View {
         }
         .accessibilityLabel(title)
         .help(title)
+    }
+}
+
+/// A soft band of light that keeps crossing the glass from left to right.
+private struct GlassSweep: View {
+    @State private var across = false
+
+    var body: some View {
+        GeometryReader { proxy in
+            LinearGradient(colors: [.clear, .white.opacity(0.35), .clear], startPoint: .leading, endPoint: .trailing)
+                .frame(width: proxy.size.width * 0.6)
+                .offset(x: across ? proxy.size.width : -proxy.size.width * 0.6)
+        }
+        .clipShape(.capsule)
+        .blendMode(.plusLighter)
+        .allowsHitTesting(false)
+        .onAppear { withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: false)) { across = true } }
     }
 }
