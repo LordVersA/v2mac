@@ -60,8 +60,11 @@ final class SandboxService {
             return try? JSONDecoder().decode(SandboxPin.self, from: data)
         }
         #endif
-        // shortcut: no sandbox release yet; the first locked release (sandbox plan M7) pins it here.
-        return nil
+        // The sandbox release this V2Mac is locked to: its release's pin.json.
+        return SandboxPin(url: URL(string: "https://github.com/LordVersA/v2mac-sandbox/releases/download/v1.0.0/V2MacSandbox.zip")!,
+                          sha256: "2385dc465e42308c55e98fdd74d870574a1d630cab6523625b0e1ece4a25bcb4",
+                          executableSHA256: "8f8572d780f2bedd790281089ca13d2cb6321b09443b17f1e247fe8b26e4a1b7",
+                          size: 361876627, version: "1.0.0")
     }
 
     // MARK: Entry

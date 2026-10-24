@@ -1789,7 +1789,7 @@ section covers only V2Mac's part, which is all the sandbox code V2Mac has (`Sand
 
 - **Pin.** A V2Mac build accepts exactly one sandbox release, a `SandboxPin` (zip URL, its
   SHA-256 and size, and the SHA-256 of the helper's executable). Without a pin nothing of the
-  sandbox is shown. Releases have none until the first locked sandbox release; Debug builds take
+  sandbox is shown. The pin is set in `SandboxService.loadPin` (V2Mac 1.0.0: sandbox v1.0.0); Debug builds can take
   one from `-debugSandboxPin <pin.json>` (written by the sandbox repo's `Scripts/package.sh`).
 - **Entry.** "Sandbox" in the main window toolbar and the menu bar panel. Before it is installed
   a sheet in the main window says what it is, the download size and the memory it may use, with
