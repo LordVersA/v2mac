@@ -87,7 +87,7 @@ jobs:
             --title "V2Mac ${{ steps.v.outputs.version }}" --notes-file notes.md
 
       # Points the Homebrew cask (LordVersA/homebrew-tap) at the new DMG. Needs a TAP_TOKEN
-      # secret with write access to that repo; without one the step only prints a warning.
+      # secret with write access to that repo; fails without one so a skipped bump is noticed.
       - name: Update Homebrew tap
         if: github.ref_type == 'tag'
         env:
@@ -95,8 +95,8 @@ jobs:
           VERSION: ${{ steps.v.outputs.version }}
         run: |
           if [[ -z "$TAP_TOKEN" ]]; then
-            echo "::warning::TAP_TOKEN is not set; update Casks/v2mac.rb in LordVersA/homebrew-tap by hand"
-            exit 0
+            echo "::error::TAP_TOKEN is not set; the release is out but Casks/v2mac.rb in LordVersA/homebrew-tap was not bumped"
+            exit 1
           fi
           SHA="$(shasum -a 256 "dist/V2Mac-$VERSION.dmg" | cut -d' ' -f1)"
           git clone -q "https://x-access-token:$TAP_TOKEN@github.com/LordVersA/homebrew-tap.git" tap

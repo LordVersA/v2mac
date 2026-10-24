@@ -40,7 +40,8 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   pushes the tag). CI (`.github/workflows/release.yml`) then runs the package tests, builds the DMG
   with the version taken from the tag, and publishes a GitHub Release with the generated notes,
   the DMG and its `.sha256`. It then bumps `version` and `sha256` in the Homebrew cask
-  (`LordVersA/homebrew-tap`, `Casks/v2mac.rb`), which needs the `TAP_TOKEN` secret.
+  (`LordVersA/homebrew-tap`, `Casks/v2mac.rb`), which needs the `TAP_TOKEN` secret: a fine-grained
+  token for `homebrew-tap` only, Contents read and write, expiring 2027-01-23. Renew it before then.
 - Never create or push release tags on your own. Run `Scripts/release.sh` only when asked.
 - "Actions → Release → Run workflow" is a dry run: it builds and attaches the DMG and notes as an
   artifact and publishes nothing.
