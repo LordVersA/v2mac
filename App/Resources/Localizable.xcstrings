@@ -1,6 +1,45 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Sandbox (beta)": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "سندباکس (بتا)"}}, "ru": {"stringUnit": {"state": "translated", "value": "Песочница (бета)"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "沙盒（测试版）"}}}
+    },
+    "Open the Secure Sandbox (beta)": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "باز کردن سندباکس امن (بتا)"}}, "ru": {"stringUnit": {"state": "translated", "value": "Открыть безопасную песочницу (бета)"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "打开安全沙盒（测试版）"}}}
+    },
+    "Sandbox (beta) downloaded": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "سندباکس (بتا) دانلود شد"}}, "ru": {"stringUnit": {"state": "translated", "value": "Песочница (бета) скачана"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "沙盒（测试版）已下载"}}}
+    },
+    "Sandbox (beta) exit stopped working": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "خروجی سندباکس (بتا) از کار افتاد"}}, "ru": {"stringUnit": {"state": "translated", "value": "Выход песочницы (бета) перестал работать"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "沙盒（测试版）出口已停止工作"}}}
+    },
+    "Apps open in the Secure Sandbox (beta) close when V2Mac quits.": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "برنامه‌های باز در سندباکس امن (بتا) با بستن V2Mac بسته می‌شوند."}}, "ru": {"stringUnit": {"state": "translated", "value": "Приложения, открытые в безопасной песочнице (бета), закрываются при выходе из V2Mac."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "V2Mac 退出时，安全沙盒（测试版）中打开的应用会关闭。"}}}
+    },
+    "The Secure Sandbox (beta) is ready to open.": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "سندباکس امن (بتا) آمادهٔ باز شدن است."}}, "ru": {"stringUnit": {"state": "translated", "value": "Безопасная песочница (бета) готова к открытию."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "安全沙盒（测试版）已可打开。"}}}
+    },
+    "The Secure Sandbox (beta) was updated and is ready to open.": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "سندباکس امن (بتا) به‌روز شد و آمادهٔ باز شدن است."}}, "ru": {"stringUnit": {"state": "translated", "value": "Безопасная песочница (бета) обновлена и готова к открытию."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "安全沙盒（测试版）已更新，可以打开。"}}}
+    },
+    "Secure Sandbox (beta) update available": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "به‌روزرسانی سندباکس امن (بتا) موجود است"}}, "ru": {"stringUnit": {"state": "translated", "value": "Доступно обновление безопасной песочницы (бета)"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "安全沙盒（测试版）有可用更新"}}}
+    },
+    "Sandbox Update Available": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "به‌روزرسانی سندباکس موجود است"}}, "ru": {"stringUnit": {"state": "translated", "value": "Доступно обновление песочницы"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "有可用的沙盒更新"}}}
+    },
+    "This V2Mac needs a newer sandbox. Update it to open the sandbox; your mini VMs and their data stay.": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "این V2Mac به سندباکس جدیدتری نیاز دارد. برای باز کردن سندباکس آن را به‌روز کنید؛ ماشین‌های مجازی کوچک و داده‌هایشان می‌مانند."}}, "ru": {"stringUnit": {"state": "translated", "value": "Этой версии V2Mac нужна более новая песочница. Обновите её, чтобы открыть; ваши мини-ВМ и их данные сохранятся."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "此版本的 V2Mac 需要更新的沙盒。请更新后再打开沙盒；你的迷你虚拟机及其数据会保留。"}}}
+    },
+    "Downloading the Secure Sandbox (beta)…": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "در حال دانلود سندباکس امن (بتا)…"}}, "ru": {"stringUnit": {"state": "translated", "value": "Загрузка безопасной песочницы (бета)…"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "正在下载安全沙盒（测试版）…"}}}
+    },
+    "Secure Sandbox (beta) %@ is available.": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "سندباکس امن (بتا) %@ آماده است."}}, "ru": {"stringUnit": {"state": "translated", "value": "Доступна безопасная песочница (бета) %@."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "安全沙盒（测试版）%@ 可用。"}}}
+    },
+    "A Secure Sandbox (beta) update is available.": {
+      "localizations": {"fa": {"stringUnit": {"state": "translated", "value": "به‌روزرسانی سندباکس امن (بتا) موجود است."}}, "ru": {"stringUnit": {"state": "translated", "value": "Доступно обновление безопасной песочницы (бета)."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "安全沙盒（测试版）有可用更新。"}}}
+    },
     "Open %@": {
       "localizations": {
         "fa": {

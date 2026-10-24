@@ -13,8 +13,14 @@ struct SidebarTools: View {
                 }
                 SidebarGlassButton(title: "Rule Editor", systemImage: "arrow.triangle.branch") { model.openRuleEditor(openWindow) }
                 if model.sandbox.pin != nil {
-                    SidebarGlassButton(title: "Sandbox", systemImage: "shield.lefthalf.filled", loading: model.sandbox.isOpening,
-                                       badge: model.sandbox.phase == .installed ? nil : "arrow.down.circle.fill") { model.sandbox.open() }
+                    HStack(spacing: 8) {
+                        SidebarGlassButton(title: "Sandbox (beta)", systemImage: "shield.lefthalf.filled", loading: model.sandbox.isOpening,
+                                           badge: model.sandbox.phase == .installed ? nil : "arrow.down.circle.fill") { model.sandbox.open() }
+                        // The same update button as V2Mac's own, for the sandbox's update.
+                        if model.sandbox.updateAvailable {
+                            UpdateButton(title: "Sandbox Update Available", opensTrailing: true, tab: .sandbox)
+                        }
+                    }
                 }
             }
         }

@@ -66,7 +66,7 @@ struct NotificationSettings: View {
                     NotificationToggle(kind: .sandboxReady)
                     NotificationToggle(kind: .sandboxExitDown)
                 } header: {
-                    Text("Secure Sandbox")
+                    Text("Secure Sandbox (beta)")
                 } footer: {
                     note("A mini VM whose exit stops working is blocked until you pick another server; it never switches by itself.")
                 }

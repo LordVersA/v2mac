@@ -17,6 +17,12 @@ struct SandboxSettings: View {
 
     var body: some View {
         Form {
+            if sandbox.phase == .installed || sandbox.updateAvailable {
+                Section("Version") {
+                    LabeledContent("Installed", value: installedVersion ?? String(localized: "Unknown"))
+                    if sandbox.updateAvailable { SandboxUpdateRow() }
+                }
+            }
             Section {
                 Picker("Memory limit", selection: $ramCapMB) {
                     ForEach(ramChoices, id: \.self) { Text(Int64($0) << 20, format: .byteCount(style: .memory)).tag($0) }
@@ -50,6 +56,11 @@ struct SandboxSettings: View {
         } message: {
             Text("Every mini VM and its data will be deleted.")
         }
+    }
+
+    /// The helper bundle's own version.
+    private var installedVersion: String? {
+        NSDictionary(contentsOf: sandbox.files.app.appendingPathComponent("Contents/Info.plist"))?["CFBundleShortVersionString"] as? String
     }
 
     private func note(_ text: LocalizedStringKey) -> some View {

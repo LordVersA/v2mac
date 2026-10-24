@@ -15,7 +15,7 @@ struct SettingsView: View {
             WarpSettings().tabItem { Label("WARP", systemImage: "cloud") }.tag(SettingsTab.warp)
             SubscriptionSettings().tabItem { Label("Servers", systemImage: "tray.and.arrow.down") }.tag(SettingsTab.servers)
             if model.sandbox.pin != nil {
-                SandboxSettings().tabItem { Label("Sandbox", systemImage: "shield.lefthalf.filled") }.tag(SettingsTab.sandbox)
+                SandboxSettings().tabItem { Label("Sandbox (beta)", systemImage: "shield.lefthalf.filled") }.tag(SettingsTab.sandbox)
             }
             NotificationSettings().tabItem { Label("Notifications", systemImage: "bell") }.tag(SettingsTab.notifications)
             CoreSettings().tabItem { Label("Core", systemImage: "cpu") }.tag(SettingsTab.core)

@@ -302,6 +302,10 @@ struct MenuBarPanel: View {
                 }
             }
 
+            if model.sandbox.updateAvailable {
+                PanelCard { SandboxUpdateRow().font(.callout) }
+            }
+
             HStack {
                 Button("Open V2Mac", systemImage: "macwindow") { model.openMainWindow(openWindow) }
                 Spacer()
@@ -314,12 +318,12 @@ struct MenuBarPanel: View {
                         if model.sandbox.isOpening {
                             ProgressView().controlSize(.small).accessibilityLabel("Loading…")
                         } else {
-                            Label("Sandbox", systemImage: "shield.lefthalf.filled")
+                            Label("Sandbox (beta)", systemImage: "shield.lefthalf.filled")
                         }
                     }
                     .labelStyle(.iconOnly)
                     .disabled(model.sandbox.isOpening)
-                    .help("Open the Secure Sandbox")
+                    .help("Open the Secure Sandbox (beta)")
                 }
                 Button("Settings", systemImage: "gearshape") { model.openSettings(openSettings) }
                     .labelStyle(.iconOnly)

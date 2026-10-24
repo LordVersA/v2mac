@@ -13,6 +13,10 @@ struct SandboxEntrySheet: View {
             Label("Secure Sandbox (beta)", systemImage: "shield.lefthalf.filled").font(.title2.bold())
             Text("Run apps in mini VMs, each with its own server. Every app opens as its own Mac app, and nothing it does can reach the internet except through the server you pick for it.")
                 .fixedSize(horizontal: false, vertical: true)
+            if sandbox.updateAvailable {
+                Text("This V2Mac needs a newer sandbox. Update it to open the sandbox; your mini VMs and their data stay.")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Grid(alignment: .leading, verticalSpacing: 6) {
                 if let pin = sandbox.pin {
                     GridRow {
@@ -40,7 +44,11 @@ struct SandboxEntrySheet: View {
                 } else {
                     Button("Not Now") { dismiss() }.keyboardShortcut(.cancelAction)
                 }
-                if sandbox.phase == .installed {
+                if sandbox.updateAvailable {
+                    Button("Update") { sandbox.update() }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled({ if case .downloading = sandbox.phase { true } else { false } }())
+                } else if sandbox.phase == .installed {
                     Button("Open Sandbox") {
                         dismiss()
                         sandbox.open()

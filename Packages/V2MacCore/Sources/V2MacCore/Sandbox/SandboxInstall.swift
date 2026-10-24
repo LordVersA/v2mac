@@ -10,12 +10,15 @@ public struct SandboxPin: Codable, Sendable, Equatable {
     /// SHA-256 of `V2Mac Sandbox.app/Contents/MacOS/V2Mac Sandbox`.
     public var executableSHA256: String
     public var size: Int64
+    /// The release's version, shown when it updates an installed sandbox.
+    public var version: String?
 
-    public init(url: URL, sha256: String, executableSHA256: String, size: Int64) {
+    public init(url: URL, sha256: String, executableSHA256: String, size: Int64, version: String? = nil) {
         self.url = url
         self.sha256 = sha256
         self.executableSHA256 = executableSHA256
         self.size = size
+        self.version = version
     }
 }
 

@@ -23,10 +23,18 @@ final class SandboxService {
     var isRunning: Bool { helper != nil }
     /// From a click that has to launch the helper until it says hello (its window opens right after).
     private(set) var isOpening = false
+    /// The installed sandbox is not the one this V2Mac pins (V2Mac was updated): it must be updated
+    /// before it opens. Mini VMs and their data stay.
+    private(set) var updateAvailable = false
+    /// The running download, for `DownloadProgressView`.
+    private(set) var progress: DownloadProgress?
+    private(set) var downloadRate: Double?
+    private var rate = RateTracker()
     var showEntrySheet = false
 
     var downloadRoutes: () -> [FetchRoute] = { [.direct] }
     var onNotice: (NotificationKind, String) -> Void = { _, _ in }
+    var onUpdateFound: (SandboxPin) -> Void = { _ in }
     /// The servers a mini VM can pick as its exit, and the active one's id.
     var serverList: () -> ([SandboxLink.Server], String?) = { ([], nil) }
     /// A server's ready outbound JSON (sandbox plan §4), or nil for one that can't be an exit.
@@ -58,9 +66,10 @@ final class SandboxService {
 
     // MARK: Entry
 
-    /// The Sandbox button: opens the helper's window, or the entry sheet when nothing is installed.
+    /// The Sandbox button: opens the helper's window, or the entry sheet when nothing is installed
+    /// or it needs an update.
     func open() {
-        guard phase == .installed else { return showEntrySheet = true }
+        guard phase == .installed, !updateAvailable else { return showEntrySheet = true }
         do {
             if helper == nil { isOpening = true }
             try launchIfNeeded()
@@ -72,22 +81,56 @@ final class SandboxService {
         }
     }
 
+    /// Once at launch, after the app has wired `onUpdateFound`: hashes the installed helper off the main actor.
+    func checkForUpdate() {
+        guard let pin, files.isInstalled else { return }
+        let files = files
+        Task {
+            updateAvailable = await Task.detached { (try? files.verify(pin)) == nil }.value
+            if updateAvailable { onUpdateFound(pin) }
+        }
+    }
+
+    /// Update Now, as for V2Mac itself: stops the sandbox (its apps close), then downloads the pinned
+    /// release and puts it in place of the old helper.
+    func update() {
+        guard updateAvailable, downloadTask == nil else { return }
+        Task {
+            await stop()
+            download()
+        }
+    }
+
     func download() {
         guard let pin, downloadTask == nil else { return }
         phase = .downloading(nil)
+        progress = nil
+        downloadRate = nil
+        rate = RateTracker()
         downloadTask = Task {
             defer { downloadTask = nil }
             do {
                 try FileManager.default.createDirectory(at: files.root, withIntermediateDirectories: true,
                                                         attributes: [.posixPermissions: 0o700])
                 try await ResumableDownload(routes: downloadRoutes()).fetch(pin.url, to: files.partial, expectedSize: pin.size) { progress in
-                    Task { @MainActor in if case .downloading = self.phase { self.phase = .downloading(progress.fraction) } }
+                    Task { @MainActor in
+                        guard case .downloading = self.phase else { return }
+                        self.phase = .downloading(progress.fraction)
+                        self.progress = progress
+                        self.downloadRate = self.rate.add(progress.received)
+                    }
                 }
                 try await files.install(pin)
                 phase = .installed
-                onNotice(.sandboxReady, String(localized: "The Secure Sandbox is ready to open."))
+                if updateAvailable {
+                    updateAvailable = false
+                    onNotice(.sandboxReady, String(localized: "The Secure Sandbox (beta) was updated and is ready to open."))
+                } else {
+                    onNotice(.sandboxReady, String(localized: "The Secure Sandbox (beta) is ready to open."))
+                }
             } catch is CancellationError {
-                phase = .notInstalled
+                // A cancelled update leaves the old sandbox in place, still waiting for its update.
+                phase = files.isInstalled ? .installed : .notInstalled
             } catch {
                 phase = .failed(error.localizedDescription)
             }
@@ -293,6 +336,7 @@ final class SandboxService {
         try? fm.removeItem(at: files.root)
         try? fm.removeItem(at: fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications/V2Mac Sandbox", isDirectory: true))
         phase = .notInstalled
+        updateAvailable = false
     }
 
     /// Disk space the sandbox folder takes (the data disk is sparse, so its allocated size counts).

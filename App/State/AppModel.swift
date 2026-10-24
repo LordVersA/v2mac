@@ -202,6 +202,14 @@ final class AppModel {
         sandbox.onNotice = { kind, text in
             notifications.post(kind, title: kind.title, body: text, id: kind.rawValue)
         }
+        sandbox.onUpdateFound = { pin in
+            // Once per sandbox release, like the app's own update.
+            guard Prefs.announcedTag("notifiedSandboxPin") != pin.sha256 else { return }
+            Prefs.setAnnouncedTag(pin.sha256, "notifiedSandboxPin")
+            notifications.post(.appUpdate, title: String(localized: "Secure Sandbox (beta) update available"),
+                               body: String(localized: "Open Settings to install it."), id: "sandboxUpdate", open: .settings(.sandbox))
+        }
+        sandbox.checkForUpdate()
         connection.onTunFailure = { message in
             notifications.post(.tun, title: String(localized: "TUN mode stopped"), body: message, id: "tun")
         }
@@ -984,7 +992,7 @@ final class AppModel {
         }
     }
 
-    /// `-debugSandbox install|boot|stop|remove` (with `-debugSandboxPin <pin.json>`): downloads and
+    /// `-debugSandbox install|boot|stop|probe|update|remove` (with `-debugSandboxPin <pin.json>`): downloads and
     /// installs the pinned sandbox; boots its VM (and keeps it running); boots and then stops it;
     /// runs the leak probes (the report arrives as a `probe` link line); or removes it. Prints each step and the VM's states; the helper's own lines share stdout.
     private func sandboxHook(_ action: String) {
@@ -1008,6 +1016,13 @@ final class AppModel {
             case "probe":
                 sandbox.open()
                 sandbox.probe()
+            case "update":
+                try? await Task.sleep(for: .seconds(1)) // checkForUpdate hashes the installed helper first
+                print("[v2mac-debug] sandbox update available: \(sandbox.updateAvailable)")
+                sandbox.update()
+                try? await Task.sleep(for: .seconds(1))
+                while case .downloading = sandbox.phase { try? await Task.sleep(for: .milliseconds(200)) }
+                print("[v2mac-debug] sandbox update: \(sandbox.phase), update still available: \(sandbox.updateAvailable)")
             case "remove":
                 await sandbox.remove()
                 print("[v2mac-debug] sandbox remove: \(sandbox.phase), folder exists \(FileManager.default.fileExists(atPath: sandbox.files.root.path))")
@@ -1283,7 +1298,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if await model.sandbox.appsOpen() {
                 let alert = NSAlert()
                 alert.messageText = String(localized: "Quit the sandbox apps too?")
-                alert.informativeText = String(localized: "Apps open in the Secure Sandbox close when V2Mac quits.")
+                alert.informativeText = String(localized: "Apps open in the Secure Sandbox (beta) close when V2Mac quits.")
                 alert.addButton(withTitle: String(localized: "Quit All"))
                 alert.addButton(withTitle: String(localized: "Cancel"))
                 guard alert.runModal() == .alertFirstButtonReturn else { return sender.reply(toApplicationShouldTerminate: false) }

@@ -69,6 +69,11 @@ struct MainView: View {
 
 /// A glowing icon that shows its text while the pointer is over it; opens Settings to install.
 struct UpdateButton: View {
+    var title: LocalizedStringKey = "Software Update Available"
+    /// The pill opens to the right of the icon (beside the sidebar's Sandbox button) instead of the left.
+    var opensTrailing = false
+    /// Where the update is installed.
+    var tab: SettingsTab = .general
     @Environment(AppModel.self) private var model
     @Environment(\.openSettings) private var openSettings
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -77,7 +82,7 @@ struct UpdateButton: View {
     @State private var closing: Task<Void, Never>?
 
     var body: some View {
-        ZStack(alignment: .trailing) {
+        ZStack(alignment: opensTrailing ? .leading : .trailing) {
             // The item is always as wide as the open pill: the toolbar only passes hover and clicks
             // inside an item's frame, and resizing the item made the toolbar jump.
             pillLabel.hidden()
@@ -88,7 +93,7 @@ struct UpdateButton: View {
                     .contentShape(.capsule)
                     .onTapGesture(perform: open)
                     .onHover(perform: hover)
-                    .transition(.opacity.combined(with: .scale(scale: 0.6, anchor: .trailing)))
+                    .transition(.opacity.combined(with: .scale(scale: 0.6, anchor: opensTrailing ? .leading : .trailing)))
             }
             Button(action: open) { icon }
                 .buttonStyle(.plain)
@@ -96,24 +101,25 @@ struct UpdateButton: View {
                 .onHover(perform: hover)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Software Update Available")
+        .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { open() }
     }
 
-    /// Room is left on the right for the button's own icon, which stays on top.
+    /// Room is left beside the text for the button's own icon, which stays on top.
     private var pillLabel: some View {
         HStack(spacing: 6) {
-            Text("Software Update Available").font(.callout.weight(.medium))
-            icon.hidden()
+            if opensTrailing { icon.hidden() }
+            Text(title).font(.callout.weight(.medium))
+            if !opensTrailing { icon.hidden() }
         }
-        .padding(.leading, 12)
-        .padding(.trailing, 6)
+        .padding(.leading, opensTrailing ? 6 : 12)
+        .padding(.trailing, opensTrailing ? 12 : 6)
         .padding(.vertical, 6)
         .fixedSize()
     }
 
-    private func open() { model.openSettings(openSettings, tab: .general) }
+    private func open() { model.openSettings(openSettings, tab: tab) }
 
     /// Closes half a second after the pointer leaves, so moving between the icon and the pill keeps it open.
     private func hover(_ inside: Bool) {

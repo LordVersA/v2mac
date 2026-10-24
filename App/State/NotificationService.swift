@@ -25,8 +25,8 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
         case .serversChanged: String(localized: "Servers added or removed")
         case .appUpdate: String(localized: "V2Mac update available")
         case .testFinished: String(localized: "Delay test finished")
-        case .sandboxReady: String(localized: "Sandbox downloaded")
-        case .sandboxExitDown: String(localized: "Sandbox exit stopped working")
+        case .sandboxReady: String(localized: "Sandbox (beta) downloaded")
+        case .sandboxExitDown: String(localized: "Sandbox (beta) exit stopped working")
         }
     }
 
