@@ -1018,7 +1018,8 @@ final class AppModel {
                 sandbox.probe()
             case "update":
                 try? await Task.sleep(for: .seconds(1)) // checkForUpdate hashes the installed helper first
-                print("[v2mac-debug] sandbox update available: \(sandbox.updateAvailable)")
+                await sandbox.planUpdate()
+                print("[v2mac-debug] sandbox update available: \(sandbox.updateAvailable), downloads \(sandbox.updateSize.map(String.init) ?? "?") bytes")
                 sandbox.update()
                 try? await Task.sleep(for: .seconds(1))
                 while case .downloading = sandbox.phase { try? await Task.sleep(for: .milliseconds(200)) }

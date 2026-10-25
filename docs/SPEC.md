@@ -1787,17 +1787,24 @@ The sandbox's design and plan live in the sandbox repo (`../sandbox/docs/PLAN.md
 section covers only V2Mac's part, which is all the sandbox code V2Mac has (`SandboxService`,
 `SandboxLink`, `SandboxFiles`).
 
-- **Pin.** A V2Mac build accepts exactly one sandbox release, a `SandboxPin` (zip URL, its
-  SHA-256 and size, and the SHA-256 of the helper's executable). Without a pin nothing of the
+- **Pin.** A V2Mac build accepts exactly one sandbox release, a `SandboxPin` (the URL and
+  SHA-256 of the release's manifest `files.json`, the full download size, and the SHA-256 of the
+  helper's executable). V2Mac 1.0.x pinned a whole-bundle zip instead and cannot read manifests. Without a pin nothing of the
   sandbox is shown. The pin is set in `SandboxService.loadPin` (V2Mac 1.0.0: sandbox v1.0.0); Debug builds can take
   one from `-debugSandboxPin <pin.json>` (written by the sandbox repo's `Scripts/package.sh`).
 - **Entry.** "Sandbox" in the main window toolbar and the menu bar panel. Before it is installed
-  a sheet in the main window says what it is, the download size and the memory it may use, with
+  (or when it needs an update) a sheet in the main window says what it is, the download size and the memory it may use, with
   Download (progress, Cancel). Once installed, the button opens the helper's Sandbox window.
-- **Download.** `V2MacSandbox.zip` goes to `sandbox/download.part` through the usual routes
-  (local proxy if connected, then direct; spec 11), resuming a partial file with a `Range`
-  request. The zip must match the pin, is unpacked with `ditto` into a staging folder, and the
-  helper replaces the old one only after its executable matches the pin too.
+- **Download** (sandbox repo, `docs/delta-updates.md`). The manifest must match the pin; it lists
+  every file of the bundle with its SHA-256, its own zip and bsdiff patches keyed by the SHA-256 of
+  the old file (paths stay inside `Contents/`, names beside the manifest). Each file is planned
+  against the installed bundle: the same hash is copied (an APFS clone), a patch's `from` hash is
+  patched with `/usr/bin/bspatch`, anything else comes in full. For an update the sheet shows what
+  that plan downloads. Downloads go to `sandbox/download/<sha256>` through the usual routes (local
+  proxy if connected, then direct; spec 11), resuming with a `Range` request, and each is checked
+  against the manifest before use. A failed patch falls back to that file's zip; any other failure
+  keeps the installed sandbox. The new bundle is built in a staging folder and replaces the old one
+  only after its executable matches the pin too.
 - **Launch.** Before every launch the executable is hashed again. V2Mac starts it with
   `posix_spawn`, one end of a socketpair as fd 3, stdout/stderr inherited and every other
   descriptor closed. There is no listening socket, so no other process can talk to the helper.
@@ -1934,7 +1941,7 @@ and can be retried. These legacy credentials are never reused to authorize the h
 │  ├─ proxy.on                   the port the system proxy should use (section 9.9)
 │  └─ killswitch.on, killswitch.allow   the kill switch's request and servers (section 9.8)
 └─ sandbox/                      0700, only once the sandbox is downloaded (section 12.11)
-   ├─ download.part              a partial download, kept for resuming
+   ├─ download/<sha256>          partial and finished downloads, kept for resuming
    ├─ V2Mac Sandbox.app          the helper (its kernel and rootfs inside)
    ├─ data.img                   the VM's data disk, sparse
    └─ vm.log                     the VM's console

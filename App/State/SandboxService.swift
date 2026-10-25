@@ -29,6 +29,8 @@ final class SandboxService {
     /// The running download, for `DownloadProgressView`.
     private(set) var progress: DownloadProgress?
     private(set) var downloadRate: Double?
+    /// What an update downloads (only changed files and patches), once `planUpdate` has looked; nil: the pin's full size.
+    private(set) var updateSize: Int64?
     private var rate = RateTracker()
     var showEntrySheet = false
 
@@ -60,11 +62,18 @@ final class SandboxService {
             return try? JSONDecoder().decode(SandboxPin.self, from: data)
         }
         #endif
-        // The sandbox release this V2Mac is locked to: its release's pin.json.
+        // The sandbox release this V2Mac is locked to: its release's pin.json (url: its files.json).
         return SandboxPin(url: URL(string: "https://github.com/LordVersA/v2mac-sandbox/releases/download/v1.0.0/V2MacSandbox.zip")!,
                           sha256: "2385dc465e42308c55e98fdd74d870574a1d630cab6523625b0e1ece4a25bcb4",
                           executableSHA256: "8f8572d780f2bedd790281089ca13d2cb6321b09443b17f1e247fe8b26e4a1b7",
                           size: 361876627, version: "1.0.0")
+    }
+
+    /// The entry sheet's Download size for an update: fetches the manifest and checks the installed files.
+    func planUpdate() async {
+        guard let pin, updateAvailable, updateSize == nil else { return }
+        guard let plan = try? await files.plan(pin, download: ResumableDownload(routes: downloadRoutes())) else { return }
+        updateSize = SandboxManifest.downloadSize(plan)
     }
 
     // MARK: Entry
@@ -115,7 +124,7 @@ final class SandboxService {
             do {
                 try FileManager.default.createDirectory(at: files.root, withIntermediateDirectories: true,
                                                         attributes: [.posixPermissions: 0o700])
-                try await ResumableDownload(routes: downloadRoutes()).fetch(pin.url, to: files.partial, expectedSize: pin.size) { progress in
+                try await files.install(pin, download: ResumableDownload(routes: downloadRoutes())) { progress in
                     Task { @MainActor in
                         guard case .downloading = self.phase else { return }
                         self.phase = .downloading(progress.fraction)
@@ -123,8 +132,8 @@ final class SandboxService {
                         self.downloadRate = self.rate.add(progress.received)
                     }
                 }
-                try await files.install(pin)
                 phase = .installed
+                updateSize = nil
                 if updateAvailable {
                     updateAvailable = false
                     onNotice(.sandboxReady, String(localized: "The Secure Sandbox (beta) was updated and is ready to open."))

@@ -21,7 +21,7 @@ struct SandboxEntrySheet: View {
                 if let pin = sandbox.pin {
                     GridRow {
                         Text("Download").foregroundStyle(.secondary)
-                        Text(pin.size, format: .byteCount(style: .file))
+                        Text(sandbox.updateSize ?? pin.size, format: .byteCount(style: .file))
                     }
                 }
                 GridRow {
@@ -63,5 +63,6 @@ struct SandboxEntrySheet: View {
         }
         .padding(24)
         .frame(width: 440)
+        .task { await sandbox.planUpdate() }
     }
 }
