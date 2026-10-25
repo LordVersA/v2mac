@@ -12285,6 +12285,28 @@
         }
       }
     },
+    "Show Crash Reports": {
+      "localizations": {
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نمایش گزارش‌های خرابی"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать отчёты о сбоях"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示崩溃报告"
+          }
+        }
+      }
+    },
     "Show Logs": {
       "localizations": {
         "fa": {

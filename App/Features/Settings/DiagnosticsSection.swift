@@ -26,6 +26,10 @@ struct DiagnosticsSection: View {
             Toggle("Log connections", isOn: $logConnections)
                 .onChange(of: logConnections) { model.connection.reconnectIfRunning() }
             Button("Show Logs") { model.openLogs(openWindow) }
+            // macOS writes app and core crashes here as .ips files; users attach them to an issue.
+            Button("Show Crash Reports") {
+                NSWorkspace.shared.open(URL.libraryDirectory.appending(path: "Logs/DiagnosticReports", directoryHint: .isDirectory))
+            }
         }
     }
 }

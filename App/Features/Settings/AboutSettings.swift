@@ -81,7 +81,7 @@ enum AboutLinks {
     static let repositoryText = "github.com/LordVersA/v2mac"
     static let repository = URL(string: "https://github.com/LordVersA/v2mac")!
     static let releases = URL(string: "https://github.com/LordVersA/v2mac/releases")!
-    static let newIssue = URL(string: "https://github.com/LordVersA/v2mac/issues/new")!
+    static let newIssue = URL(string: "https://github.com/LordVersA/v2mac/issues/new?template=bug_report.md")!
     static let author = URL(string: "https://github.com/LordVersA")!
     static let noleaker = URL(string: "https://github.com/LordVersA/noleaker")!
 
