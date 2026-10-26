@@ -17,7 +17,7 @@ struct RuleImportSheet: View {
             Text("Import \(profile.format.rawValue) rules").font(.title2.weight(.semibold))
             Text("\(profile.rules.count) rules will be added after your existing rules. Existing rules keep their priority.")
                 .font(.callout).foregroundStyle(.secondary)
-            List(profile.rules) { rule in
+            List(profile.rules.map(CustomRule.init(legacy:))) { rule in
                 HStack(spacing: 10) {
                     Image(systemName: RuleList(rule.action).symbol)
                         .foregroundStyle(RuleList(rule.action).tint)

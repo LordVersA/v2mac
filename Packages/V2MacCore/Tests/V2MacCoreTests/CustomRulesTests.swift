@@ -180,8 +180,8 @@ import Testing
         #expect(p.skipped == ["Elsewhere", "Chain"])
         #expect(p.rules.map(\.name) == ["Proxifier exclusions", "Direct - LAN", "Apps", "Hosts", "Ads"])
         #expect(p.rules.map(\.action) == [.direct, .direct, .proxy, .proxy, .block])
-        #expect(p.rules[0].hosts == "localhost\n*.local")
-        #expect(p.rules[2].apps == "\"Example.app\"\ncom.example.chat\n*tool*")
+        #expect(p.rules[0].hostItems == ["domain:local", "localhost"])
+        #expect(p.rules[2].appItems == ["Example.app", "com.example.chat", "*tool*"])
         #expect(!p.rules[3].enabled)
         #expect(throws: (any Error).self) { try ProxifierProfile(data: Data("<x/>".utf8)) }
         #expect(try RuleImport(data: Data(Fixtures.proxifierProfile.utf8)).format == .proxifier)
@@ -191,9 +191,9 @@ import Testing
         let r = try RuleImport(data: Data(Fixtures.clashConfig.utf8))
         #expect(r.format == .clash)
         #expect(r.rules.map(\.action) == [.proxy, .proxy, .direct, .block])
-        #expect(r.rules[0].hosts == "DOMAIN-SUFFIX,blocked.example\nDOMAIN-KEYWORD,tracker")
-        #expect(r.rules[1].apps == "Telegram" && r.rules[1].hosts.isEmpty)
-        #expect(RuleMatchers(parsing: r.rules[2].hosts).ips == ["10.0.0.0/8", "geoip:ir"])
+        #expect(r.rules[0].hostItems == ["domain:blocked.example", "keyword:tracker"])
+        #expect(r.rules[1].appItems == ["Telegram"] && r.rules[1].hostItems.isEmpty)
+        #expect(r.rules[2].hostItems == ["10.0.0.0/8", "geoip:ir"])
         #expect(r.skipped == ["RULE-SET,streaming,PROXY"])
     }
 
@@ -201,24 +201,25 @@ import Testing
         let r = try RuleImport(data: Data(Fixtures.singBoxConfig.utf8))
         #expect(r.format == .singBox)
         #expect(r.rules.map(\.action) == [.direct, .proxy, .block])
-        #expect(r.rules[0].hosts == "domain:ir\ngeoip:ir")
-        #expect(r.rules[1].apps == "Safari" && r.rules[1].hosts == "full:x.example.com")
+        #expect(r.rules[0].hostItems == ["domain:ir", "geoip:ir"])
+        #expect(r.rules[1].only.apps == ["Safari"] && r.rules[1].hostItems == ["full:x.example.com"])
         #expect(r.skipped.count == 1)
     }
 
     @Test func importsV2rayNRules() throws {
         let r = try RuleImport(data: Data(Fixtures.v2rayNRules.utf8))
         #expect(r.format == .xray)
-        #expect(r.rules.map(\.name) == ["Iran direct", "Block ads", "Telegram"])
-        #expect(r.rules.map(\.action) == [.direct, .block, .proxy])
-        #expect(!r.rules[2].enabled && r.rules[2].apps == "Telegram")
-        #expect(r.skipped == ["Ports"])
+        #expect(r.rules.map(\.name) == ["Iran direct", "Block ads", "Telegram", "Ports"])
+        #expect(r.rules.map(\.action) == [.direct, .block, .proxy, .proxy])
+        #expect(!r.rules[2].enabled && r.rules[2].only.apps == ["Telegram"])
+        #expect(r.rules[3].items.isEmpty && r.rules[3].only.ports == "443")
+        #expect(r.skipped.isEmpty)
     }
 
     @Test func importsSurgeRules() throws {
         let r = try RuleImport(data: Data(Fixtures.surgeConfig.utf8))
         #expect(r.format == .surge)
-        #expect(r.rules.count == 2 && r.rules[0].hosts.split(separator: "\n").count == 2)
+        #expect(r.rules.count == 2 && r.rules[0].hostItems.count == 2)
         #expect(r.skipped == ["RULE-SET,https://lists.example.com/ads.list,REJECT"])
         #expect(throws: (any Error).self) { try RuleImport(data: Data("hello".utf8)) }
     }
@@ -372,12 +373,45 @@ import Testing
     }
 
     @Test func rulesWithConditionsV2MacLacksAreSkipped() throws {
-        let sing = #"{"outbounds":[{"type":"direct","tag":"d"}],"route":{"rules":[{"domain":["a.example.com"],"port":[443],"outbound":"d"},{"domain":["b.example.com"],"invert":true,"outbound":"d"},{"domain":["c.example.com"],"outbound":"d"}]}}"#
+        let sing = #"{"outbounds":[{"type":"direct","tag":"d"}],"route":{"rules":[{"domain":["a.example.com"],"port":[443],"port_range":["1000:2000"],"outbound":"d"},{"domain":["b.example.com"],"invert":true,"outbound":"d"},{"domain":["c.example.com"],"network":"udp","protocol":["quic"],"outbound":"d"},{"domain":["d.example.com"],"protocol":["stun"],"outbound":"d"}]}}"#
         let s = try RuleImport(data: Data(sing.utf8))
-        #expect(s.rules.map(\.hosts) == ["full:c.example.com"] && s.skipped.count == 2)
-        let xray = #"[{"outboundTag":"direct","domain":["a.example.com"],"ip":["1.2.3.4"]},{"outboundTag":"direct","domain":["b.example.com"],"network":"udp"},{"outboundTag":"direct","domain":["c.example.com"],"port":"","inboundTag":null}]"#
+        #expect(s.rules.map(\.hostItems) == [["full:a.example.com"], ["full:c.example.com"]] && s.skipped.count == 2)
+        #expect(s.rules[0].only.ports == "443,1000-2000")
+        #expect(s.rules[1].only == Rule.OnlyWhen(network: .udp, protocols: [.quic]))
+        let xray = #"[{"outboundTag":"direct","domain":["a.example.com"],"ip":["1.2.3.4"]},{"outboundTag":"direct","domain":["b.example.com"],"network":"udp"},{"outboundTag":"direct","domain":["c.example.com"],"port":"","inboundTag":null},{"outboundTag":"direct","domain":["e.example.com"],"source":["10.0.0.1"]}]"#
         let x = try RuleImport(data: Data(xray.utf8))
-        #expect(x.rules.map(\.hosts) == ["c.example.com"] && x.skipped.count == 2)
+        #expect(x.rules.map(\.hostItems) == [["domain:b.example.com"], ["domain:c.example.com"]] && x.skipped.count == 2)
+        #expect(x.rules[0].only.network == .udp)
+    }
+
+    @Test func clashConditionsAndAnd() throws {
+        let r = try RuleImport(data: Data("""
+        rules:
+          - DST-PORT,22,DIRECT
+          - NETWORK,UDP,REJECT
+          - AND,((DOMAIN-SUFFIX,git.example),(DST-PORT,22/443)),DIRECT
+          - AND,((PROCESS-NAME,ssh),(DST-PORT,22)),PROXY
+          - AND,((DOMAIN,a.example),(DOMAIN,b.example)),PROXY
+          - OR,((DOMAIN,a.example),(DOMAIN,b.example)),PROXY
+          - AND,((DOMAIN,a.example),(SRC-IP-CIDR,10.0.0.0/8)),PROXY
+        """.utf8))
+        #expect(r.rules.count == 4 && r.skipped.count == 3)
+        #expect(r.rules[0].items.isEmpty && r.rules[0].only.ports == "22" && r.rules[0].action == .direct)
+        #expect(r.rules[1].only.network == .udp && r.rules[1].action == .block)
+        #expect(r.rules[2].hostItems == ["domain:git.example"] && r.rules[2].only.ports == "22,443")
+        #expect(r.rules[3].items.isEmpty && r.rules[3].only.apps == ["ssh"] && r.rules[3].only.ports == "22")
+    }
+
+    @Test func proxifierPortsNarrowTheRule() throws {
+        let ppx = #"<ProxifierProfile><RuleList><Rule enabled="true"><Name>SSH</Name><Targets>git.example</Targets><Ports>22; 2200-2299</Ports><Action type="Direct" /></Rule></RuleList></ProxifierProfile>"#
+        let p = try ProxifierProfile(data: Data(ppx.utf8))
+        #expect(p.rules.first?.only.ports == "22,2200-2299")
+    }
+
+    @Test func readsItsOwnExport() throws {
+        let rules = [Rule(name: "Via", action: .via(.init(target: .server(UUID()), name: "Home")), items: [.host("a.example")])]
+        let r = try RuleImport(data: Data(Rule.encode(rules).utf8))
+        #expect(r.format == .v2mac && r.rules == rules)
     }
 
     @Test func deepNestingIsCutOff() {

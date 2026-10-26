@@ -273,7 +273,7 @@ struct SimpleRuleEditor: View {
     }
 
     private func importProfile(_ profile: RuleImport) {
-        stored = CustomRule.encode(CustomRule.decode(stored) + profile.rules)
+        stored = CustomRule.encode(CustomRule.decode(stored) + profile.rules.map(CustomRule.init(legacy:)))
         if profile.blockQUIC { UserDefaults.standard.set(true, forKey: "blockQUIC") }
         importedProfile = nil
         selection.removeAll()

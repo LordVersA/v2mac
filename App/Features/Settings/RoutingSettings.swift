@@ -147,7 +147,7 @@ struct CustomRulesSection: View {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             let profile = try RuleImport(data: Data(contentsOf: url))
-            change { $0 += profile.rules }
+            change { $0 += profile.rules.map(CustomRule.init(legacy:)) }
             if profile.blockQUIC { blockQUIC = true }
             importNote = profile.skipped.isEmpty
                 ? String(localized: "Imported \(profile.rules.count) rules. Check them and click Apply.")

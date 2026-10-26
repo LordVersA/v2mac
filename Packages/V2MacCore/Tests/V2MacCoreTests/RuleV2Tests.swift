@@ -354,3 +354,88 @@ enum GeoFixture {
         #expect(out.contains("Configuration OK"), Comment(rawValue: out))
     }
 }
+
+@Suite struct TidyUpTests {
+    static let rules = RuleV2Tests.oldList.map(Rule.init(migrating:))
+
+    func suggestions(_ rules: [Rule] = rules) -> [TidySuggestion.Kind] {
+        TidyUp.suggestions(for: rules, apps: RuleV2Tests.installed).map(\.kind)
+    }
+
+    @Test func mergesAppAndHostHalves() {
+        let s = suggestions()
+        #expect(s.contains(.merge(into: Self.rules[1].id, from: Self.rules[2].id, name: "Chat")))
+        let merged = TidyUp.apply(TidyUp.suggestions(for: Self.rules, apps: RuleV2Tests.installed).filter { if case .merge = $0.kind { true } else { false } }, to: Self.rules)
+        #expect(merged.count == Self.rules.count - 1)
+        #expect(merged[1].name == "Chat")
+        #expect(merged[1].appItems.count == 4)
+        #expect(merged[1].hostItems == ["domain:chat.example", "domain:chatcdn.example", "keyword:chatapi"])
+    }
+
+    @Test func mergingNeverJumpsARuleThatRoutesElsewhere() {
+        let a = Rule(name: "App - Mail", action: .proxy, items: [.app("Mail.app")])
+        let between = Rule(name: "Work", action: .direct, items: [.host("mail.example")])
+        let b = Rule(name: "Host - Mail", action: .proxy, items: [.host("mail.example")])
+        #expect(!suggestions([a, between, b]).contains { if case .merge = $0 { true } else { false } })
+        let same = Rule(name: "Other", action: .proxy, items: [.host("x.example")])
+        #expect(suggestions([a, same, b]).contains(.merge(into: a.id, from: b.id, name: "Mail")))
+    }
+
+    @Test func dropsWhatTheBuiltInsCover() {
+        let s = suggestions()
+        #expect(s.contains(.dropCovered(rule: Self.rules[0].id, items: [.host("10.0.0.0/8"), .host("192.168.0.0/16")])))
+        #expect(TidyUp.isCoveredByBuiltIns(.host("domain:printer.local")))
+        #expect(TidyUp.isCoveredByBuiltIns(.host("full:router.lan")))
+        #expect(TidyUp.isCoveredByBuiltIns(.host("10.1.0.0/16")))
+        #expect(TidyUp.isCoveredByBuiltIns(.host("geoip:private")))
+        #expect(!TidyUp.isCoveredByBuiltIns(.host("0.0.0.0/0")))
+        #expect(!TidyUp.isCoveredByBuiltIns(.host("11.0.0.0/8")))
+        #expect(!TidyUp.isCoveredByBuiltIns(.host("domain:notlocal")))
+    }
+
+    @Test func collapsesOneAppsSpellings() {
+        let s = suggestions()
+        #expect(s.contains(.collapseApps(rule: Self.rules[1].id, items: ["Chat.app", "Chat", "com.example.chat", "*chat*"], into: "com.example.chat")))
+        let applied = TidyUp.apply([.init(kind: .collapseApps(rule: Self.rules[1].id, items: ["Chat.app", "Chat", "com.example.chat", "*chat*"], into: "com.example.chat"))], to: Self.rules)
+        #expect(applied[1].appItems == ["com.example.chat"])
+        // Still the same app, so the rule still matches it.
+        #expect(AppMatchers(parsing: "com.example.chat", apps: RuleV2Tests.installed).processes == ["/Applications/Chat.app/"])
+    }
+
+    @Test func dropsDuplicates() {
+        let a = Rule(name: "A", action: .block, items: [.host("a.example"), .host("b.example"), .host("a.example")])
+        let copy = Rule(name: "A again", action: .block, items: a.items)
+        let s = suggestions([a, copy])
+        #expect(s.contains(.dropRule(copy.id, sameAs: a.id)))
+        #expect(s.contains(.dropDuplicates(rule: a.id, items: [.host("a.example")])))
+        let applied = TidyUp.apply(TidyUp.suggestions(for: [a, copy], apps: []), to: [a, copy])
+        #expect(applied.map(\.items) == [[.host("a.example"), .host("b.example")]])
+    }
+
+    @Test func tidiedListRoutesTheSame() throws {
+        // Everything but collapsing keeps the compiled rules' matches; check with the tester.
+        let chosen = TidyUp.suggestions(for: Self.rules, apps: RuleV2Tests.installed).filter { if case .collapseApps = $0.kind { false } else { true } }
+        let tidied = TidyUp.apply(chosen, to: Self.rules)
+        func route(_ rules: [Rule], _ q: RouteQuery) throws -> String? {
+            let c = try ConfigBuilder.build(outbound: ["protocol": "freedom"], options: RunOptions(metricsPort: 1), routing: .global,
+                                            custom: CustomRules(rules: rules, installedApps: RuleV2Tests.installed))
+            return RuleTester.route(q, routing: c["routing"]!, geo: GeoFixture.geo)?.outbound
+        }
+        for q in [RouteQuery(host: "chat.example"), RouteQuery(host: "x.chatapi.example"), RouteQuery(ips: ["10.2.3.4"]),
+                  RouteQuery(host: "office.example", process: "/Applications/Editor.app/Contents/MacOS/Editor"),
+                  RouteQuery(host: "office.example"), RouteQuery(host: "other.example", process: "/Applications/Chat.app/Contents/MacOS/Chat"),
+                  RouteQuery(host: "ads.example"), RouteQuery(host: "tracker.example")] {
+            #expect(try route(tidied, q) == route(Self.rules, q), "\(q)")
+        }
+    }
+
+    @Test func storedListsPreferV2AndMigrateV1() {
+        let v1 = CustomRule.encode(RuleV2Tests.oldList)
+        #expect(Rule.list(v2: nil, v1: v1) == Self.rules)
+        #expect(Rule.list(v2: Rule.encode([]), v1: v1).isEmpty)
+        let old = RuleProfile(name: "Work", rules: RuleV2Tests.oldList)
+        let profiles = RuleProfileV2.list(v2: nil, v1: RuleProfile.encode([old]))
+        #expect(profiles.map(\.id) == [old.id] && profiles[0].rules == Self.rules)
+        #expect(RuleProfileV2.list(v2: RuleProfileV2.encode(profiles), v1: nil) == profiles)
+    }
+}

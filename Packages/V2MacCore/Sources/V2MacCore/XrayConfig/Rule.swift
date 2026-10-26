@@ -191,3 +191,47 @@ extension CustomRule {
         id = rule.id
     }
 }
+
+extension Rule {
+    /// The list to use: the v2 `rules` value, or the 1.1 `customRuleList` migrated when there is none
+    /// yet. The old value is never written, so going back to 1.1 finds the rules from before the upgrade.
+    public static func list(v2: String?, v1: String?) -> [Rule] {
+        if let v2, let rules = decode(v2) { return rules }
+        return CustomRule.decode(v1 ?? "[]").map(Rule.init(migrating:))
+    }
+}
+
+/// A named rule set, version 2 (spec 8.6).
+public struct RuleProfileV2: Codable, Sendable, Hashable, Identifiable {
+    public var id = UUID()
+    public var name: String
+    public var rules: [Rule]
+
+    public init(id: UUID = UUID(), name: String, rules: [Rule]) {
+        self.id = id
+        self.name = name
+        self.rules = rules
+    }
+
+    /// Keeps the profile's id, so the active profile stays active.
+    public init(migrating old: RuleProfile) {
+        self.init(id: old.id, name: old.name, rules: old.rules.map(Rule.init(migrating:)))
+    }
+
+    private struct Stored: Codable { var version = 2; var profiles: [RuleProfileV2] }
+
+    public static func decode(_ json: String) -> [RuleProfileV2]? {
+        guard let stored = try? JSONDecoder().decode(Stored.self, from: Data(json.utf8)), stored.version == 2 else { return nil }
+        return stored.profiles
+    }
+
+    public static func encode(_ profiles: [RuleProfileV2]) -> String {
+        (try? JSONEncoder().encode(Stored(profiles: profiles))).flatMap { String(data: $0, encoding: .utf8) } ?? #"{"version":2,"profiles":[]}"#
+    }
+
+    /// As `Rule.list`: v2 when present, else the 1.1 profiles migrated.
+    public static func list(v2: String?, v1: String?) -> [RuleProfileV2] {
+        if let v2, let profiles = decode(v2) { return profiles }
+        return RuleProfile.decode(v1 ?? "[]").map(RuleProfileV2.init(migrating:))
+    }
+}
