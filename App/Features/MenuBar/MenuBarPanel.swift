@@ -216,6 +216,7 @@ struct MenuBarPanel: View {
             if connection.phase == .connected {
                 PanelCard {
                     exitRow
+                    viaWarning
                     PanelRates(connection: connection)
                 }
             }
@@ -365,6 +366,22 @@ struct MenuBarPanel: View {
             Text("Checking where traffic comes out…").font(.caption).foregroundStyle(.secondary)
         case .unknown:
             EmptyView()
+        }
+    }
+
+    /// Spec 8.6: Via targets whose servers all fail; their rules' traffic fails (or uses this server).
+    @ViewBuilder
+    private var viaWarning: some View {
+        let failing = connection.viaStatus.filter(\.value.allFailing).keys.compactMap { model.viaName($0) }.sorted()
+        if !failing.isEmpty {
+            Button { model.windowRequest = .rules } label: {
+                Label("No server of \(failing.formatted(.list(type: .and))) answers. Its Via rules' traffic fails.", systemImage: "exclamationmark.triangle.fill")
+                    .multilineTextAlignment(.leading)
+            }
+            .buttonStyle(.plain)
+            .font(.caption)
+            .foregroundStyle(.orange)
+            .help("Open Rules")
         }
     }
 

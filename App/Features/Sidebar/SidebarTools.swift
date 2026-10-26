@@ -11,7 +11,7 @@ struct SidebarTools: View {
                 SidebarGlassButton(title: "Connections", systemImage: "point.3.connected.trianglepath.dotted") {
                     model.openConnections(openWindow)
                 }
-                SidebarGlassButton(title: "Rule Editor", systemImage: "arrow.triangle.branch") { model.openRuleEditor(openWindow) }
+                SidebarGlassButton(title: "Rules", systemImage: "arrow.triangle.branch") { model.openRules(openWindow) }
                 if model.sandbox.pin != nil {
                     HStack(spacing: 8) {
                         SidebarGlassButton(title: "Sandbox (beta)", systemImage: "shield.lefthalf.filled", loading: model.sandbox.isOpening,

@@ -104,7 +104,8 @@ enum Prefs {
     /// without one. Region packs are restored through their service, since they need downloading.
     static var backupKeys: [String] {
         Array(defaultValues.keys) + NotificationKind.allCases.map(\.key)
-            + ["routingMode", "tunEnabled", "packUpdateIntervals", "userAgent"] + legacyRuleKeys
+            // `rules` has no default (that would hide the 1.1 list from the migration), so it is named here.
+            + ["routingMode", "tunEnabled", "packUpdateIntervals", "userAgent", "rules", "ruleProfilesV2"] + legacyRuleKeys
     }
 
     /// Spec 13: what "Reset to Defaults" clears on each Settings tab; the getters then fall back to
@@ -131,7 +132,7 @@ enum Prefs {
 
     /// Settings no reset touches: the user's rules (edited in the Rule Editor, not on a tab), the
     /// TUN switch (in the connection bar) and each region pack's update interval.
-    static let keptOnReset = Set(["customRuleList", "ruleProfiles", "activeRuleProfile", "blockQUIC", "tunEnabled", "packUpdateIntervals"] + legacyRuleKeys)
+    static let keptOnReset = Set(["rules", "ruleProfilesV2", "customRuleList", "ruleProfiles", "activeRuleProfile", "blockQUIC", "tunEnabled", "packUpdateIntervals"] + legacyRuleKeys)
 
     private static var defaultValues: [String: Any] {
         [
@@ -273,6 +274,12 @@ enum Prefs {
     }
 
     /// Spec 9.8: block traffic outside the connection while one is wanted.
+    /// Apps and hosts the Rules window's Discovered list should no longer show.
+    static var ignoredDiscoveries: Set<String> {
+        get { Set(defaults.stringArray(forKey: "ignoredDiscoveries") ?? []) }
+        set { defaults.set(newValue.sorted(), forKey: "ignoredDiscoveries") }
+    }
+
     static var killSwitch: Bool {
         get { defaults.bool(forKey: "killSwitch") }
         set { defaults.set(newValue, forKey: "killSwitch") }
@@ -390,45 +397,59 @@ enum Prefs {
         set { defaults.set(newValue.rawValue, forKey: "routingMode") }
     }
 
-    /// Spec 8.6. Keys match `RoutingSettings`.
+    /// Spec 8.6. Keys match `RoutingSettings` and the Rules window.
     static var customRules: CustomRules {
-        CustomRules(rules: customRuleList, blockQUIC: defaults.bool(forKey: "blockQUIC"),
+        CustomRules(rules: rules, blockQUIC: defaults.bool(forKey: "blockQUIC"),
                     proxyClientsRoute: systemProxy ? nil : CustomRule.Action(rawValue: defaults.string(forKey: "proxyClientsRoute") ?? ""),
                     unmatchedRoute: CustomRule.Action(rawValue: defaults.string(forKey: "unmatchedRoute") ?? ""))
     }
 
-    static var customRuleList: [CustomRule] {
-        get { CustomRule.decode(defaults.string(forKey: "customRuleList") ?? "[]") }
-        set { defaults.set(CustomRule.encode(newValue), forKey: "customRuleList") }
+    /// Spec 8.6: the active profile's rules, under `rules`. Until they are first saved, the 1.1 list
+    /// (`customRuleList`) migrated; that key is never written again, so 1.1 still finds its rules.
+    static var rules: [Rule] {
+        get { Rule.list(v2: defaults.string(forKey: "rules"), v1: defaults.string(forKey: "customRuleList")) }
+        set { defaults.set(Rule.encode(newValue), forKey: "rules") }
     }
 
-    /// Spec 8.6: named rule sets. The active one's rules live in `customRuleList`; its copy here is
-    /// brought up to date when another is chosen. With none saved, the current list is "Default".
-    static var ruleProfiles: [RuleProfile] {
+    /// Named rule sets. The active one's rules live in `rules`; its copy here is brought up to date when
+    /// another is chosen. With none saved, the current list is "Default".
+    static var ruleProfiles: [RuleProfileV2] {
         get {
-            let saved = RuleProfile.decode(defaults.string(forKey: "ruleProfiles") ?? "[]")
+            let saved = RuleProfileV2.list(v2: defaults.string(forKey: "ruleProfilesV2"), v1: defaults.string(forKey: "ruleProfiles"))
             guard saved.isEmpty else { return saved }
             // Saved at once, so the profile keeps one id.
-            let first = [RuleProfile(name: String(localized: "Default"), rules: customRuleList)]
-            defaults.set(RuleProfile.encode(first), forKey: "ruleProfiles")
+            let first = [RuleProfileV2(id: storedRuleProfileID ?? UUID(), name: String(localized: "Default"), rules: rules)]
+            defaults.set(RuleProfileV2.encode(first), forKey: "ruleProfilesV2")
             return first
         }
-        set { defaults.set(RuleProfile.encode(newValue), forKey: "ruleProfiles") }
+        set { defaults.set(RuleProfileV2.encode(newValue), forKey: "ruleProfilesV2") }
     }
 
+    private static var storedRuleProfileID: UUID? { UUID(uuidString: defaults.string(forKey: "activeRuleProfile") ?? "") }
+
     static var activeRuleProfile: UUID? {
-        get { UUID(uuidString: defaults.string(forKey: "activeRuleProfile") ?? "") ?? ruleProfiles.first?.id }
+        get {
+            let profiles = ruleProfiles
+            return profiles.first { $0.id == storedRuleProfileID }?.id ?? profiles.first?.id
+        }
         set { defaults.set(newValue?.uuidString ?? "", forKey: "activeRuleProfile") }
     }
 
     /// Saves the current rules into the active profile and loads `id`'s.
     static func switchRuleProfile(to id: UUID) {
         var profiles = ruleProfiles
-        if let active = profiles.firstIndex(where: { $0.id == activeRuleProfile }) { profiles[active].rules = customRuleList }
+        if let active = profiles.firstIndex(where: { $0.id == activeRuleProfile }) { profiles[active].rules = rules }
         guard let target = profiles.first(where: { $0.id == id }) else { return }
         ruleProfiles = profiles
         activeRuleProfile = id
-        customRuleList = target.rules
+        rules = target.rules
+    }
+
+    /// A backup from before the v2 rules carries only the 1.1 keys: drop this Mac's v2 values so the
+    /// restored 1.1 ones are migrated, as on an upgrade.
+    static func restoringRules(from settings: [String: JSONValue]) {
+        if settings["rules"] == nil, settings["customRuleList"] != nil { defaults.removeObject(forKey: "rules") }
+        if settings["ruleProfilesV2"] == nil, settings["ruleProfiles"] != nil { defaults.removeObject(forKey: "ruleProfilesV2") }
     }
 
     /// The Block, Proxy and Direct lists of earlier versions; still read from old backups.
@@ -438,7 +459,7 @@ enum Prefs {
     static func migrateCustomRules() {
         guard legacyRuleKeys.contains(where: { defaults.object(forKey: $0) != nil }) else { return }
         let text = legacyRuleKeys.map { defaults.string(forKey: $0) ?? "" }
-        customRuleList = CustomRule.migrating(proxy: text[0], direct: text[1], block: text[2])
+        defaults.set(CustomRule.encode(CustomRule.migrating(proxy: text[0], direct: text[1], block: text[2])), forKey: "customRuleList")
         legacyRuleKeys.forEach(defaults.removeObject)
     }
 

@@ -134,7 +134,7 @@ public struct AppMatchers: Sendable, Equatable {
         }
     }
 
-    static func processes(for entry: String, apps: [InstalledApp]) -> [String] {
+    public static func processes(for entry: String, apps: [InstalledApp]) -> [String] {
         let lower = entry.lowercased()
         // A bundle's folder catches its helpers too (Xray matches a path prefix ending in `/`).
         func folders(_ match: (InstalledApp) -> Bool) -> [String] { apps.filter(match).map { $0.path.hasSuffix("/") ? $0.path : $0.path + "/" } }

@@ -69,6 +69,19 @@ public struct StatsClient: Sendable {
         return TrafficSnapshot(uplink: Int64(up), downlink: Int64(down), date: now)
     }
 
+    /// Counters and, when the config has an observatory, whether each probed outbound answers.
+    public func read() async throws -> (snapshot: TrafficSnapshot, observatory: [String: Bool]) {
+        let (data, response) = try await session.data(from: url)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw StatsError.badResponse }
+        return (try Self.parse(data, inboundTags: inboundTags), Self.observatory(data))
+    }
+
+    /// `observatory` in `/debug/vars`: outbound tag → alive. An outbound not probed yet is missing.
+    public static func observatory(_ data: Data) -> [String: Bool] {
+        guard let entries = (try? JSONValue.parse(data))?["observatory"]?.objectValue else { return [:] }
+        return entries.mapValues { $0["alive"]?.boolValue ?? false }
+    }
+
     public static func parse(_ data: Data, inboundTag: String, now: Date = Date()) throws -> TrafficSnapshot {
         try parse(data, inboundTags: [inboundTag], now: now)
     }

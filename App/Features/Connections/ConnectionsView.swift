@@ -112,7 +112,6 @@ struct ConnectionsView: View {
             }
         }
         .frame(minWidth: 760, minHeight: 440)
-        .task { await EntryIcons.shared.load() }
         .onAppear { watcher.watch() }
         .onDisappear { watcher.unwatch() }
         #if DEBUG
@@ -216,10 +215,10 @@ struct ConnectionsView: View {
             // Context menus drop the icons unless asked.
             Group {
                 if picked.count == 1, let connection = picked[0].connection {
-                    ConnectionMenu(connection: connection, route: route) { goToConfiguration(connection) }
+                    ConnectionMenu(connection: connection) { goToConfiguration(connection) }
                 } else if picked.count == 1, let group = picked[0].group {
                     Section(group.title) {
-                        RoutePicker(title: "Route", entry: group.entry, route: route)
+                        AddToRuleMenu(title: "Add to Rule", items: [group.entry.item], name: group.title)
                         Button("Copy Name", systemImage: "doc.on.doc") { ConnectionMenu.copy(group.title) }
                     }
                 } else if picked.count > 1 {
@@ -236,23 +235,16 @@ struct ConnectionsView: View {
         }
     }
 
-    /// The simple editor's move: the entry leaves every simple rule and joins the one for `action`.
-    private func route(_ entry: RuleEntry, _ action: CustomRule.Action?) {
-        Prefs.customRuleList = SimpleRules.move([entry], to: action, in: Prefs.customRuleList)
-        model.connection.reconnectIfRunning()
-    }
-
-    /// The rule that routed the row in Advanced, or the setting that did: the app's proxy setting
-    /// or, with no rule, the routing mode.
+    /// The rule that routed the row, in the Rules window, or the setting that did: the app's proxy
+    /// setting or, with no rule, the routing mode.
     private func goToConfiguration(_ connection: ConnectionWatcher.Connection) {
         if connection.skipsRules {
             model.openSettings(openSettings, tab: .proxy)
-        } else if let rule = connection.matchedRule {
-            UserDefaults.standard.set(RuleEditorView.Mode.advanced.rawValue, forKey: "ruleEditorMode")
-            model.focusedRule = rule.id
-            model.openRuleEditor(openWindow)
+        } else if let rule = connection.matchedRule(geo: model.ruleCatalog.lists) {
+            model.openRules(openWindow, selecting: rule.id)
         } else {
-            model.openSettings(openSettings, tab: .routing)
+            model.rules.selection = [.builtIn(.mode)]
+            model.openRules(openWindow)
         }
     }
 
@@ -271,7 +263,6 @@ struct ConnectionsView: View {
 /// any detail. Built only when the menu opens, so it costs nothing while the table updates.
 private struct ConnectionMenu: View {
     let connection: ConnectionWatcher.Connection
-    let route: (RuleEntry, CustomRule.Action?) -> Void
     let goToConfiguration: () -> Void
 
     var body: some View {
@@ -286,15 +277,15 @@ private struct ConnectionMenu: View {
                 Button("Show in Finder", systemImage: "folder") {
                     NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
                 }
-                RoutePicker(title: "Route This App", entry: RuleEntry(.app, path), route: route)
+                AddToRuleMenu(title: "Add App to Rule", items: [RuleEntry(.app, path).item], name: c.appName)
             }
         }
         Section(c.target) {
             if let url = browserURL {
                 Button("Open in Browser", systemImage: "safari") { NSWorkspace.shared.open(url) }
             }
-            RoutePicker(title: "Route This Host", entry: RuleEntry(.host, c.host), route: route)
-            Button("Go to Configuration", systemImage: "arrow.right.circle", action: goToConfiguration)
+            AddToRuleMenu(title: "Add Host to Rule", items: [RuleEntry(.host, c.host).item], name: c.host)
+            Button("Show Rule", systemImage: "arrow.right.circle", action: goToConfiguration)
         }
         Section {
             Menu("Details", systemImage: "info.circle") {
@@ -336,7 +327,7 @@ private struct ConnectionMenu: View {
     /// Name and value of every known detail, in the order the Details menu lists them.
     @MainActor static func fields(_ c: ConnectionWatcher.Connection) -> [(name: String, value: String)] {
         let rule = c.skipsRules ? String(localized: "App's proxy setting")
-            : c.matchedRule?.name ?? (c.configFallback ? String(localized: "Config fallback") : c.routingMode?.title)
+            : c.matchedRule(geo: GeoLists())?.name ?? (c.configFallback ? String(localized: "Config fallback") : c.routingMode?.title)
         let candidates: [(String, String?)] = [
             (String(localized: "Application"), c.appName.isEmpty ? nil : c.appName),
             (String(localized: "Target"), c.target),
@@ -365,27 +356,41 @@ private struct ConnectionMenu: View {
     }
 }
 
-/// Proxy, Direct or Block for one app or host, ticked where it is now, as in the simple rule editor.
-private struct RoutePicker: View {
+/// "Add to Rule ▸": the rules, most recently used first, and New Rule…. It adds to the Rules window's
+/// draft and opens the window at that rule, where Apply saves it.
+struct AddToRuleMenu: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
     let title: LocalizedStringKey
-    let entry: RuleEntry
-    let route: (RuleEntry, CustomRule.Action?) -> Void
+    let items: [Rule.Item]
+    let name: String
 
     var body: some View {
-        Picker(selection: Binding { current } set: { route(entry, $0) }) {
-            ForEach(CustomRule.Action.allCases, id: \.self) { Text(RuleList($0).title).tag(Optional($0)) }
-            Divider()
-            Text("Use the Routing Mode").tag(CustomRule.Action?.none)
-        } label: {
-            Label(title, systemImage: "arrow.triangle.branch")
+        let store = model.rules
+        let recent = store.recentTargets.compactMap { id in store.draft.first { $0.id == id } }
+        Menu(title, systemImage: "arrow.triangle.branch") {
+            ForEach(recent + store.draft.filter { r in !recent.contains { $0.id == r.id } }) { rule in
+                Button(rule.name) {
+                    store.add(items, to: rule.id, nil)
+                    model.openRules(openWindow, selecting: rule.id)
+                }
+            }
+            if !store.draft.isEmpty { Divider() }
+            Button("New Rule…") {
+                let rule = Rule(name: name, action: .proxy, items: items)
+                store.add(rule, nil)
+                model.openRules(openWindow, selecting: rule.id)
+            }
         }
     }
+}
 
-    private var current: CustomRule.Action? {
-        let rules = Prefs.customRuleList
-        return switch entry.kind {
-        case .host: SimpleRules.action(forHost: entry.text, in: rules)
-        case .app: SimpleRules.action(forApp: entry.text, bundleID: ConnectionGroup.bundleID(of: entry.text), in: rules)
+extension RuleEntry {
+    /// The entry as a rule item: an installed app by its bundle id, a host exactly.
+    @MainActor var item: Rule.Item {
+        switch kind {
+        case .app: .app(ConnectionGroup.bundleID(of: text).isEmpty ? text : ConnectionGroup.bundleID(of: text))
+        case .host: RuleMatchers.isIP(text) ? .host(text) : .host("full:" + text)
         }
     }
 }
@@ -449,7 +454,7 @@ private struct RuleCell: View {
     var body: some View {
         let action = connection.action
         let viaProxySetting = connection.skipsRules
-        let rule = viaProxySetting ? nil : connection.matchedRule
+        let rule = viaProxySetting ? nil : connection.matchedRule(geo: GeoLists())
         let fromConfig = rule == nil && connection.configFallback
         let tint: Color = viaProxySetting ? .orange : fromConfig ? .purple : action.map { RuleList($0).tint } ?? .secondary
         HStack(spacing: 6) {
@@ -479,13 +484,17 @@ private struct RuleCell: View {
 }
 
 extension ConnectionWatcher.Connection {
-    /// The first rule naming the app or the host whose action matches where the traffic went.
-    @MainActor var matchedRule: CustomRule? {
-        guard !isDefaultRoute else { return nil }
-        let byApp = app.flatMap { app in
-            SimpleRules.rule(forApp: app, bundleID: ConnectionGroup.bundleID(of: app), in: rules)
-        }
-        return [byApp, SimpleRules.rule(forHost: host, in: rules)].compactMap { $0 }.first { $0.action == action }
+    /// The rule that sent this connection where it went, asked of the rules it opened under. Geo lists
+    /// are looked into once the Rules window has read them.
+    @MainActor func matchedRule(geo: GeoLists) -> Rule? {
+        guard !isDefaultRoute, !rules.isEmpty else { return nil }
+        let isIP = RuleMatchers.isIP(host)
+        let path = app.map { $0.hasSuffix(".app") ? $0 + "/Contents/MacOS/" + appName : $0 } ?? executable
+        let q = RouteQuery(host: isIP ? nil : host, ips: isIP ? [host] : remoteAddress.map { [$0] } ?? [], port: port ?? 443,
+                           process: path, inbound: inbound)
+        guard let id = RuleTester.route(q, routing: routing, geo: geo)?.ruleTag.flatMap(RuleTag.ruleID),
+              let rule = rules.first(where: { $0.id == id }), rule.action.basic == action else { return nil }
+        return rule
     }
 }
 
@@ -553,5 +562,22 @@ private struct EventRow: View {
             }
         }
         .font(.callout)
+    }
+}
+
+/// An app's icon, or a globe for a host.
+struct EntryIcon: View {
+    let entry: RuleEntry
+
+    var body: some View {
+        Group {
+            if entry.kind == .app {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: entry.text)).resizable().scaledToFit()
+            } else {
+                Image(systemName: "globe").foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 24, height: 24)
+        .accessibilityHidden(true)
     }
 }

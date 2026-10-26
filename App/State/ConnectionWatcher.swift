@@ -24,7 +24,9 @@ final class ConnectionWatcher {
         let outbound: String
         let start: Date
         var routingMode: RoutingMode?
-        var rules: [CustomRule] = []
+        /// The rules and their compiled routing when the connection opened, to name the rule that matched.
+        var rules: [Rule] = []
+        var routing: JSONValue = [:]
         /// Where the app's proxy setting sent it, when it came through the proxy port with that setting on.
         var proxySettingRoute: CustomRule.Action?
         var usesProxySetting: Bool { proxySettingRoute != nil }
@@ -79,7 +81,10 @@ final class ConnectionWatcher {
 
     @ObservationIgnored var proxyPort: () -> Int = { Prefs.inbound.port }
     @ObservationIgnored var routingMode: RoutingMode?
-    @ObservationIgnored var customRules = CustomRules()
+    @ObservationIgnored var customRules = CustomRules() {
+        didSet { compiledRouting = RuleTester.routing(plan: .global, custom: customRules) }
+    }
+    @ObservationIgnored private var compiledRouting: JSONValue = [:]
     @ObservationIgnored var hasConfigFallback = false
     @ObservationIgnored var outboundActions: [String: CustomRule.Action] = [:]
     @ObservationIgnored var modeOutbounds: Set<String> = []
@@ -127,7 +132,10 @@ final class ConnectionWatcher {
         connection.action = outboundActions[seen.outbound] ?? CustomRule.Action(rawValue: seen.outbound)
         connection.isDefaultRoute = seen.isDefaultRoute
         connection.configFallback = hasConfigFallback && (seen.isDefaultRoute || !modeOutbounds.contains(seen.outbound))
-        connection.rules = routingMode == nil ? [] : customRules.rules.compactMap(CustomRule.init(legacy:)).filter { routingMode != .direct || $0.action == .block }
+        if routingMode != nil {
+            connection.rules = customRules.rules.filter { routingMode != .direct || $0.action == .block }
+            connection.routing = compiledRouting
+        }
         connection.proxySettingRoute = routingMode != nil && seen.inbound == ConfigBuilder.inboundTag ? customRules.proxyClientsRoute : nil
         pending.append(connection)
         guard pending.count == 1 else { return }
@@ -259,8 +267,9 @@ extension ConnectionWatcher {
             c.action = CustomRule.Action(rawValue: outbound) ?? .proxy
             c.configFallback = outbound == "imported-server"
             c.proxySettingRoute = outbound == ConfigBuilder.proxyTag ? .proxy : nil
-            c.rules = [CustomRule(name: "Browsers direct", action: .direct, apps: "Safari.app"),
-                       CustomRule(name: "Block ads", action: .block, hosts: "ads.example.net")]
+            c.rules = [Rule(name: "Browsers direct", action: .direct, items: [.app("/Applications/Safari.app")]),
+                       Rule(name: "Block ads", action: .block, items: [.host("full:ads.example.net")])]
+            c.routing = RuleTester.routing(plan: .global, custom: CustomRules(rules: c.rules))
             c.app = app
             c.process = app == nil ? "curl" : nil
             c.sent = sent

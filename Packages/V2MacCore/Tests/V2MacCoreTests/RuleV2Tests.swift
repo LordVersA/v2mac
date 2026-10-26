@@ -218,6 +218,13 @@ enum GeoFixture {
         #expect(RuleTester.route(RouteQuery(host: "example.com"), routing: try routing(.global, [dev], unmatched: .block), geo: geo)?.ruleTag == RuleTag.unmatched)
     }
 
+    @Test func answersForAPlanWithVia() {
+        let custom = ViaConfigTests.custom()
+        let a = RuleTester.route(RouteQuery(host: "work.example"), plan: .global, custom: custom, geo: geo)
+        #expect(a?.balancer == "via-g0" && a.flatMap { $0.ruleTag.flatMap(RuleTag.ruleID) } == custom.rules[0].id)
+        #expect(RuleTester.route(RouteQuery(host: "one.example"), plan: .global, custom: custom, geo: geo)?.outbound == "via-s1-m0")
+    }
+
     @Test func followsTheDomainStrategy() {
         let rules: JSONValue = [["type": "field", "ip": ["0.0.0.0/0"], "port": "80", "outboundTag": "r1"],
                                 ["type": "field", "domain": ["domain:example.com"], "outboundTag": "r2"]]
@@ -308,6 +315,20 @@ enum GeoFixture {
         var off = Self.custom()
         off.rules = off.rules.map { var r = $0; r.enabled = false; return r }
         #expect(off.viaHosts.isEmpty)
+    }
+
+    @Test func healthFromTheObservatory() {
+        // As the core reports it: a dead outbound has no `alive` key.
+        let vars = Data(#"{"observatory":{"via-g0-m0":{"alive":true,"delay":120},"via-g0-m1":{"delay":99999999,"last_error_reason":"x"},"via-s1-m0":{"delay":99999999}}}"#.utf8)
+        let observatory = StatsClient.observatory(vars)
+        #expect(observatory == ["via-g0-m0": true, "via-g0-m1": false, "via-s1-m0": false])
+        let members = ConfigBuilder.viaMembers(plan: .global, custom: Self.custom())
+        #expect(members[.group(Self.group)] == ["via-g0-m0", "via-g0-m1"])
+        let health = ViaHealth.of(observatory, members: members)
+        #expect(health[.group(Self.group)] == ViaHealth(alive: 1, dead: 1, total: 2))
+        #expect(health[.server(Self.single)]?.allFailing == true)
+        #expect(health[.server(Self.chained)] == nil)
+        #expect(ConfigBuilder.viaMembers(plan: .direct, custom: Self.custom()).isEmpty)
     }
 
     @Test func directModeHasNoVia() throws {
@@ -456,6 +477,12 @@ enum GeoFixture {
         #expect(Rule.Item.item("*.chat.example", as: .domain) == .host("domain:chat.example"))
         #expect(Rule.Item.item("((", as: .regex) == nil)
         #expect(Rule.Item.item("DE", as: .country) == .country("de"))
+    }
+
+    @Test func registeredDomains() {
+        #expect(EntryGroups.registeredDomain(ofHost: "a.b.example.co.uk") == "example.co.uk")
+        #expect(EntryGroups.registeredDomain(ofHost: "api.github.com") == "github.com")
+        #expect(EntryGroups.registeredDomain(ofHost: "1.2.3.4") == nil)
     }
 
     @Test func pastedLines() {

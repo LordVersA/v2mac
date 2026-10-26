@@ -91,7 +91,7 @@ public enum RuleTester {
         }
     }
 
-    static func processMatches(_ entry: String, _ path: String) -> Bool {
+    public static func processMatches(_ entry: String, _ path: String) -> Bool {
         if entry.hasSuffix("/") { return path.hasPrefix(entry) }
         if entry.hasPrefix("/") { return path == entry }
         return (path as NSString).lastPathComponent == entry
@@ -121,5 +121,19 @@ public enum RuleTester {
         guard host < 128 else { return true }
         let mask = ~((UInt128(1) << host) - 1) & (isV4 ? UInt128(UInt32.max) : .max)
         return base & mask == value & mask
+    }
+}
+
+extension RuleTester {
+    /// Where `q` goes with these rules in this mode, Via targets included (spec 8.6, the window's search).
+    public static func route(_ q: RouteQuery, plan: RoutingPlan, custom: CustomRules, geo: GeoLists) -> RouteAnswer? {
+        route(q, routing: routing(plan: plan, custom: custom), geo: geo)
+    }
+
+    /// The routing section a config would get, for asking many questions of one rule list.
+    public static func routing(plan: RoutingPlan, custom: CustomRules) -> JSONValue {
+        var custom = custom
+        custom.via = ConfigBuilder.viaSections(plan: plan, custom: custom, options: RunOptions(metricsPort: 0)).routes
+        return ConfigBuilder.routingSections(for: plan, custom: custom).routing
     }
 }

@@ -53,18 +53,13 @@ enum NotificationKind: String, CaseIterable, Identifiable, Sendable {
 enum WindowRequest: Equatable, Sendable {
     case main
     case settings(SettingsTab)
-    case ruleBuilder
-    case ruleEditor
+    case rules
     case connections
-
-    /// The Rule Builder's window id; here so state code does not need the view.
-    static let ruleBuilderID = "rule-builder"
 
     var code: String {
         switch self {
         case .main: "main"
-        case .ruleBuilder: Self.ruleBuilderID
-        case .ruleEditor: "rule-editor"
+        case .rules: "rules"
         case .connections: "connections"
         case .settings(let tab): "settings:\(tab.rawValue)"
         }
@@ -73,10 +68,9 @@ enum WindowRequest: Equatable, Sendable {
     init(code: String) {
         if code.hasPrefix("settings:"), let tab = SettingsTab(rawValue: String(code.dropFirst(9))) {
             self = .settings(tab)
-        } else if code == Self.ruleBuilderID {
-            self = .ruleBuilder
-        } else if code == "rule-editor" {
-            self = .ruleEditor
+        } else if ["rules", "rule-editor", "rule-builder"].contains(code) {
+            // The last two from notifications delivered by 1.1, whose windows the Rules window replaced.
+            self = .rules
         } else if code == "connections" {
             self = .connections
         } else {

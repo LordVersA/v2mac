@@ -35,6 +35,8 @@ extension ConfigBuilder {
         var outbounds: [JSONValue] = []
         var balancers: [JSONValue] = []
         var routes: [Rule.Via.Target: ViaRoute] = [:]
+        /// Each target's server outbounds, for its status.
+        var members: [Rule.Via.Target: [String]] = [:]
         var observatory: JSONValue? {
             outbounds.isEmpty ? nil : ["subjectSelector": [.string(viaGroupPrefix), .string(viaServerPrefix)],
                                        "probeURL": .string(probeURL), "probeInterval": "30s", "enableConcurrency": true]
@@ -60,6 +62,7 @@ extension ConfigBuilder {
             let base = (isGroup ? viaGroupPrefix : viaServerPrefix) + String(n)
             for (i, server) in (custom.viaServers[target] ?? []).enumerated() {
                 out.outbounds += viaOutbounds(server, tag: "\(base)-m\(i)", hopPrefix: "via-hop-\(n)-\(i)-", options: options)
+                out.members[target, default: []].append("\(base)-m\(i)")
             }
             func balancer(_ tag: String, fallback: String) -> JSONValue {
                 ["tag": .string(tag), "selector": [.string(base + "-m")], "strategy": ["type": "leastPing"], "fallbackTag": .string(fallback)]
@@ -114,5 +117,30 @@ extension CustomRules {
     public var viaHosts: [String] {
         let used = Set(rules.filter(\.enabled).compactMap { if case .via(let v) = $0.action { v.target } else { nil } })
         return Array(Set(used.flatMap { viaServers[$0] ?? [] }.flatMap { KillSwitch.hosts(in: $0.config, kind: $0.kind) })).sorted()
+    }
+}
+
+/// How a Via target's servers are doing, from the core's observatory (spec 8.6).
+public struct ViaHealth: Sendable, Hashable {
+    public var alive: Int
+    public var dead: Int
+    public var total: Int
+
+    /// Every server has been probed and none answers: the rule's traffic fails (or falls back).
+    public var allFailing: Bool { total > 0 && dead == total }
+
+    /// Targets with at least one probed server; ones not probed yet are left out.
+    public static func of(_ observatory: [String: Bool], members: [Rule.Via.Target: [String]]) -> [Rule.Via.Target: ViaHealth] {
+        members.compactMapValues { tags in
+            let known = tags.compactMap { observatory[$0] }
+            return known.isEmpty ? nil : ViaHealth(alive: known.filter { $0 }.count, dead: known.filter { !$0 }.count, total: tags.count)
+        }
+    }
+}
+
+extension ConfigBuilder {
+    /// The server outbounds of each Via target an active rule uses in `plan`.
+    public static func viaMembers(plan: RoutingPlan, custom: CustomRules) -> [Rule.Via.Target: [String]] {
+        viaSections(plan: plan, custom: custom, options: RunOptions(metricsPort: 0)).members
     }
 }

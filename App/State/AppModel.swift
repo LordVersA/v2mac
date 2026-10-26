@@ -40,8 +40,9 @@ final class AppModel {
     var settingsTab: SettingsTab = .general
     /// A window a notification click asked for; `WindowRequestHandler` opens it.
     var windowRequest: WindowRequest?
-    /// A custom rule the rule editor's Advanced mode scrolls to and lights up once.
-    var focusedRule: UUID?
+    /// Spec 8.6: the Rules window's draft, shared with the Connections window and the menu bar.
+    let rules = RulesStore()
+    let ruleCatalog = RuleCatalog()
     /// The server editor's sheet (spec 12.7).
     var serverEditor: ServerEditorRequest?
     var cleanIPScan: CleanIPRequest?
@@ -100,6 +101,19 @@ final class AppModel {
             return group.profiles.filter { !$0.isStale || $0.id == activeID }
                 .sorted { $0.sortIndex == $1.sortIndex ? $0.id.uuidString < $1.id.uuidString : $0.sortIndex < $1.sortIndex }
                 .compactMap { ActiveServer($0) }
+        }
+        rules.onApplied = { connection.reconnectIfRunning() }
+        connection.viaServers = { [weak self] targets in
+            guard let self else { return [:] }
+            var out: [Rule.Via.Target: [ViaServer]] = [:]
+            for target in targets {
+                let profiles: [Profile] = switch target {
+                case .server(let id): profile(id: id).map { [$0] } ?? []
+                case .group(let id): (group(id: id)?.profiles ?? []).filter { !$0.isStale }.sorted { $0.sortIndex < $1.sortIndex }
+                }
+                out[target] = profiles.compactMap { p in p.config.map { ViaServer(config: $0, kind: p.kind) } }
+            }
+            return out
         }
         let latencyStore = LatencyStore(modelContainer: container)
         connection.onAutomaticResults = { results in
@@ -549,6 +563,9 @@ final class AppModel {
             defaults.object(forKey: key).flatMap(Backup.json(fromPreference:)).map { (key, $0) }
         })
         settings["enabledRegionPacks"] = .array(regionPacks.enabledIDs.sorted().map { .string($0) })
+        // v2 rules even before they were first saved here (until then they are the 1.1 list, migrated).
+        settings["rules"] = .string(Rule.encode(Prefs.rules))
+        settings["ruleProfilesV2"] = .string(RuleProfileV2.encode(Prefs.ruleProfiles))
         return Backup(app: Prefs.appVersion, groups: groups.map { group in
             let profiles = group.profiles.filter { !$0.isStale || $0.isFavorite }.sorted { $0.sortIndex < $1.sortIndex }
             return Backup.Group(
@@ -607,6 +624,7 @@ final class AppModel {
         save()
 
         let allowed = Set(Prefs.backupKeys)
+        Prefs.restoringRules(from: backup.settings)
         for (key, value) in backup.settings where allowed.contains(key) {
             if let preference = Backup.preference(from: value) { UserDefaults.standard.set(preference, forKey: key) }
         }
@@ -769,15 +787,10 @@ final class AppModel {
         NSApp.activate()
     }
 
-    func openRuleBuilder(_ openWindow: OpenWindowAction) {
+    func openRules(_ openWindow: OpenWindowAction, selecting rule: UUID? = nil) {
+        if let rule { rules.selection = [.rule(rule)] }
         NSApp.setActivationPolicy(.regular)
-        openWindow(id: RuleBuilderView.windowID)
-        NSApp.activate()
-    }
-
-    func openRuleEditor(_ openWindow: OpenWindowAction) {
-        NSApp.setActivationPolicy(.regular)
-        openWindow(id: RuleEditorView.windowID)
+        openWindow(id: RulesWindow.windowID)
         NSApp.activate()
     }
 
@@ -980,13 +993,13 @@ final class AppModel {
         }
     }
 
-    /// `-debugWindowRequest <settings tab>|main|rule-builder`: what a click on a notification does. Works with
+    /// `-debugWindowRequest <settings tab>|main|rules`: what a click on a notification does. Works with
     /// demo data, so `-debugSnapshot` can show a settings tab.
     private func windowRequestHook() {
         guard let target = UserDefaults.standard.string(forKey: "debugWindowRequest") else { return }
         Task {
             try? await Task.sleep(for: .seconds(2))
-            windowRequest = WindowRequest(code: ["main", RuleBuilderView.windowID, RuleEditorView.windowID, ConnectionsView.windowID].contains(target) ? target : "settings:\(target)")
+            windowRequest = WindowRequest(code: ["main", RulesWindow.windowID, ConnectionsView.windowID].contains(target) ? target : "settings:\(target)")
             try? await Task.sleep(for: .seconds(1))
             print("[v2mac-debug] window request handled: \(windowRequest == nil), settings tab \(settingsTab.rawValue)")
         }

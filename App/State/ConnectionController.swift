@@ -91,6 +91,11 @@ final class ConnectionController {
     let watcher = ConnectionWatcher()
     let tun: TunController
     let killSwitch: KillSwitchController
+    /// How each Via target's servers answer the core's probes (spec 8.6); empty until probed.
+    private(set) var viaStatus: [Rule.Via.Target: ViaHealth] = [:]
+    @ObservationIgnored private var viaMembers: [Rule.Via.Target: [String]] = [:]
+    /// The servers of Via targets (spec 8.6), from the app's data.
+    var viaServers: @MainActor (Set<Rule.Via.Target>) -> [Rule.Via.Target: [ViaServer]] = { _ in [:] }
     let systemProxy: SystemProxyController
     private let runner: CoreRunner
     private let executable: @MainActor () -> URL
@@ -201,13 +206,28 @@ final class ConnectionController {
         reconnectIfRunning()
     }
 
+    /// The user's rules with what compiling them needs: installed apps, the site file's lists for
+    /// country items, and each Via target's servers.
+    private func currentRules() async -> CustomRules {
+        var custom = Prefs.customRules
+        if custom.needsApps { custom.installedApps = await InstalledApps.all() }
+        if custom.rules.contains(where: { !$0.countryItems.isEmpty }) {
+            let file = AppPaths.assetsDirectory.appendingPathComponent("geosite.dat")
+            custom.siteTags = await Task.detached { Set(GeoTags.read(contentsOf: file)) }.value
+        }
+        let targets = Set(custom.rules.compactMap { rule -> Rule.Via.Target? in if case .via(let v) = rule.action { v.target } else { nil } })
+        custom.viaServers = viaServers(targets)
+        return custom
+    }
+
     /// Spec 9.8. Turned on while a connection is wanted, the block goes up at once.
     func setKillSwitchEnabled(_ on: Bool) {
         Prefs.killSwitch = on
         if !on {
             Task { await killSwitch.lift() }
         } else if userWantsRunning, let server = activeServer {
-            Task { _ = await killSwitch.arm(allowing: KillSwitch.hosts(in: server.config, kind: server.kind)) }
+            let via = running?.custom.viaHosts ?? []
+            Task { _ = await killSwitch.arm(allowing: KillSwitch.hosts(in: server.config, kind: server.kind) + via) }
         }
     }
 
@@ -594,7 +614,7 @@ final class ConnectionController {
         }
     }
 
-    private var routingPlan: RoutingPlan {
+    var routingPlan: RoutingPlan {
         switch routingMode {
         case .global: .global
         case .bypassRegions: .bypass(regionRoutes())
@@ -614,9 +634,11 @@ final class ConnectionController {
             localError = String(localized: "Saved secrets could not be read. Check Secret storage in General settings.")
             return
         }
+        let custom = await currentRules()
+        guard commandGeneration == generation, userWantsRunning else { return }
         // Before anything connects, so nothing leaves around the connection meanwhile (spec 9.8).
         if Prefs.killSwitch {
-            let armed = await killSwitch.arm(allowing: KillSwitch.hosts(in: server.config, kind: server.kind))
+            let armed = await killSwitch.arm(allowing: KillSwitch.hosts(in: server.config, kind: server.kind) + custom.viaHosts)
             guard commandGeneration == generation, userWantsRunning else { return }
             guard armed else {
                 stopForKillSwitchFailure()
@@ -635,8 +657,6 @@ final class ConnectionController {
         if tunLink == nil { tun.down() }
         let inbound = Prefs.inbound
         let plan = routingPlan
-        var custom = Prefs.customRules
-        if custom.needsApps { custom.installedApps = await InstalledApps.all() }
         func options(metrics: Int, api: Int?) -> RunOptions {
             RunOptions(inbound: inbound, logLevel: Prefs.logLevel, logConnections: true, metricsPort: metrics,
                        tun: tunLink, dialer: Prefs.dialer, dns: Prefs.dns, apiPort: api, warpExit: Prefs.warpExit,
@@ -704,6 +724,7 @@ final class ConnectionController {
             logs.append("[v2mac] Connecting to \(server.name)")
             watcher.routingMode = routingMode
             watcher.customRules = custom
+            viaMembers = ConfigBuilder.viaMembers(plan: plan, custom: custom)
             watcher.hasConfigFallback = server.kind == .custom
             let outbounds = config["outbounds"]?.arrayValue ?? []
             watcher.outboundActions = Dictionary(outbounds.compactMap { outbound -> (String, CustomRule.Action)? in
@@ -780,6 +801,7 @@ final class ConnectionController {
             if case .failed = state, !isRecovering { tun.down() }
             statsTask?.cancel()
             statsTask = nil
+            viaStatus = [:]
             saveUsage()
             lastCounters = nil
             downRate = 0
@@ -795,7 +817,11 @@ final class ConnectionController {
             let client = StatsClient(port: metricsPort)
             var previous: TrafficSnapshot?
             while !Task.isCancelled {
-                if let snapshot = try? await client.snapshot() {
+                if let (snapshot, observatory) = try? await client.read() {
+                    if let self {
+                        let status = ViaHealth.of(observatory, members: self.viaMembers)
+                        if status != self.viaStatus { self.viaStatus = status }
+                    }
                     self?.count(snapshot)
                     if let previous {
                         let rate = snapshot.rate(since: previous)

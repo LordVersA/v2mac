@@ -173,6 +173,14 @@ public enum EntryGroups {
         return labels[index]
     }
 
+    /// The registered domain of a host (`a.b.example.co.uk` → `example.co.uk`), or nil for an address.
+    public static func registeredDomain(ofHost host: String) -> String? {
+        guard let brand = brand(ofHost: host) else { return nil }
+        let labels = host.lowercased().split(separator: ".").map(String.init)
+        guard let index = labels.lastIndex(of: brand), labels.count >= 2 else { return nil }
+        return labels[index...].joined(separator: ".")
+    }
+
     /// The vendor part of a bundle id (`com.google.Chrome` → `google`).
     public static func brand(ofBundleID id: String) -> String? {
         let parts = id.lowercased().split(separator: ".")
