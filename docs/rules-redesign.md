@@ -4,6 +4,11 @@
 It replaces the Rule Builder, the Rule Editor (Simple and Advanced) and the custom rules list in
 Settings → Routing. It ships in one release.
 
+**Status (2026-10-27):** R0–R8 are implemented locally. R9's real 30-rule migration produces identical
+routing in Global and Rules Only, Tidy Up completes with 26 reviewable suggestions, all 340 package
+tests pass, and the Debug app builds. The live stopped-server failover check, tester/access-log matrix,
+and release remain.
+
 ## Today
 - Three places edit the same `CustomRule` list (about 2,600 lines of UI): Settings → Routing (the raw
   list), the Rule Editor window (`rule-editor`: Simple library with six hidden fixed rules that
