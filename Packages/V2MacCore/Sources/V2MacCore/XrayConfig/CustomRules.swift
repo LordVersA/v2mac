@@ -56,9 +56,14 @@ public struct InstalledApp: Sendable, Hashable {
     public var name: String { (path as NSString).lastPathComponent.lowercased() }
 }
 
+/// Where a Via target's traffic goes in the config: one outbound, or a balancer over a group.
+public enum ViaRoute: Sendable, Hashable {
+    case outbound(String), balancer(String)
+}
+
 /// The user's rules plus what the config needs to turn them into Xray rules.
 public struct CustomRules: Sendable, Equatable, Hashable {
-    public var rules: [CustomRule]
+    public var rules: [Rule]
     /// Looked up by the app only when some rule names apps.
     public var installedApps: [InstalledApp]
     /// Refuse QUIC, so browsers fall back to TCP and their host names reach the rules.
@@ -69,17 +74,46 @@ public struct CustomRules: Sendable, Equatable, Hashable {
     /// Where traffic that matches no rule goes, ahead of the mode's own default and an imported
     /// config's fallback; nil leaves it to them. Direct mode ignores it.
     public var unmatchedRoute: CustomRule.Action?
+    /// The site file's list names, for country items.
+    public var siteTags: Set<String>
+    /// Via targets present in the config; a rule whose target is missing fails closed.
+    public var via: [Rule.Via.Target: ViaRoute]
 
-    public init(rules: [CustomRule] = [], installedApps: [InstalledApp] = [], blockQUIC: Bool = false,
-                proxyClientsRoute: CustomRule.Action? = nil, unmatchedRoute: CustomRule.Action? = nil) {
+    public init(rules: [Rule] = [], installedApps: [InstalledApp] = [], blockQUIC: Bool = false,
+                proxyClientsRoute: CustomRule.Action? = nil, unmatchedRoute: CustomRule.Action? = nil,
+                siteTags: Set<String> = [], via: [Rule.Via.Target: ViaRoute] = [:]) {
         self.rules = rules
         self.installedApps = installedApps
         self.blockQUIC = blockQUIC
         self.proxyClientsRoute = proxyClientsRoute
         self.unmatchedRoute = unmatchedRoute
+        self.siteTags = siteTags
+        self.via = via
     }
 
-    public var needsApps: Bool { rules.contains { $0.enabled && !$0.apps.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
+    /// Old rules, migrated.
+    public init(rules: [CustomRule], installedApps: [InstalledApp] = [], blockQUIC: Bool = false,
+                proxyClientsRoute: CustomRule.Action? = nil, unmatchedRoute: CustomRule.Action? = nil) {
+        self.init(rules: rules.map(Rule.init(migrating:)), installedApps: installedApps, blockQUIC: blockQUIC,
+                  proxyClientsRoute: proxyClientsRoute, unmatchedRoute: unmatchedRoute)
+    }
+
+    public var needsApps: Bool { rules.contains { $0.enabled && $0.needsApps } }
+
+    /// The Xray field and tag a rule's traffic goes to.
+    func target(of action: Rule.Action) -> (key: String, tag: String) {
+        switch action {
+        case .proxy: ("outboundTag", ConfigBuilder.proxyTag)
+        case .direct: ("outboundTag", ConfigBuilder.directTag)
+        case .block: ("outboundTag", ConfigBuilder.blockTag)
+        case .via(let via):
+            switch self.via[via.target] {
+            case .outbound(let tag): ("outboundTag", tag)
+            case .balancer(let tag): ("balancerTag", tag)
+            case nil: ("outboundTag", via.fallsBack ? ConfigBuilder.proxyTag : ConfigBuilder.blockTag)
+            }
+        }
+    }
 
     /// Local names that never leave the Mac or the LAN go direct, whatever the rules say.
     static let localNames = ["full:localhost", "domain:localhost", "domain:local", "domain:test", "domain:internal",

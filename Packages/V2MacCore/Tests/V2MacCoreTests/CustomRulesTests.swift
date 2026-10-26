@@ -43,7 +43,7 @@ import Testing
 
     @Test func rulesComeFirstInOrder() throws {
         let c = try build(.global, lists(proxy: "a.com", direct: "b.com\n1.1.1.1", block: "c.com"))
-        let rules = try #require(c["routing"]?["rules"]?.arrayValue)
+        let rules = try #require(c["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "proxy", "direct", "direct"])
         #expect(rules[0]["domain"]?[0]?.stringValue == "full:localhost")
         #expect(rules[1]["ip"]?[0]?.stringValue == "geoip:private")
@@ -58,12 +58,12 @@ import Testing
     }
 
     @Test func directModeKeepsOnlyBlock() throws {
-        let rules = try #require(try build(.direct, lists(proxy: "a.com", block: "c.com"))["routing"]?["rules"]?.arrayValue)
+        let rules = try #require(try build(.direct, lists(proxy: "a.com", block: "c.com"))["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "direct"])
     }
 
     @Test func rulesOnlyProxiesMatchesAndDefaultsDirect() throws {
-        let rules = try #require(try build(.rulesOnly, lists(proxy: "a.com", block: "c.com"))["routing"]?["rules"]?.arrayValue)
+        let rules = try #require(try build(.rulesOnly, lists(proxy: "a.com", block: "c.com"))["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         #expect(rules.map { $0["outboundTag"]?.stringValue } == ["direct", "direct", "block", "proxy", "proxy", "direct"])
         #expect(rules[4]["domain"]?.arrayValue?.contains("full:ipwho.is") == true)
         #expect(rules.last?["network"]?.stringValue == "tcp,udp")
@@ -73,7 +73,7 @@ import Testing
         let c = try build(.rulesOnly, lists(proxy: "geoip:us"))
         let servers = ConfigBuilder.dohServers.compactMap { URL(string: $0)?.host }
         #expect(c["dns"] != nil)
-        let rules = try #require(c["routing"]?["rules"]?.arrayValue)
+        let rules = try #require(c["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         let resolver = try #require(rules.firstIndex { $0["ip"]?.arrayValue == servers.map { .string($0) } })
         #expect(rules[resolver]["outboundTag"] == "proxy")
         #expect(resolver < rules.firstIndex { $0["network"] == "tcp,udp" }!)
@@ -83,18 +83,18 @@ import Testing
         var custom = lists(proxy: "a.com")
         custom.unmatchedRoute = .block
         for plan in [RoutingPlan.global, .rulesOnly] {
-            let rules = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue)
+            let rules = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
             #expect(rules.last == ["type": "field", "network": "tcp,udp", "outboundTag": "block"])
             #expect(rules.filter { $0["network"] == "tcp,udp" }.count == 1)
         }
-        let direct = try #require(try build(.direct, custom)["routing"]?["rules"]?.arrayValue)
+        let direct = try #require(try build(.direct, custom)["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         #expect(direct.last?["outboundTag"] == "direct")
     }
 
     @Test func proxyClientsCanGoDirect() throws {
         var custom = lists(proxy: "a.com")
         custom.proxyClientsRoute = .direct
-        let rules = try #require(try build(.global, custom)["routing"]?["rules"]?.arrayValue)
+        let rules = try #require(try build(.global, custom)["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         #expect(rules[2] == ["type": "field", "inboundTag": ["mixed-in"], "outboundTag": "direct"])
     }
 
@@ -104,7 +104,7 @@ import Testing
     func proxyClientsSkipRulesAfterLocalTraffic(plan: RoutingPlan, skip: Bool) throws {
         var custom = lists(direct: "a.com", block: "b.com")
         custom.proxyClientsRoute = skip ? .proxy : nil
-        let rules = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue)
+        let rules = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         #expect(rules[0]["domain"]?[0]?.stringValue == "full:localhost")
         #expect(rules[1]["ip"]?[0]?.stringValue == "geoip:private")
         if skip {
@@ -116,9 +116,9 @@ import Testing
         #expect(rules[skip ? 4 : 3]["domain"] == ["domain:a.com"])
         // QUIC remains blocked before the proxy-port exception.
         custom.blockQUIC = true
-        let quic = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue)
+        let quic = try #require(try build(plan, custom)["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         #expect(quic.first == ["type": "field", "network": "udp", "port": "443", "outboundTag": "block"])
-        let direct = try #require(try build(.direct, custom)["routing"]?["rules"]?.arrayValue)
+        let direct = try #require(try build(.direct, custom)["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         #expect(!direct.contains { $0["inboundTag"] != nil })
         #expect(!direct.contains { $0["outboundTag"] == "proxy" })
         #expect(direct.contains { $0["domain"] == ["domain:b.com"] && $0["outboundTag"] == "block" })
@@ -160,7 +160,7 @@ import Testing
             CustomRule(name: "Gone", action: .proxy, apps: "Missing.app"),
             CustomRule(name: "Both", action: .block, apps: "curl", hosts: "b.com"),
         ], installedApps: apps, blockQUIC: true)
-        let rules = try #require(try build(.global, custom)["routing"]?["rules"]?.arrayValue)
+        let rules = try #require(try build(.global, custom)["routing"]?["rules"]?.arrayValue).map { $0.removing("ruleTag") }
         #expect(rules[0] == ["type": "field", "network": "udp", "port": "443", "outboundTag": "block"])
         #expect(rules.dropFirst(3).map { $0["outboundTag"]?.stringValue } == ["direct", "proxy", "block"])
         #expect(rules[4]["process"] == ["/Applications/Spotify.app/"])

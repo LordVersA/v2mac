@@ -74,7 +74,7 @@ public struct GeoIPIndex: Sendable {
         return codes[ranges[low - 1].code]
     }
 
-    private struct Reader {
+    struct Reader {
         var bytes: ArraySlice<UInt8>
 
         mutating func varint() -> Int? {

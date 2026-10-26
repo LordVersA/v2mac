@@ -127,7 +127,7 @@ final class ConnectionWatcher {
         connection.action = outboundActions[seen.outbound] ?? CustomRule.Action(rawValue: seen.outbound)
         connection.isDefaultRoute = seen.isDefaultRoute
         connection.configFallback = hasConfigFallback && (seen.isDefaultRoute || !modeOutbounds.contains(seen.outbound))
-        connection.rules = routingMode == nil ? [] : customRules.rules.filter { routingMode != .direct || $0.action == .block }
+        connection.rules = routingMode == nil ? [] : customRules.rules.map(CustomRule.init(legacy:)).filter { routingMode != .direct || $0.action == .block }
         connection.proxySettingRoute = routingMode != nil && seen.inbound == ConfigBuilder.inboundTag ? customRules.proxyClientsRoute : nil
         pending.append(connection)
         guard pending.count == 1 else { return }

@@ -40,7 +40,7 @@ extension ConfigBuilder {
     static let dohServers = ["https://1.1.1.1/dns-query", "https://8.8.8.8/dns-query"]
 
     static func routingSections(for plan: RoutingPlan, custom: CustomRules = CustomRules()) -> (routing: JSONValue, dns: JSONValue?) {
-        let privateRule: JSONValue = ["type": "field", "ip": ["geoip:private"], "outboundTag": .string(directTag)]
+        let privateRule: JSONValue = ["type": "field", "ruleTag": .string(RuleTag.privateIPs), "ip": ["geoip:private"], "outboundTag": .string(directTag)]
         func rules(_ domains: [String], _ ips: [String], to tag: String) -> [JSONValue] {
             var out: [JSONValue] = []
             if !domains.isEmpty { out.append(["type": "field", "domain": .array(domains.map { .string($0) }), "outboundTag": .string(tag)]) }
@@ -51,37 +51,27 @@ extension ConfigBuilder {
         var customRules: [JSONValue] = []
         var hasCustomIPs = false
         for rule in custom.rules where rule.enabled && (plan != .direct || rule.action == .block) {
-            let hosts = RuleMatchers(parsing: rule.hosts)
-            let hasApps = !rule.apps.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            let apps = AppMatchers(parsing: rule.apps, apps: custom.installedApps).processes
-            // A rule whose apps are all missing must not turn into a rule for every app.
-            if hasApps, apps.isEmpty { continue }
-            var made = rules(hosts.domains, hosts.ips, to: rule.tag)
-            if hasApps {
-                let process: JSONValue = .array(apps.map { .string($0) })
-                made = made.isEmpty && hosts.invalid.isEmpty
-                    ? [["type": "field", "process": process, "outboundTag": .string(rule.tag)]]
-                    : made.map { $0.setting("process", to: process) }
-            }
-            hasCustomIPs = hasCustomIPs || !hosts.ips.isEmpty
+            let made = rule.xrayRules(apps: custom.installedApps, siteTags: custom.siteTags, target: custom.target(of: rule.action))
+                .enumerated().map { $1.setting("ruleTag", to: .string(RuleTag.user(rule.id, part: $0))) }
+            hasCustomIPs = hasCustomIPs || made.contains { $0["ip"] != nil }
             customRules += made
         }
         // This Mac and the LAN always go direct, before any rule: a proxy rule for an app must not
         // send its localhost traffic to the server's own localhost.
-        let localNames: JSONValue = ["type": "field", "domain": .array(CustomRules.localNames.map { .string($0) }), "outboundTag": .string(directTag)]
+        let localNames: JSONValue = ["type": "field", "ruleTag": .string(RuleTag.localNames), "domain": .array(CustomRules.localNames.map { .string($0) }), "outboundTag": .string(directTag)]
         // Direct mode keeps everything off the server, the proxy port included.
         if let route = custom.proxyClientsRoute, plan != .direct {
-            customRules.insert(["type": "field", "inboundTag": [.string(inboundTag)], "outboundTag": .string(route.tag)], at: 0)
+            customRules.insert(["type": "field", "ruleTag": .string(RuleTag.proxyPort), "inboundTag": [.string(inboundTag)], "outboundTag": .string(route.tag)], at: 0)
         }
         if plan != .direct || !customRules.isEmpty { customRules.insert(contentsOf: [localNames, privateRule], at: 0) }
-        if custom.blockQUIC { customRules.insert(["type": "field", "network": "udp", "port": "443", "outboundTag": .string(blockTag)], at: 0) }
+        if custom.blockQUIC { customRules.insert(["type": "field", "ruleTag": .string(RuleTag.quic), "network": "udp", "port": "443", "outboundTag": .string(blockTag)], at: 0) }
 
         var tail: [JSONValue] = []
         var hasIPRules = hasCustomIPs
         switch plan {
         case .direct:
             let strategy: JSONValue = hasCustomIPs ? "IPOnDemand" : "AsIs"
-            return (["domainStrategy": strategy, "rules": .array(customRules + [["type": "field", "network": "tcp,udp", "outboundTag": .string(directTag)]])], nil)
+            return (["domainStrategy": strategy, "rules": .array(customRules + RuleTag.mode([["type": "field", "network": "tcp,udp", "outboundTag": .string(directTag)]]))], nil)
         case .bypass(let routes) where !routes.isEmpty:
             for route in routes { tail += rules(route.domainRules, route.ipRules, to: directTag) }
             hasIPRules = true
@@ -93,9 +83,9 @@ extension ConfigBuilder {
         case .bypass, .global: break
         }
         if let route = custom.unmatchedRoute {
-            tail = tail.filter { $0["network"] == nil } + [["type": "field", "network": "tcp,udp", "outboundTag": .string(route.tag)]]
+            tail = tail.filter { $0["network"] == nil } + [["type": "field", "ruleTag": .string(RuleTag.unmatched), "network": "tcp,udp", "outboundTag": .string(route.tag)]]
         }
-        guard hasIPRules else { return (["domainStrategy": "AsIs", "rules": .array(customRules + tail)], nil) }
+        guard hasIPRules else { return (["domainStrategy": "AsIs", "rules": .array(customRules + RuleTag.mode(tail))], nil) }
         // The core's own DoH lookups would otherwise follow the catch-all out of the tunnel.
         if plan == .rulesOnly {
             let resolvers: JSONValue = .array(dohServers.compactMap { URL(string: $0)?.host.map { .string($0) } })
@@ -108,7 +98,7 @@ extension ConfigBuilder {
             "queryStrategy": "UseIP",
             "enableParallelQuery": true,
         ]
-        return (["domainStrategy": hasCustomIPs ? "IPOnDemand" : "IPIfNonMatch", "rules": .array(customRules + tail)], dns)
+        return (["domainStrategy": hasCustomIPs ? "IPOnDemand" : "IPIfNonMatch", "rules": .array(customRules + RuleTag.mode(tail))], dns)
     }
 
     /// Full config for an `outbound` profile in any routing mode.
@@ -250,5 +240,28 @@ extension ConfigBuilder {
         var out = config.setting("outbounds", to: .array(outbounds)).setting("routing", to: routing)
         if out["dns"] == nil, let dns = sections.dns { out = out.setting("dns", to: dns) }
         return out
+    }
+}
+
+/// `ruleTag`s of the rules V2Mac writes, so the tester can say which rule matched. Xray wants them unique.
+public enum RuleTag {
+    public static let localNames = "v2mac-local-names"
+    public static let privateIPs = "v2mac-private"
+    public static let quic = "v2mac-quic"
+    public static let proxyPort = "v2mac-proxy-port"
+    public static let unmatched = "v2mac-unmatched"
+    public static let modePrefix = "v2mac-mode-"
+
+    static func user(_ id: UUID, part: Int) -> String { "rule-\(id.uuidString)-\(part)" }
+
+    /// The user rule a tag belongs to.
+    public static func ruleID(_ tag: String) -> UUID? {
+        guard tag.hasPrefix("rule-") else { return nil }
+        return UUID(uuidString: String(tag.dropFirst(5).prefix(36)))
+    }
+
+    /// The mode's own rules; the unmatched catch-all keeps its tag.
+    static func mode(_ rules: [JSONValue]) -> [JSONValue] {
+        rules.enumerated().map { $1["ruleTag"] == nil ? $1.setting("ruleTag", to: .string(modePrefix + String($0))) : $1 }
     }
 }
