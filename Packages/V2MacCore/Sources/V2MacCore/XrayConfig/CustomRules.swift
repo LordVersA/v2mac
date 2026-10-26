@@ -56,11 +56,6 @@ public struct InstalledApp: Sendable, Hashable {
     public var name: String { (path as NSString).lastPathComponent.lowercased() }
 }
 
-/// Where a Via target's traffic goes in the config: one outbound, or a balancer over a group.
-public enum ViaRoute: Sendable, Hashable {
-    case outbound(String), balancer(String)
-}
-
 /// The user's rules plus what the config needs to turn them into Xray rules.
 public struct CustomRules: Sendable, Equatable, Hashable {
     public var rules: [Rule]
@@ -76,19 +71,21 @@ public struct CustomRules: Sendable, Equatable, Hashable {
     public var unmatchedRoute: CustomRule.Action?
     /// The site file's list names, for country items.
     public var siteTags: Set<String>
-    /// Via targets present in the config; a rule whose target is missing fails closed.
-    public var via: [Rule.Via.Target: ViaRoute]
+    /// The servers of each Via target the rules name; a target missing here fails closed.
+    public var viaServers: [Rule.Via.Target: [ViaServer]]
+    /// Set by `ConfigBuilder` from `viaServers`.
+    var via: [Rule.Via.Target: ViaRoute] = [:]
 
     public init(rules: [Rule] = [], installedApps: [InstalledApp] = [], blockQUIC: Bool = false,
                 proxyClientsRoute: CustomRule.Action? = nil, unmatchedRoute: CustomRule.Action? = nil,
-                siteTags: Set<String> = [], via: [Rule.Via.Target: ViaRoute] = [:]) {
+                siteTags: Set<String> = [], viaServers: [Rule.Via.Target: [ViaServer]] = [:]) {
         self.rules = rules
         self.installedApps = installedApps
         self.blockQUIC = blockQUIC
         self.proxyClientsRoute = proxyClientsRoute
         self.unmatchedRoute = unmatchedRoute
         self.siteTags = siteTags
-        self.via = via
+        self.viaServers = viaServers
     }
 
     /// Old rules, migrated.
@@ -107,10 +104,11 @@ public struct CustomRules: Sendable, Equatable, Hashable {
         case .direct: ("outboundTag", ConfigBuilder.directTag)
         case .block: ("outboundTag", ConfigBuilder.blockTag)
         case .via(let via):
-            switch self.via[via.target] {
-            case .outbound(let tag): ("outboundTag", tag)
-            case .balancer(let tag): ("balancerTag", tag)
-            case nil: ("outboundTag", via.fallsBack ? ConfigBuilder.proxyTag : ConfigBuilder.blockTag)
+            if let route = self.via[via.target] {
+                if via.fallsBack, let balancer = route.fallbackBalancer { ("balancerTag", balancer) }
+                else { (route.isBalancer ? "balancerTag" : "outboundTag", route.tag) }
+            } else {
+                ("outboundTag", via.fallsBack ? ConfigBuilder.proxyTag : ConfigBuilder.blockTag)
             }
         }
     }

@@ -104,6 +104,9 @@ extension ConfigBuilder {
     /// Full config for an `outbound` profile in any routing mode.
     public static func build(outbound: JSONValue, options: RunOptions, routing plan: RoutingPlan, custom: CustomRules = CustomRules()) throws -> JSONValue {
         guard case .object = outbound else { throw ConfigBuilderError.outboundNotAnObject }
+        var custom = custom
+        let via = viaSections(plan: plan, custom: custom, options: options)
+        custom.via = via.routes
         let sections = routingSections(for: plan, custom: custom)
         var direct: JSONValue = ["tag": .string(directTag), "protocol": "freedom"]
         // Direct traffic is resolved by the chosen servers too, not by the system resolver.
@@ -124,9 +127,10 @@ extension ConfigBuilder {
                 proxyOutbound(outbound, options: options),
                 direct,
                 ["tag": .string(blockTag), "protocol": "blackhole"],
-            ] + extras),
-            "routing": sections.routing,
+            ] + extras + via.outbounds),
+            "routing": via.balancers.isEmpty ? sections.routing : sections.routing.setting("balancers", to: .array(via.balancers)),
         ]
+        if let observatory = via.observatory { config = config.setting("observatory", to: observatory) }
         if let dns = options.dns.map(dnsSection) ?? sections.dns { config = config.setting("dns", to: dns) }
         if let port = options.apiPort { config = config.setting("api", to: apiSection(port: port)) }
         if let tun = options.tun { config = tunDNS(config, tun: tun) }
@@ -167,6 +171,12 @@ extension ConfigBuilder {
         policy = policy.setting("system", to: system)
         out = out.setting("policy", to: policy)
 
+        // Via servers join before the dialer and interface settings, which then cover them too.
+        var via = ViaSections()
+        if let plan {
+            via = viaSections(plan: plan, custom: custom, options: options)
+            out = out.setting("outbounds", to: .array((out["outbounds"]?.arrayValue ?? []) + via.outbounds))
+        }
         out = dialingOutbounds(of: out, through: options.dialer)
         if let dns = options.dns, config["dns"] == nil { out = out.setting("dns", to: dnsSection(dns)) }
         if let interface = options.boundInterface { out = bindingOutbounds(of: out, to: interface) }
@@ -194,14 +204,16 @@ extension ConfigBuilder {
             out = out.setting("routing", to: routing.setting("rules", to: .array(rewritten)))
         }
         if let plan {
-            out = try applyingRouting(to: out, plan: plan, custom: custom, options: options)
+            out = try applyingRouting(to: out, plan: plan, custom: custom, via: via, options: options)
         }
         if let tun = options.tun { out = tunDNS(out, tun: tun) }
         return blockingLoopback(of: out, when: options.inbound.allowLAN)
     }
 
     /// App rules run first; imported rules and the original default outbound remain the fallback.
-    private static func applyingRouting(to config: JSONValue, plan: RoutingPlan, custom: CustomRules, options: RunOptions) throws -> JSONValue {
+    private static func applyingRouting(to config: JSONValue, plan: RoutingPlan, custom: CustomRules, via: ViaSections, options: RunOptions) throws -> JSONValue {
+        var custom = custom
+        custom.via = via.routes
         var outbounds = config["outbounds"]?.arrayValue ?? []
         guard !outbounds.isEmpty else { throw CoreError.startFailed(String(localized: "This config has no outbound for routing.")) }
         var used = Set(outbounds.compactMap { $0["tag"]?.stringValue })
@@ -237,8 +249,17 @@ extension ConfigBuilder {
             routing = routing.setting("domainStrategy", to: strategy ?? "AsIs")
         }
         routing = routing.setting("rules", to: .array(prefix + (routing["rules"]?.arrayValue ?? [])))
+        if !via.balancers.isEmpty {
+            let balancers = via.balancers.map { $0.setting("fallbackTag", to: .string(targets[$0["fallbackTag"]?.stringValue ?? ""] ?? block)) }
+            routing = routing.setting("balancers", to: .array((routing["balancers"]?.arrayValue ?? []) + balancers))
+        }
         var out = config.setting("outbounds", to: .array(outbounds)).setting("routing", to: routing)
         if out["dns"] == nil, let dns = sections.dns { out = out.setting("dns", to: dns) }
+        if let observatory = via.observatory {
+            // The config's own observatory keeps its settings and probes our servers as well.
+            let selectors = (out["observatory"]?["subjectSelector"]?.arrayValue ?? []) + (observatory["subjectSelector"]?.arrayValue ?? [])
+            out = out.setting("observatory", to: (out["observatory"] ?? observatory).setting("subjectSelector", to: .array(selectors)))
+        }
         return out
     }
 }

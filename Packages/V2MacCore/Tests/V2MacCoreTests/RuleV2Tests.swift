@@ -106,13 +106,16 @@ import Testing
 
     @Test func viaTargets() {
         let group = UUID(), server = UUID(), gone = UUID()
-        let custom = CustomRules(via: [.group(group): .balancer("via-g0"), .server(server): .outbound("via-s0")])
+        var custom = CustomRules()
+        custom.via = [.group(group): ViaRoute(tag: "via-g0", isBalancer: true, fallbackBalancer: "via-g0-fb"),
+                      .server(server): ViaRoute(tag: "via-s1-m0", isBalancer: false)]
         func target(_ t: Rule.Via.Target, fallsBack: Bool = false) -> String {
             let made = Self.newRules([Rule(name: "x", action: .via(.init(target: t, name: "x", fallsBack: fallsBack)), items: [.host("a.example")])], custom: custom)
             return made[0].objectValue!.filter { $0.key.hasSuffix("Tag") }.map { "\($0.key)=\($0.value.stringValue!)" }.joined()
         }
         #expect(target(.group(group)) == "balancerTag=via-g0")
-        #expect(target(.server(server)) == "outboundTag=via-s0")
+        #expect(target(.group(group), fallsBack: true) == "balancerTag=via-g0-fb")
+        #expect(target(.server(server)) == "outboundTag=via-s1-m0")
         // A target missing from the config fails closed, or uses the connected server when allowed.
         #expect(target(.server(gone)) == "outboundTag=block")
         #expect(target(.server(gone), fallsBack: true) == "outboundTag=proxy")
@@ -223,5 +226,131 @@ enum GeoFixture {
         #expect(RuleTester.route(q, routing: ["domainStrategy": "IPOnDemand", "rules": rules], geo: geo)?.outbound == "r1")
         #expect(RuleTester.route(q, routing: ["domainStrategy": "IPIfNonMatch", "rules": rules], geo: geo)?.outbound == "r2")
         #expect(RuleTester.route(RouteQuery(host: "other.com", ips: ["1.1.1.1"]), routing: ["domainStrategy": "AsIs", "rules": rules], geo: geo) == nil)
+    }
+}
+
+@Suite struct ViaConfigTests {
+    static let group = UUID(), single = UUID(), chained = UUID()
+    static let trojan = try! ShareLinkParser.parse(Fixtures.trojanPlain)
+    static let hy2 = try! ShareLinkParser.parse(Fixtures.hy2)
+    /// A full config whose proxy goes out through a second hop, with routing of its own.
+    static let chainConfig: JSONValue = [
+        "outbounds": [
+            ["tag": "exit", "protocol": "socks", "settings": ["servers": [["address": "exit.example", "port": 1080]]],
+             "streamSettings": ["sockopt": ["dialerProxy": "hop"]]],
+            ["tag": "hop", "protocol": "socks", "settings": ["servers": [["address": "hop.example", "port": 1080]]]],
+            ["tag": "direct", "protocol": "freedom"],
+        ],
+        "routing": ["rules": [["type": "field", "ip": ["1.1.1.1"], "outboundTag": "direct"]]],
+    ]
+
+    static func custom(fallsBack: Bool = false) -> CustomRules {
+        CustomRules(rules: [
+            Rule(name: "Work", action: .via(.init(target: .group(group), name: "Work")), items: [.host("work.example")]),
+            Rule(name: "Work or current", action: .via(.init(target: .group(group), name: "Work", fallsBack: true)), items: [.host("mail.example")]),
+            Rule(name: "One", action: .via(.init(target: .server(single), name: "One")), items: [.host("one.example")]),
+            Rule(name: "Chain", action: .via(.init(target: .server(chained), name: "Chain")), items: [.host("chain.example")]),
+        ], viaServers: [
+            .group(group): [ViaServer(config: trojan.config, kind: .outbound), ViaServer(config: hy2.config, kind: .outbound)],
+            .server(single): [ViaServer(config: trojan.config, kind: .outbound)],
+            .server(chained): [ViaServer(config: chainConfig, kind: .custom)],
+        ])
+    }
+
+    func build(_ plan: RoutingPlan, options: RunOptions = RunOptions(metricsPort: 1)) throws -> JSONValue {
+        try ConfigBuilder.build(outbound: Self.trojan.config, options: options, routing: plan, custom: Self.custom())
+    }
+
+    func target(_ config: JSONValue, _ host: String) -> String? {
+        let rule = config["routing"]?["rules"]?.arrayValue?.first { $0["domain"]?.arrayValue?.contains(.string("domain:" + host)) == true }
+        return rule.map { ($0["balancerTag"] ?? $0["outboundTag"])!.stringValue! }
+    }
+
+    @Test func groupsBecomeBalancersThatFailClosed() throws {
+        let c = try build(.global)
+        let tags = c["outbounds"]!.arrayValue!.compactMap { $0["tag"]?.stringValue }
+        #expect(tags.contains("via-g0-m0") && tags.contains("via-g0-m1"))
+        let balancers = try #require(c["routing"]?["balancers"]?.arrayValue)
+        #expect(balancers.map { $0["tag"]?.stringValue } == ["via-g0", "via-g0-fb"])
+        #expect(balancers.map { $0["fallbackTag"]?.stringValue } == ["block", "proxy"])
+        #expect(balancers[0]["selector"] == ["via-g0-m"])
+        #expect(balancers[0]["strategy"]?["type"] == "leastPing")
+        #expect(target(c, "work.example") == "via-g0")
+        #expect(target(c, "mail.example") == "via-g0-fb")
+        #expect(target(c, "one.example") == "via-s1-m0")
+        #expect(c["observatory"]?["subjectSelector"] == ["via-g", "via-s"])
+    }
+
+    @Test func fullConfigsBringTheirChainOnly() throws {
+        let c = try build(.global)
+        let outbounds = c["outbounds"]!.arrayValue!
+        let exit = try #require(outbounds.first { $0["tag"] == "via-s2-m0" })
+        #expect(exit["settings"]?["servers"]?[0]?["address"] == "exit.example")
+        #expect(exit["streamSettings"]?["sockopt"]?["dialerProxy"] == "via-hop-2-0-hop")
+        #expect(outbounds.contains { $0["tag"] == "via-hop-2-0-hop" })
+        // Its own freedom outbound and routing stay out.
+        #expect(!outbounds.contains { $0["tag"]?.stringValue?.hasSuffix("direct") == true && $0["tag"] != "direct" })
+        #expect(!(c["routing"]?["rules"]?.arrayValue ?? []).contains { $0["ip"] == ["1.1.1.1"] })
+        #expect(target(c, "chain.example") == "via-s2-m0")
+    }
+
+    @Test func viaServersAreDialledLikeTheServer() throws {
+        var options = RunOptions(metricsPort: 1, outboundInterface: "en9")
+        options.dialer = DialerSettings(fragment: .init())
+        let c = try build(.global, options: options)
+        let members = c["outbounds"]!.arrayValue!.filter { $0["tag"]?.stringValue?.hasPrefix("via-") == true }
+        #expect(members.allSatisfy { $0["streamSettings"]?["sockopt"]?["interface"] == "en9" })
+        #expect(members.first { $0["tag"] == "via-g0-m0" }?["streamSettings"]?["sockopt"]?["dialerProxy"] == .string(ConfigBuilder.dialerTag))
+    }
+
+    @Test func killSwitchAllowsEveryViaServer() {
+        #expect(Self.custom().viaHosts == ["1.2.3.4", "exit.example", "hop.example", "srv.example.com"])
+        var off = Self.custom()
+        off.rules = off.rules.map { var r = $0; r.enabled = false; return r }
+        #expect(off.viaHosts.isEmpty)
+    }
+
+    @Test func directModeHasNoVia() throws {
+        let c = try build(.direct)
+        #expect(!c["outbounds"]!.arrayValue!.contains { $0["tag"]?.stringValue?.hasPrefix("via-") == true })
+        #expect(c["observatory"] == nil && c["routing"]?["balancers"] == nil)
+    }
+
+    @Test func customConfigsGetBalancersWithTheirOwnTags() throws {
+        let imported: JSONValue = ["outbounds": [["tag": "p", "protocol": "trojan", "settings": ["servers": [["address": "x.example", "port": 443, "password": "x"]]]]],
+                                   "routing": ["balancers": [["tag": "own", "selector": ["p"]]]],
+                                   "observatory": ["subjectSelector": ["p"], "probeInterval": "1m"]]
+        let c = try ConfigBuilder.buildCustom(config: imported, options: RunOptions(metricsPort: 1), routing: .global, custom: Self.custom())
+        let balancers = try #require(c["routing"]?["balancers"]?.arrayValue)
+        #expect(balancers.map { $0["tag"]?.stringValue } == ["own", "via-g0", "via-g0-fb"])
+        #expect(balancers[1]["fallbackTag"]?.stringValue?.hasPrefix("v2mac-block") == true)
+        #expect(balancers[2]["fallbackTag"] == "p")
+        #expect(c["observatory"]?["subjectSelector"] == ["p", "via-g", "via-s"])
+        #expect(c["observatory"]?["probeInterval"] == "1m")
+        #expect(c["outbounds"]!.arrayValue!.contains { $0["tag"] == "via-g0-m1" })
+    }
+
+    @Test(.tags(.integration), .enabled(if: TestSupport.coreAvailable), arguments: [false, true])
+    func generatedViaConfigPassesXrayTest(custom: Bool) throws {
+        let options = RunOptions(metricsPort: 1)
+        let imported: JSONValue = ["outbounds": [Self.trojan.config.setting("tag", to: "p")]]
+        let config = custom
+            ? try ConfigBuilder.buildCustom(config: imported, options: options, routing: .rulesOnly, custom: Self.custom())
+            : try ConfigBuilder.build(outbound: Self.trojan.config, options: options, routing: .bypass([]), custom: Self.custom())
+        let dir = try TestSupport.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let file = dir.appendingPathComponent("config.json")
+        try config.data().write(to: file)
+        let p = Process()
+        p.executableURL = TestSupport.xray
+        p.arguments = ["run", "-test", "-c", file.path]
+        p.environment = ["XRAY_LOCATION_ASSET": TestSupport.vendorCore.path]
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = pipe
+        try p.run()
+        let out = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        p.waitUntilExit()
+        #expect(out.contains("Configuration OK"), Comment(rawValue: out))
     }
 }
