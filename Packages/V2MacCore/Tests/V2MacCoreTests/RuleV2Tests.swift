@@ -439,3 +439,40 @@ enum GeoFixture {
         #expect(RuleProfileV2.list(v2: RuleProfileV2.encode(profiles), v1: nil) == profiles)
     }
 }
+
+@Suite struct RuleItemTests {
+    @Test func kindsAndText() {
+        let items: [Rule.Item] = [.app("Chat.app"), .country("ir"), .host("domain:a.example"), .host("full:b.example"), .host("keyword:chat"),
+                                  .host("regexp:^x\\d+$"), .host("geosite:github"), .host("ext:region-ir-geoip.dat:ir"), .host("10.0.0.0/8"), .host("not a host")]
+        #expect(items.map(\.kind) == [.app, .country, .domain, .exact, .keyword, .regex, .service, .service, .ip, .invalid])
+        #expect(items[2].text == "a.example" && items[5].text == "^x\\d+$" && items[6].text == "geosite:github")
+    }
+
+    @Test func changingKind() {
+        let domain = Rule.Item.host("domain:chat.example")
+        #expect(domain.changing(to: .exact) == .host("full:chat.example"))
+        #expect(domain.changing(to: .keyword) == .host("keyword:chat.example"))
+        #expect(domain.changing(to: .ip) == nil)
+        #expect(Rule.Item.item("*.chat.example", as: .domain) == .host("domain:chat.example"))
+        #expect(Rule.Item.item("((", as: .regex) == nil)
+        #expect(Rule.Item.item("DE", as: .country) == .country("de"))
+    }
+
+    @Test func pastedLines() {
+        let (items, skipped) = Rule.Item.parse("a.example\n1.2.3.0-1.2.3.255\nDOMAIN-KEYWORD,chat\nnot!valid")
+        #expect(items == [.host("domain:a.example"), .host("keyword:chat"), .host("1.2.3.0/24")])
+        #expect(skipped == ["not!valid"])
+    }
+
+    @Test func templatesUseWhatIsThere() {
+        let ai = RuleTemplate.all.first { $0.id == .ai }!
+        let rule = ai.rule(available: ["geosite:openai"], installed: [InstalledApp(path: "/Applications/ChatGPT.app", bundleID: "com.openai.chat")])
+        #expect(rule.items == [.app("com.openai.chat"), .host("geosite:openai")])
+        #expect(rule.action == .proxy)
+        let region = RuleTemplate.all.first { $0.id == .region }!
+        let r = region.rule(available: [], installed: [], regions: [RegionRoute(geositeFile: "s.dat", geositeTags: ["ir"], geoipFile: "i.dat", geoipTags: ["ir"])])
+        #expect(r.items == [.host("ext:s.dat:ir"), .host("ext:i.dat:ir")] && r.action == .direct)
+        let torrents = RuleTemplate.all.first { $0.id == .torrents }!.rule(available: [], installed: [])
+        #expect(torrents.items.isEmpty && torrents.only.protocols == [.bittorrent])
+    }
+}

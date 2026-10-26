@@ -394,8 +394,10 @@ import Testing
           - AND,((DOMAIN,a.example),(DOMAIN,b.example)),PROXY
           - OR,((DOMAIN,a.example),(DOMAIN,b.example)),PROXY
           - AND,((DOMAIN,a.example),(SRC-IP-CIDR,10.0.0.0/8)),PROXY
+          - AND,((DST-PORT,443),(NOT,((DOMAIN,b.example)))),DIRECT
+          - AND,((DST-PORT,443),(OR,((DOMAIN,b.example),(NETWORK,UDP)))),DIRECT
         """.utf8))
-        #expect(r.rules.count == 4 && r.skipped.count == 3)
+        #expect(r.rules.count == 4 && r.skipped.count == 5)
         #expect(r.rules[0].items.isEmpty && r.rules[0].only.ports == "22" && r.rules[0].action == .direct)
         #expect(r.rules[1].only.network == .udp && r.rules[1].action == .block)
         #expect(r.rules[2].hostItems == ["domain:git.example"] && r.rules[2].only.ports == "22,443")

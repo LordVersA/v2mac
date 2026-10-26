@@ -181,12 +181,14 @@ extension Rule.Action {
 }
 
 extension CustomRule {
-    /// The v1 shape of a rule, for views that still read it.
-    // shortcut: drops Via, countries and port/network/protocol conditions; removed with the old windows (Phase 12 R7).
-    public init(legacy rule: Rule) {
+    /// The v1 shape of a rule, for views that still read it; nil when v1 cannot say the same thing
+    /// (Via, countries, port/network/protocol conditions), since dropping those would widen the rule.
+    // shortcut: removed with the old windows (Phase 12 R7).
+    public init?(legacy rule: Rule) {
+        guard let action = rule.action.basic, rule.countryItems.isEmpty, rule.only.ports.isEmpty, rule.only.network == nil,
+              rule.only.protocols.isEmpty, rule.hostItems.isEmpty || rule.appItems.isEmpty, !rule.items.isEmpty else { return nil }
         let hasHosts = !rule.hostItems.isEmpty
-        self.init(name: rule.name, action: rule.action.basic ?? .proxy,
-                  apps: (hasHosts ? rule.only.apps : rule.appItems).joined(separator: "\n"),
+        self.init(name: rule.name, action: action, apps: (hasHosts ? rule.only.apps : rule.appItems).joined(separator: "\n"),
                   hosts: rule.hostItems.joined(separator: "\n"), enabled: rule.enabled)
         id = rule.id
     }

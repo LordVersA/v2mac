@@ -76,6 +76,9 @@ public struct RuleImport: Sendable, Equatable {
         guard let close = line.lastIndex(of: ")"), let comma = line[close...].firstIndex(of: ",") else { skipped.append(line); return }
         let policy = line[line.index(after: comma)...].split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
         let parts = line[..<close].matches(of: /\(([^()]+)\)/).map { String($0.output.1) }
+        // Exactly `AND,((T,v),(T,v),…)`: a nested NOT or OR would otherwise lose its meaning.
+        let body = line[line.index(line.startIndex, offsetBy: 4)...close].replacing(/\([^()]+\)/, with: "")
+        guard line.uppercased().hasPrefix("AND,"), body == "(" + String(repeating: ",", count: max(parts.count - 1, 0)) + ")" else { skipped.append(line); return }
         var rule = Rule(name: policy, action: Self.action(policy: policy))
         let matchers = parts.filter { Self.hostTypes.contains($0.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces).uppercased() } ?? "") }
         guard !policy.isEmpty, !parts.isEmpty, matchers.count <= 1 else { skipped.append(line); return }
