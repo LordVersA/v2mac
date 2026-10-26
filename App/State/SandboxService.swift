@@ -63,10 +63,10 @@ final class SandboxService {
         }
         #endif
         // The sandbox release this V2Mac is locked to: its release's pin.json (url: its files.json).
-        return SandboxPin(url: URL(string: "https://github.com/LordVersA/v2mac-sandbox/releases/download/v1.0.0/V2MacSandbox.zip")!,
-                          sha256: "2385dc465e42308c55e98fdd74d870574a1d630cab6523625b0e1ece4a25bcb4",
-                          executableSHA256: "8f8572d780f2bedd790281089ca13d2cb6321b09443b17f1e247fe8b26e4a1b7",
-                          size: 361876627, version: "1.0.0")
+        return SandboxPin(url: URL(string: "https://github.com/LordVersA/v2mac-sandbox/releases/download/v1.1.1/files.json")!,
+                          sha256: "77afdc492451273369a3d51594e19d97286222b76fbbc7c32a9ce0f613e3ccf1",
+                          executableSHA256: "1e44b583db24f56c68d321b576b92df6dc89c2ee11797e0bfd64a8788efc570d",
+                          size: 361877577, version: "1.1.1")
     }
 
     /// The entry sheet's Download size for an update: fetches the manifest and checks the installed files.
