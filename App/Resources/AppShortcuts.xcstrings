@@ -1,114 +1,228 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "Connect ${applicationName}": {
-      "extractionState": "extracted_with_value",
-      "localizations": {
-        "en": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Add to a ${applicationName} rule" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Add to a ${applicationName} rule"
+            ]
+          }
+        },
+        "fa" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "افزودن به یک قانون ${applicationName}"
+            ]
+          }
+        },
+        "ru" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Добавить в правило ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "添加到 ${applicationName} 规则"
+            ]
+          }
+        }
+      }
+    },
+    "Connect ${applicationName}" : {
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "Connect ${applicationName}"
             ]
           }
         },
-        "fa": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "fa" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "${applicationName} را وصل کن"
             ]
           }
         },
-        "ru": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "ru" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "Подключи ${applicationName}"
             ]
           }
         },
-        "zh-Hans": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "连接${applicationName}"
             ]
           }
         }
       }
     },
-    "Disconnect ${applicationName}": {
-      "extractionState": "extracted_with_value",
-      "localizations": {
-        "en": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+    "Connect ${applicationName} to ${server}" : {
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Connect ${applicationName} to ${server}",
+              "Use ${server} in ${applicationName}"
+            ]
+          }
+        },
+        "fa" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} را به ${server} وصل کن",
+              "از ${server} در ${applicationName} استفاده کن"
+            ]
+          }
+        },
+        "ru" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Подключи ${applicationName} к ${server}",
+              "Используй ${server} в ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "将${applicationName}连接到${server}",
+              "在${applicationName}中使用${server}"
+            ]
+          }
+        }
+      }
+    },
+    "Connect ${applicationName} to the fastest server" : {
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Connect ${applicationName} to the fastest server",
+              "Find the fastest ${applicationName} server"
+            ]
+          }
+        },
+        "fa" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName} را به سریع‌ترین سرور وصل کن",
+              "سریع‌ترین سرور ${applicationName} را پیدا کن"
+            ]
+          }
+        },
+        "ru" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Подключи ${applicationName} к самому быстрому серверу",
+              "Найди самый быстрый сервер ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "将${applicationName}连接到最快的服务器",
+              "查找最快的${applicationName}服务器"
+            ]
+          }
+        }
+      }
+    },
+    "Disconnect ${applicationName}" : {
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "Disconnect ${applicationName}"
             ]
           }
         },
-        "fa": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "fa" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "${applicationName} را قطع کن"
             ]
           }
         },
-        "ru": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "ru" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "Отключи ${applicationName}"
             ]
           }
         },
-        "zh-Hans": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "断开${applicationName}"
             ]
           }
         }
       }
     },
-    "Is ${applicationName} connected": {
-      "extractionState": "extracted_with_value",
-      "localizations": {
-        "en": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+    "Is ${applicationName} connected" : {
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "Is ${applicationName} connected",
               "${applicationName} status"
             ]
           }
         },
-        "fa": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "fa" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "آیا ${applicationName} وصل است",
               "وضعیت ${applicationName}"
             ]
           }
         },
-        "ru": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "ru" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "Подключён ли ${applicationName}",
               "Статус ${applicationName}"
             ]
           }
         },
-        "zh-Hans": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "${applicationName}连接了吗",
               "${applicationName}状态"
             ]
@@ -116,40 +230,39 @@
         }
       }
     },
-    "Turn ${applicationName} on or off": {
-      "extractionState": "extracted_with_value",
-      "localizations": {
-        "en": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+    "Turn ${applicationName} on or off" : {
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "Turn ${applicationName} on or off",
               "Toggle ${applicationName}"
             ]
           }
         },
-        "fa": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "fa" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "${applicationName} را روشن یا خاموش کن",
               "تغییر وضعیت ${applicationName}"
             ]
           }
         },
-        "ru": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "ru" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "Включи или выключи ${applicationName}",
               "Переключи ${applicationName}"
             ]
           }
         },
-        "zh-Hans": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "开关${applicationName}",
               "切换${applicationName}"
             ]
@@ -157,122 +270,42 @@
         }
       }
     },
-    "Connect ${applicationName} to ${server}": {
-      "localizations": {
-        "en": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "Connect ${applicationName} to ${server}",
-              "Use ${server} in ${applicationName}"
-            ]
-          }
-        },
-        "fa": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "${applicationName} را به ${server} وصل کن",
-              "از ${server} در ${applicationName} استفاده کن"
-            ]
-          }
-        },
-        "zh-Hans": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "将${applicationName}连接到${server}",
-              "在${applicationName}中使用${server}"
-            ]
-          }
-        },
-        "ru": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "Подключи ${applicationName} к ${server}",
-              "Используй ${server} в ${applicationName}"
-            ]
-          }
-        }
-      }
-    },
-    "Connect ${applicationName} to the fastest server": {
-      "localizations": {
-        "en": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "Connect ${applicationName} to the fastest server",
-              "Find the fastest ${applicationName} server"
-            ]
-          }
-        },
-        "fa": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "${applicationName} را به سریع‌ترین سرور وصل کن",
-              "سریع‌ترین سرور ${applicationName} را پیدا کن"
-            ]
-          }
-        },
-        "zh-Hans": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "将${applicationName}连接到最快的服务器",
-              "查找最快的${applicationName}服务器"
-            ]
-          }
-        },
-        "ru": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "Подключи ${applicationName} к самому быстрому серверу",
-              "Найди самый быстрый сервер ${applicationName}"
-            ]
-          }
-        }
-      }
-    },
-    "Update ${applicationName} subscriptions": {
-      "localizations": {
-        "en": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+    "Update ${applicationName} subscriptions" : {
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "Update ${applicationName} subscriptions"
             ]
           }
         },
-        "fa": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
+        "fa" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
               "اشتراک‌های ${applicationName} را به‌روز کن"
             ]
           }
         },
-        "zh-Hans": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "更新${applicationName}订阅"
+        "ru" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Обнови подписки ${applicationName}"
             ]
           }
         },
-        "ru": {
-          "stringSet": {
-            "state": "translated",
-            "values": [
-              "Обнови подписки ${applicationName}"
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "更新${applicationName}订阅"
             ]
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }
