@@ -101,6 +101,17 @@ final class RulesStore {
         draft = saved
     }
 
+    /// Items added from outside the window (Shortcuts): saved and applied at once, and added to the
+    /// draft too, so unapplied edits stay.
+    func addSaved(_ items: [Rule.Item], to id: UUID) -> Bool {
+        guard let index = saved.firstIndex(where: { $0.id == id }) else { return false }
+        saved[index].items += items.filter { !saved[index].items.contains($0) }
+        Prefs.rules = saved
+        if let d = draft.firstIndex(where: { $0.id == id }) { draft[d].items += items.filter { !draft[d].items.contains($0) } }
+        onApplied()
+        return true
+    }
+
     /// The saved list again, after a profile switch or a restore.
     func reload() {
         saved = Prefs.rules

@@ -133,6 +133,7 @@ struct V2MacShortcuts: AppShortcutsProvider {
                     shortTitle: "Connect to Server", systemImageName: "server.rack")
         AppShortcut(intent: ConnectToFastestIntent(), phrases: ["Connect \(.applicationName) to the fastest server", "Find the fastest \(.applicationName) server"],
                     shortTitle: "Connect to Fastest", systemImageName: "hare")
+        AppShortcut(intent: AddToRuleIntent(), phrases: ["Add to a \(.applicationName) rule"], shortTitle: "Add to Rule", systemImageName: "arrow.triangle.branch")
         AppShortcut(intent: UpdateSubscriptionsIntent(), phrases: ["Update \(.applicationName) subscriptions"],
                     shortTitle: "Update Subscriptions", systemImageName: "arrow.clockwise")
     }
@@ -298,5 +299,43 @@ struct GetExitIPIntent: AppIntent {
         }
         let place = [exit.city, exit.countryCode].compactMap { $0 }.joined(separator: ", ")
         return .result(value: exit.ip, dialog: place.isEmpty ? "\(exit.ip)" : "\(exit.ip), \(place)")
+    }
+}
+
+struct RuleEntity: AppEntity {
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Rule"
+    static let defaultQuery = RuleQuery()
+
+    let id: UUID
+    let name: String
+
+    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(name)") }
+}
+
+struct RuleQuery: EntityQuery {
+    func entities(for identifiers: [UUID]) async throws -> [RuleEntity] {
+        try await suggestedEntities().filter { identifiers.contains($0.id) }
+    }
+
+    @MainActor func suggestedEntities() async throws -> [RuleEntity] {
+        Prefs.rules.map { RuleEntity(id: $0.id, name: $0.name) }
+    }
+}
+
+/// Adds sites, addresses or apps to a saved rule and applies it at once (spec 8.6).
+struct AddToRuleIntent: AppIntent {
+    static let title: LocalizedStringResource = "Add to Rule"
+    static let description = IntentDescription("Adds sites, addresses or apps to one of your rules and applies it.")
+
+    @Parameter(title: "Items", description: "Domains, addresses, geosite: lists or app bundle ids, one per line.") var text: String
+    @Parameter(title: "Rule") var rule: RuleEntity
+
+    static var parameterSummary: some ParameterSummary { Summary("Add \(\.$text) to \(\.$rule)") }
+
+    @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
+        let items = Rule.Item.parse(text).items
+        guard !items.isEmpty else { return .result(dialog: "Nothing in that text can go in a rule.") }
+        guard AppDelegate.model?.rules.addSaved(items, to: rule.id) == true else { return .result(dialog: "That rule is no longer in V2Mac.") }
+        return .result(dialog: "Added to \(rule.name).")
     }
 }

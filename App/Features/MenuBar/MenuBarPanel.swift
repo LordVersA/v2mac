@@ -217,6 +217,7 @@ struct MenuBarPanel: View {
                 PanelCard {
                     exitRow
                     viaWarning
+                    FrontmostAppRow()
                     PanelRates(connection: connection)
                 }
             }
@@ -709,5 +710,31 @@ private struct SwitchRow: View {
         .buttonStyle(.plain)
         .animation(.easeOut(duration: 0.12), value: hovering)
         .onHover { hovering = $0 }
+    }
+}
+
+/// Spec 8.6: the app in front, where its traffic goes now, and Add to Rule.
+private struct FrontmostAppRow: View {
+    @Environment(AppModel.self) private var model
+    @State private var app = NSWorkspace.shared.frontmostApplication
+    @State private var answer: SearchAnswer?
+
+    var body: some View {
+        if let app, app.bundleIdentifier != Bundle.main.bundleIdentifier, let name = app.localizedName, let url = app.bundleURL {
+            HStack(spacing: 8) {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 18, height: 18)
+                Text(answer.map { "\(name) → \($0.destination)" } ?? name).font(.callout).lineLimit(1)
+                Spacer()
+                AddToRuleMenu(title: "Add to Rule", items: [.app(app.bundleIdentifier ?? url.path)], name: name)
+                    .labelStyle(.titleOnly)
+                    .fixedSize()
+                    .controlSize(.small)
+            }
+            .help(answer?.by ?? "")
+            .task(id: url) {
+                await model.ruleCatalog.load()
+                answer = await SearchAnswer.find(name, model: model)
+            }
+        }
     }
 }
