@@ -85,7 +85,7 @@ broad Proxy rules).
 - [x] Turn the list into Xray rules in the same order.
 - [x] Move the existing three lists into the new list once (Block, Proxy, Direct order), so
       nothing changes for current users.
-- [x] Update the Rule Builder to add rules to the ordered list.
+- [x] Update the Rule Builder to add rules to the ordered list (since replaced by the Rules window, Phase 12).
 
 **Done when:** the order of v7.1 can be reproduced exactly.
 

@@ -657,15 +657,43 @@ Hysteria 2 server: both connect with the setting on, Trojan fails with it off.
 
 ---
 
-### 8.6 Custom rules
+### 8.6 Rules
 
-One ordered list in Settings → Routing (`CustomRule`, stored as JSON under
-`customRuleList`). Each rule has a name, an on/off switch, an action (Proxy,
-Direct or Block), apps and hosts. Rules are checked top to bottom and the first
-match wins, as in Proxifier; a rule with apps and hosts needs both, an empty
-field matches everything. The Block, Proxy and Direct text lists of earlier
-versions become three rules in that order on first launch (and when an old
-backup is restored), so nothing changes.
+One ordered list (`Rule`, stored as `{"version":2,"rules":[…]}` under `rules`),
+edited in the Rules window. Rules are checked top to bottom and the first match
+wins. Each rule has a name, an on/off switch, an action and items:
+
+- **Action:** Proxy (the connected server), **Via** a chosen server or a group's
+  fastest live server, Direct or Block.
+- **Items** are OR: apps, domains (and subdomains), exact names, keywords,
+  regular expressions, IP addresses and ranges, countries and service lists
+  (`geosite:`/`geoip:`). A rule matches when any item does.
+- **Only when** is AND with every item: ports (`443`, `8000-8100`), TCP or UDP,
+  sniffed protocol (TLS, HTTP, QUIC, BitTorrent) and apps. A rule with no items
+  matches all traffic that meets its conditions.
+
+`Rule.xrayRules` turns one rule into adjacent Xray rules (process, domain, ip)
+that each carry the conditions, all with `ruleTag` `rule-<uuid>-<part>`, so the
+access log and `RuleTester` can name the rule. Invalid ports, or "Only when" apps
+that match nothing installed, leave the rule out. A country item gives
+`geoip:<cc>`, `domain:<tld>` (`uk` for GB) and the site lists the files have.
+
+**Migration.** The 1.1 list (`customRuleList`, `CustomRule`) is read once into
+v2: hosts become items; apps become items, or "Only when" apps when the rule
+also had hosts (a 1.1 rule with both needed both). The old key is never written,
+so 1.1 still finds its rules after a downgrade. Rule profiles move the same way
+to `ruleProfilesV2`. Backups carry both keys.
+
+**Via** (`Via.swift`). Each Via target gets its own outbounds: a server's
+outbound (with its own dialer chain), or one per live member of a group plus an
+Xray balancer `via-g<n>` with `leastPing` and an observatory probing every 30 s.
+Every balancer has a `fallbackTag`, because without one Xray sends an all-dead
+balancer's traffic to the first outbound. "If its servers fail, use the current
+server" sets it to `proxy`; off (the default) it is `block`, so the traffic
+fails closed. A target no longer on this Mac blocks (or uses Proxy when falling
+back). The kill switch allows the Via servers' addresses. `StatsClient` reads
+the observatory; when a target's members all fail the rule shows a warning and
+the menu bar panel says so.
 
 Hosts are one entry per line (commas, spaces and `;` also separate entries;
 `#`, `//` and `!` start a comment). `RuleMatchers` turns them into Xray
@@ -706,22 +734,27 @@ dotless names) always go direct, ahead of the rules. **Block QUIC (UDP 443)**
 (`blockQUIC`, off by default) adds a first rule sending UDP 443 to Block, so
 browsers fall back to TCP and their host names reach the rules.
 
+Local names and private addresses always go direct, ahead of the rules
+(built-in "Local network"). **Block QUIC (UDP 443)** (`blockQUIC`, off by default)
+adds a first rule sending UDP 443 to Block, so browsers fall back to TCP and their
+host names reach the rules.
+
 **Import Rules…** reads the file with `RuleImport`, which tells the formats apart:
 Proxifier (below); Clash / Mihomo `rules:` and Shadowrocket / Surge `[Rule]` lines
 (`TYPE,value,POLICY`: `DIRECT` → Direct, `REJECT*` → Block, any other policy →
 Proxy; neighbouring lines with the same policy become one rule named after it;
-`MATCH`/`FINAL` is left to the routing mode; `RULE-SET`, logic and port rules are
-skipped and listed); sing-box `route.rules` (domain, suffix, keyword, regex, CIDR,
-geosite, geoip, process fields; the outbound's type gives the action, `reject`
+`MATCH`/`FINAL` is left to the routing mode; `DST-PORT` and `NETWORK` lines and `AND`
+of plain conditions become "Only when"; `RULE-SET`, `OR` and `NOT` are skipped and listed); sing-box `route.rules` (domain, suffix, keyword, regex, CIDR,
+geosite, geoip, process fields; port, port_range, network and protocol become "Only when"; the outbound's type gives the action, `reject`
 blocks; rule sets skipped); Xray / v2rayN / v2rayNG rule JSON (`outboundTag`
 `direct`, `block` or anything else → Proxy, with `remarks` and `enabled` kept).
 
 A Proxifier `.ppx` file (`ProxifierProfile`): each
 rule to a proxy on 127.0.0.1 or localhost becomes a Proxy rule, Direct and
-Block rules keep their action, `enabled` is kept, rules to other proxies or
+Block rules keep their action, `enabled` is kept, `<Ports>` becomes "Only when" ports, rules to other proxies or
 chains are skipped and named, the default rule is left to the routing mode,
 `ExclusionList` becomes a Direct rule at the top and `BlockUDP443` turns on
-Block QUIC. Imported rules are a draft until Apply.
+Block QUIC. Imported rules are a draft until Apply. Export writes the v2 JSON, which Import reads back.
 
 The rules come before the mode's own rules. In Global mode, IP
 entries switch `domainStrategy` to `IPOnDemand` with the DoH `dns` section of
@@ -746,74 +779,63 @@ the custom and region rules, replacing the mode's own default and a full
 config's imported fallback. "Follow mode" leaves them as they are; Direct mode
 ignores the setting.
 
-**Rule Editor.** A window (`rule-editor`), opened from the glass button at the
-foot of the main window's sidebar (its name slides out on hover) or from
-Settings → Routing. The toolbar switches between Simple and Advanced and holds
-the rule profile menu.
+The rules come before the mode's own rules. In Global mode, IP
+entries switch `domainStrategy` to `IPOnDemand` with the DoH `dns` section of
+Bypass mode, so later domain rules or a catch-all cannot preempt an IP rule.
+Direct mode uses only Block rules. Full configs (8.2) use app routing first,
+then their imported routing as fallback, with Via outbounds and balancers added
+and the config's own observatory merged. Apply restarts a running core.
 
-- Simple: a routing library with separate Apps and Hosts views, and a Discovered
-  inbox for connections no rule covers yet. Discoveries never fill the saved lists.
-  Search and an All/Proxy/Direct/Block route filter narrow the saved groups; the inbox
-  separates apps from hosts. Rows are grouped by name (`EntryGroups`: a domain's
-  registered name, a bundle id's vendor, a longer name folded under a shorter one
-  it contains), initially collapsed. Expand a group to adjust individual members.
-  Each row has a compact route menu with Proxy, Direct, Block and Use Routing Mode.
-  Multi-selection and Select All apply the footer's action to the selected rows.
-  Changing the view, search or route filter clears selection.
-  Add opens a sheet with a searchable, alphabetized installed-app checklist or a
-  domain-per-line field, and a route choice. Invalid domains, IP addresses and
-  technical matchers cannot be saved through that field; Advanced handles those.
-  When Apple Intelligence is available (`SystemLanguageModel.default.isAvailable`), the
-  domain field has a "Suggest Domains" request: the on-device model (Foundation
-  Models, guided generation into `SuggestedDomains`, at most 20) names the domains the
-  described services use. Suggestions that are not plain domains are dropped, the rest
-  are added to the field once each, and nothing is saved until the user clicks Add.
-  App rules' TUN limitation is stated beside the Apps list and in the add sheet.
-  Import opens a file chooser and reviews `RuleImport`'s rules, skipped
-  names and Block QUIC setting before appending to the active profile. Existing
-  rules keep priority; cancellation leaves the list untouched, errors show an alert.
-  Combined app-and-host rules, disabled rules and addresses remain in Advanced.
-  Each saved row carries its source rule badge; clicking it opens Advanced at that
-  rule (`AppModel.focusedRule`). The sidebar links to Advanced and counts address entries.
-  A new group's route adds `*name*`; a saved group's route moves its members.
-  `SimpleRules.move` removes those entries from rules with only apps or hosts and
-  adds them to one of six fixed rules at the top (hosts, then apps, for Proxy,
-  Direct and Block). Changes save immediately and restart a running core once,
-  1.5 s after the last edit. Import applies once after review.
-  The core always writes access logs; they reach Logs only with Log connections
-  enabled. `ConnectionWatcher` records discoveries while this window is open;
-  process and traffic attribution follow the Connections monitor (section 12.10).
-  Icons come from this Mac only (`EntryIcons`): an app entry's own icon (by path,
-  `Name.app`, bundle id or `*word*`), a gear for daemons and tools, the Apple logo
-  for Apple's domains, a site's icon from an installed app of the same name or
-  vendor, and a globe otherwise. Nothing is fetched, so the list never leaves the Mac.
-- Advanced: the ordered list, as in Settings.
-- Profiles (`RuleProfile`, `ruleProfiles` and `activeRuleProfile`): named rule
-  lists. The active one's rules are `customRuleList`; choosing another saves the
-  current list into the active profile, loads the chosen one and restarts a
-  running core. New, Duplicate, Rename and Delete (not the last one).
+With System Proxy off, the mixed proxy inbound goes to `proxy` (or `direct`,
+per Settings → Proxy → Apps using the proxy port; "Follow rules" turns this off)
+before custom and region rules in Global and Bypass modes (`proxyClientsRoute`).
+With System Proxy on this is disabled: manual and system proxy traffic share the
+inbound and cannot be told apart.
 
-**Rule Builder.** A window (`rule-builder`, opened from the Custom rules
-section) writes a rule in three steps: the action (Proxy, Direct, Block, or a
-common setup that fills in the rest); what to match; a review. What to match
-comes from three panes:
+"Everything else" (`unmatchedRoute`) can send everything no rule matched to
+Proxy, Direct or Block with one catch-all after the custom and region rules,
+replacing the mode's own default and a full config's imported fallback. "Follow
+mode" leaves them as they are; Direct mode ignores it.
 
-- Countries: every two-letter list in `geoip.dat` (since Xray 26.10.21 the bundled
-  file has only CN, IR and RU), searchable by local or
-  English name and code, and on a map (a click on a country adds or removes it,
-  found by MapKit reverse geocoding). Each country gives `geoip:<cc>`,
-  `domain:<tld>` (`uk` for GB) and `geosite:category-<cc>` / `geosite:<cc>`
-  where the site file has them; each of the three can be turned off.
-- Services: popular services as tiles, each mapped to the lists the files
-  contain, and every list of `geosite.dat` plus the non-country lists of
-  `geoip.dat`, searchable. List names are read from the files themselves
-  (`GeoTags`), so a rule never names a list the core lacks.
-- Domains & IPs: free text in the formats above.
+**Rules window** (`rules`, `RulesWindow`), opened from the sidebar's glass
+button, Settings → Routing ("Open Rules…"), the Connections window and the menu
+bar. Notifications from 1.1 that name `rule-editor` or `rule-builder` open it.
 
-The review shows each entry and marks the ones enabled rules with the same
-action already have. Add Rules saves the new entries as one rule named
-"Rule Builder, <date>" (Block rules at the top of the list, the others at the
-bottom) and restarts a running core.
+- Sidebar: built-ins before the rules (Local network, Block QUIC, Apps using the
+  proxy port), the user's rules (drag to reorder, switch, warnings badge), then
+  the routing mode and Everything else, and Discovered. A filter by action.
+- Search filters the list and answers where a host, URL, address or app goes:
+  `RuleTester` follows the compiled routing (domainStrategy included, geo lists
+  read from the files with `GeoLists`) and names the rule, built-in or mode, and
+  the item that matched.
+- Detail: name, switch, action menu (Proxy · Via ▸ group ▸ fastest or a server ·
+  Direct · Block), the fallback switch and live server count for Via, one smart
+  field for every item kind (installed apps, services with entry counts,
+  countries, the text as its detected kind; pasted lines in any import format;
+  on-device "Suggest domains" when Apple Intelligence is available), tokens
+  grouped by kind with a menu to read a domain as exact/keyword/regex, an app
+  token's popover listing what it matches on this Mac, Browse (app checklist,
+  service tiles, country map) and "Only when".
+- Discovered: apps and hosts seen while this window or Connections is open that
+  no rule or built-in covers, a host offered as its registered domain. "Add to"
+  (recent rules first), New Rule, Ignore (`ignoredDiscoveries`), and drag onto a
+  rule.
+- Edits are a draft with undo; Apply (⌘S) saves and restarts a running core
+  once; closing with changes asks to Apply, Cancel or Discard.
+- New Rule menu: empty, or a template (AI services, developer tools, Apple
+  services, social, streaming, region sites direct, torrents direct, ads), each
+  using only lists the installed files have.
+- Profiles: named rule lists; switching needs no unapplied changes. New,
+  Duplicate, Rename, Delete (not the last).
+- Tidy Up (`TidyUp`): merge an app-only and a host-only rule with the same
+  action into one, drop rules an earlier rule fully covers, collapse spellings
+  of one app, drop repeated or local-network entries. Each is a checkbox; only
+  collapsing spellings can change what matches, and the sheet says so.
+
+The Connections window's row menu offers Add App/Host to Rule ▸ and Show Rule
+(the tester names the rule from the rules the connection opened under). The
+menu bar panel shows the frontmost app, where it goes and Add to Rule. The
+Shortcuts action "Add to Rule" adds items to a saved rule and applies it.
 
 ## 9. Core process management
 
@@ -1725,7 +1747,7 @@ placed from the system's `zone.tab` (`CountryPlaces`). Nothing is asked outside
 the Mac, so a proxy-mode `.com` site has no arc.
 
 A `connections` window, opened from the second glass button at the foot of the
-sidebar (beside the Rule Editor's), lists every connection through the core,
+sidebar (beside the Rules button), lists every connection through the core,
 sorted by a click on any column (newest first until changed; the choice is kept across launches as `connectionsSort`): the app (icon and name), the target `host:port`, the time it has
 been open (a green dot) or how long it lasted, the outbound the core chose
 (tinted Proxy, Direct or Block) with the custom rule that most likely sent it
@@ -1736,7 +1758,7 @@ Connections that skip rules through the proxy-port exception show an orange
 "App's proxy setting" label. Each row keeps the mode and custom rules from its
 running configuration, so later edits do not relabel its history. Manually
 proxied connections remain in Connections but do not add discovered apps or
-hosts to the rule editor; existing user rules are preserved. Below it, a log of
+hosts to Discovered; existing user rules are preserved. Below it, a log of
 opens and closes with the same details. The toolbar filters All or Open,
 searches apps and targets, and clears closed rows and the log; the subtitle
 sums the open connections.
@@ -1757,18 +1779,19 @@ Expanding a group stays stable as its connections update. No grouping retains
 individual rows without group headers. The event log stays below the table.
 
 Right-clicking a connection opens a menu built only when it opens. Under the app's name:
-open the app, show it (or the executable of a command-line tool) in Finder, and Route
-This App. Under the target: Open in Browser (ports 443 and 80 only), Route This Host
-and Go to Configuration. Route This App/Host is the simple editor's move (Proxy,
-Direct, Block or Use the Routing Mode, ticked where the entry is now) and reconnects.
+open the app, show it (or the executable of a command-line tool) in Finder, and Add
+App to Rule ▸. Under the target: Open in Browser (ports 443 and 80 only), Add Host to
+Rule ▸ and Show Rule. Add to Rule lists the rules (recent first) and New Rule…; it
+edits the Rules window's draft and opens it at that rule. Show Rule opens the rule
+that matched, or the routing mode.
 Details lists every known field (app, target, IP address, status, opened and closed
 times, duration, bytes, route, rule, inbound and outbound tags, source port, process,
 pid, executable and app paths); choosing one copies its value. Copy has the target,
-host, IP address, paths, pid and All Details as text. A group row offers Route and
+host, IP address, paths, pid and All Details as text. A group row offers Add to Rule and
 Copy Name; several selected rows offer Copy Targets and Copy Details.
 
-`ConnectionWatcher` records only while this window or the rule editor's Simple
-mode is open (`watch()` / `unwatch()`). Access log lines from the `mixed-in` and
+`ConnectionWatcher` records only while this window or the Rules window
+is open (`watch()` / `unwatch()`). Access log lines from the `mixed-in` and
 `tun-in` inbounds make the rows (the core's own DNS lookups, and those TUN mode hands to its resolver, are left out). Once a
 second it runs `nettop` (`ProxyFlow`, no privileges needed) for every TCP
 connection to the proxy port: its source port links it to a row and gives the
@@ -1855,7 +1878,7 @@ is in one list or the other).
 | | Allow connections from LAN (shows the Mac's LAN address; warning when it is on and there are no credentials) | Off |
 | Routing | Mode: Global / Bypass regions / Direct / Rules only | Global |
 | | Bypass regions list: enable, status, Update Now, auto-update interval | None enabled |
-| | Custom rules: Proxy / Direct / Block lists, applied with a button, and the Rule Builder (section 8.6) | Empty |
+| | Open Rules… (the rules themselves are in the Rules window, section 8.6) | Empty |
 | Subscriptions | Auto-update subscriptions | On |
 | | Auto-update route: Without proxy / Via proxy | Without proxy |
 | | Default interval when the provider sends none | 12 h |

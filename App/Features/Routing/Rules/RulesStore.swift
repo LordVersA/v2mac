@@ -112,6 +112,14 @@ final class RulesStore {
         return true
     }
 
+    #if DEBUG
+    /// `-debugRulesFile <path>`: made-up rules for screenshots, shown as saved but never written.
+    func showForDebug(_ rules: [Rule]) {
+        saved = rules
+        draft = rules
+    }
+    #endif
+
     /// The saved list again, after a profile switch or a restore.
     func reload() {
         saved = Prefs.rules

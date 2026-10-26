@@ -54,7 +54,7 @@ brew install --cask lordversa/tap/v2mac
 - **اتصال:** تست تأخیر واقعی و سرعت، انتخاب خودکار سرور، تعویض زنده بدون ری‌استارت، کشور خروجی در نوار منو.
 - **کل مک:** TUN، پراکسی سیستم و کیل‌سوییچ مبتنی بر pf.
 - **مسیریابی:** Global، Bypass regions (ایران، چین، روسیه)، Rules Only و Direct، به‌همراه قوانین Proxy / Direct / Block بر اساس سایت و برنامه.
-- **جایگزین Proxifier:** قانون برای هر برنامه، وارد کردن پروفایل `.ppx`، Rule Builder تصویری و نمای زندهٔ Connections.
+- **جایگزین Proxifier:** قانون برای هر برنامه با شرط‌های «فقط وقتی»، قانون از طریق سرور یا گروهی دیگر، وارد کردن پروفایل `.ppx` و نمای زندهٔ Connections.
 - **Cloudflare WARP:** به‌عنوان سرور مستقل یا زنجیرشده پشت سرور شما.
 - **سندباکس امن (بتا):** اجرای برنامه‌ها در ماشین‌های مجازی کوچک، هر کدام با سرور خودش و بدون نشت در صورت قطعی؛ هر برنامه مثل یک برنامهٔ جداگانهٔ مک. فقط با اولین باز کردن دانلود می‌شود.
 - **macOS:** پنل نوار منو، Shortcuts، Siri، Spotlight، Control Center، ویجت دسکتاپ، پیشنهاد دامنه با Apple Intelligence، Touch ID، اعلان‌ها، پشتیبان‌گیری و بازگردانی. انگلیسی، فارسی، چینی و روسی.
@@ -67,11 +67,11 @@ brew install --cask lordversa/tap/v2mac
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="ویرایشگر قوانین، نمای ساده" width="380"><br><sub>قانون برای هر برنامه و سایت</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="قانون‌ها" width="380"><br><sub>قانون برای هر برنامه و سایت</sub></td>
     <td align="center"><img src="docs/images/screenshots/connections.png" alt="پنجرهٔ Connections" width="380"><br><sub>هر اتصال و قانون پشت آن</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="نقشهٔ جهان در Rule Builder" width="380"><br><sub>Rule Builder</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="نقشهٔ کشورها" width="380"><br><sub>انتخاب کشور روی نقشه</sub></td>
     <td align="center"><img src="docs/images/screenshots/proxifier-import.png" alt="وارد کردن پروفایل Proxifier" width="380"><br><sub>وارد کردن از Proxifier</sub></td>
   </tr>
 </table>
@@ -87,7 +87,7 @@ brew install --cask lordversa/tap/v2mac
 | [نصب](https://github.com/LordVersA/v2mac/wiki/fa-Installation) | Homebrew، DMG، اولین اجرا، به‌روزرسانی |
 | [سرورها و اشتراک‌ها](https://github.com/LordVersA/v2mac/wiki/fa-Servers-and-Subscriptions) | افزودن، به‌روزرسانی، ویرایش، تست تأخیر |
 | [اتصال](https://github.com/LordVersA/v2mac/wiki/fa-Connecting) | TUN، پراکسی سیستم، کیل‌سوییچ، بررسی خروجی، WARP |
-| [مسیریابی](https://github.com/LordVersA/v2mac/wiki/fa-Routing) | حالت‌ها، قوانین سفارشی، وارد کردن از Proxifier، Rule Builder |
+| [مسیریابی](https://github.com/LordVersA/v2mac/wiki/fa-Routing) | حالت‌ها، پنجرهٔ Rules، سرورهای Via، وارد کردن از Proxifier |
 | [اتصال‌ها](https://github.com/LordVersA/v2mac/wiki/fa-Connections) | فهرست زندهٔ اتصال‌ها و نقشه |
 | [سندباکس امن](https://github.com/LordVersA/v2mac/wiki/fa-Sandbox) | ماشین‌های مجازی کوچک، برنامه‌های سندباکس، خروجی‌ها، فروشگاه |
 | [نوار منو و میان‌برها](https://github.com/LordVersA/v2mac/wiki/fa-Menu-Bar-and-Shortcuts) | پنل، صفحه‌کلید، Shortcuts، اعلان‌ها |

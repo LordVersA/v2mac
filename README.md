@@ -48,7 +48,7 @@ Or download the DMG from the [latest release](https://github.com/LordVersA/v2mac
 - **Connection:** real-delay and speed tests, automatic server selection, live switching without a restart, exit country in the menu bar.
 - **Whole-Mac modes:** TUN, system proxy and a pf-based kill switch.
 - **Routing:** Global, Bypass regions (Iran, China, Russia), Rules Only and Direct, plus Proxy / Direct / Block rules by site and by app.
-- **Proxifier alternative:** per-app rules, `.ppx` profile import, a visual Rule Builder and a live Connections view.
+- **Proxifier alternative:** per-app rules with "Only when" conditions, rules via another server or group, `.ppx` profile import and a live Connections view.
 - **Cloudflare WARP:** as its own server or chained behind yours.
 - **Secure Sandbox (beta):** run apps in mini VMs, each with its own server and fail-closed, every app as its own Mac app. Downloaded only when you first open it.
 - **macOS:** menu bar panel, Shortcuts, Siri, Spotlight, Control Center, a desktop widget, Apple Intelligence domain suggestions, Touch ID, notifications, backup and restore. English, Persian, Chinese and Russian.
@@ -59,11 +59,11 @@ Or download the DMG from the [latest release](https://github.com/LordVersA/v2mac
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="Rule Editor, Simple view" width="380"><br><sub>Per-app and per-site rules</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="Rules" width="380"><br><sub>Per-app and per-site rules</sub></td>
     <td align="center"><img src="docs/images/screenshots/connections.png" alt="Connections window" width="380"><br><sub>Every connection and the rule behind it</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="Rule Builder world map" width="380"><br><sub>Rule Builder</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="Country map" width="380"><br><sub>Countries on the map</sub></td>
     <td align="center"><img src="docs/images/screenshots/proxifier-import.png" alt="Proxifier profile import" width="380"><br><sub>Proxifier import</sub></td>
   </tr>
 </table>
@@ -77,7 +77,7 @@ The **[V2Mac Wiki](https://github.com/LordVersA/v2mac/wiki)** covers everything 
 | [Installation](https://github.com/LordVersA/v2mac/wiki/Installation) | Homebrew, DMG, first launch, updates |
 | [Servers and Subscriptions](https://github.com/LordVersA/v2mac/wiki/Servers-and-Subscriptions) | Adding, updating, editing, latency tests |
 | [Connecting](https://github.com/LordVersA/v2mac/wiki/Connecting) | TUN, system proxy, kill switch, exit check, WARP |
-| [Routing](https://github.com/LordVersA/v2mac/wiki/Routing) | Modes, custom rules, Proxifier import, Rule Builder |
+| [Routing](https://github.com/LordVersA/v2mac/wiki/Routing) | Modes, the Rules window, Via servers, Proxifier import |
 | [Connections](https://github.com/LordVersA/v2mac/wiki/Connections) | Live connection list and map |
 | [Secure Sandbox](https://github.com/LordVersA/v2mac/wiki/Sandbox) | Mini VMs, sandbox apps, exits, store |
 | [Menu Bar and Shortcuts](https://github.com/LordVersA/v2mac/wiki/Menu-Bar-and-Shortcuts) | Panel, keyboard, Shortcuts, notifications |

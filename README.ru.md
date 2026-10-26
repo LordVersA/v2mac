@@ -48,7 +48,7 @@ brew install --cask lordversa/tap/v2mac
 - **Подключение:** тесты реальной задержки и скорости, автовыбор сервера, смена сервера без перезапуска, страна выхода в строке меню.
 - **Весь Mac:** TUN, системный прокси и kill switch на основе pf.
 - **Маршрутизация:** Global, Bypass regions (Иран, Китай, Россия), Rules Only и Direct, плюс правила Proxy / Direct / Block по сайтам и приложениям.
-- **Замена Proxifier:** правила для приложений, импорт профилей `.ppx`, визуальный Rule Builder и живой список соединений.
+- **Замена Proxifier:** правила для приложений с условиями «Только когда», правила через другой сервер или группу, импорт профилей `.ppx` и живой список соединений.
 - **Cloudflare WARP:** как отдельный сервер или в цепочке за вашим.
 - **Безопасная песочница (бета):** приложения в мини-ВМ, у каждой свой сервер и без утечек при обрыве; каждое приложение — отдельное приложение Mac. Скачивается только при первом открытии.
 - **macOS:** панель в строке меню, Команды, Siri, Spotlight, Пункт управления, виджет на рабочем столе, подсказки доменов Apple Intelligence, Touch ID, уведомления, резервное копирование. Английский, персидский, китайский и русский.
@@ -59,11 +59,11 @@ brew install --cask lordversa/tap/v2mac
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="Редактор правил, простой вид" width="380"><br><sub>Правила для приложений и сайтов</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="Правила" width="380"><br><sub>Правила для приложений и сайтов</sub></td>
     <td align="center"><img src="docs/images/screenshots/connections.png" alt="Окно Connections" width="380"><br><sub>Каждое соединение и его правило</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="Карта мира в Rule Builder" width="380"><br><sub>Rule Builder</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="Карта стран" width="380"><br><sub>Страны на карте</sub></td>
     <td align="center"><img src="docs/images/screenshots/proxifier-import.png" alt="Импорт профиля Proxifier" width="380"><br><sub>Импорт из Proxifier</sub></td>
   </tr>
 </table>
@@ -77,7 +77,7 @@ brew install --cask lordversa/tap/v2mac
 | [Установка](https://github.com/LordVersA/v2mac/wiki/ru-Installation) | Homebrew, DMG, первый запуск, обновления |
 | [Серверы и подписки](https://github.com/LordVersA/v2mac/wiki/ru-Servers-and-Subscriptions) | Добавление, обновление, редактирование, тесты задержки |
 | [Подключение](https://github.com/LordVersA/v2mac/wiki/ru-Connecting) | TUN, системный прокси, kill switch, проверка выхода, WARP |
-| [Маршрутизация](https://github.com/LordVersA/v2mac/wiki/ru-Routing) | Режимы, свои правила, импорт из Proxifier, Rule Builder |
+| [Маршрутизация](https://github.com/LordVersA/v2mac/wiki/ru-Routing) | Режимы, окно «Правила», серверы Via, импорт из Proxifier |
 | [Соединения](https://github.com/LordVersA/v2mac/wiki/ru-Connections) | Живой список соединений и карта |
 | [Безопасная песочница](https://github.com/LordVersA/v2mac/wiki/ru-Sandbox) | Мини-ВМ, приложения песочницы, выходы, магазин |
 | [Строка меню и быстрые команды](https://github.com/LordVersA/v2mac/wiki/ru-Menu-Bar-and-Shortcuts) | Панель, клавиатура, Команды, уведомления |

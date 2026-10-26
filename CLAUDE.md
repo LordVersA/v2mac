@@ -78,11 +78,10 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
     `~/Library/Developer/Xcode/DerivedData/v2mac-*/Build/Products/Debug/V2MacDev.app/Contents/MacOS/V2MacDev -debugConnect YES`
   - `-debugEditServer new|<row>|save` (with demo data) opens the server editor, or runs a save;
     `-debugEditProtocol <protocol>` and `-debugEditorHeight <points>` show a whole form in a snapshot.
-  - `-debugWindowRequest <settings tab>|main|rule-builder` opens that window after 2 seconds (also with demo
+  - `-debugWindowRequest <settings tab>|main|rules|connections` opens that window after 2 seconds (also with demo
     data), so a snapshot can show a settings tab: `-debugWindowRequest about`.
-    With `rule-editor`, `-debugFocusRule <part of a rule name>` shows Advanced lit up at that rule.
-    With `rule-builder`, `-debugRuleBuilder <step>[:<source>]` (`targets:countries`, `review`) shows a step.
-    With `rule-editor`, `-debugProxifierImport <path>` opens the import review on that file (any format `RuleImport` reads).
+    With `rules`, `-debugSelectRule <part of a rule name>` shows that rule, and `-debugRulesFile <path>`
+    shows made-up v2 rules from that file without saving them, so no real rule appears in a screenshot.
     With `connection`, `-debugFragmentTuner YES` opens Find Settings and prints the result.
   - `-debugSandbox install|boot|stop|probe|update|remove` with `-debugSandboxPin <pin.json>` (from `../sandbox`,
     `Scripts/package.sh <url of files.json>`, served with e.g. `python3 -m http.server` in `../sandbox/out/release`) drives

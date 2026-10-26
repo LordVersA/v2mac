@@ -48,7 +48,7 @@ brew install --cask lordversa/tap/v2mac
 - **连接：** 真实延迟和速度测试、自动选择服务器、无需重启的实时切换、菜单栏显示出口国家。
 - **全局模式：** TUN、系统代理和基于 pf 的 Kill Switch。
 - **路由：** Global、Bypass regions（伊朗、中国、俄罗斯）、Rules Only 和 Direct，以及按网站和应用的 Proxy / Direct / Block 规则。
-- **Proxifier 替代品：** 按应用分流、导入 `.ppx` 配置、可视化 Rule Builder 和实时连接视图。
+- **Proxifier 替代品：** 按应用分流并支持“仅当”条件、经由其他服务器或分组的规则、导入 `.ppx` 配置和实时连接视图。
 - **Cloudflare WARP：** 作为独立服务器或串接在你的服务器之后。
 - **安全沙盒（测试版）：** 在迷你虚拟机中运行应用，每个虚拟机使用自己的服务器，断线即断网，每个应用都是独立的 Mac 应用。仅在首次打开时下载。
 - **macOS 集成：** 菜单栏面板、快捷指令、Siri、Spotlight、控制中心、桌面小组件、Apple Intelligence 域名建议、Touch ID、通知、备份与恢复。支持英语、波斯语、中文和俄语。
@@ -59,11 +59,11 @@ brew install --cask lordversa/tap/v2mac
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="规则编辑器简单视图" width="380"><br><sub>按应用和网站分流</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-editor-simple.png" alt="规则" width="380"><br><sub>按应用和网站分流</sub></td>
     <td align="center"><img src="docs/images/screenshots/connections.png" alt="连接窗口" width="380"><br><sub>每个连接及其规则</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="Rule Builder 世界地图" width="380"><br><sub>Rule Builder</sub></td>
+    <td align="center"><img src="docs/images/screenshots/rule-builder-countries.png" alt="国家地图" width="380"><br><sub>在地图上选择国家</sub></td>
     <td align="center"><img src="docs/images/screenshots/proxifier-import.png" alt="导入 Proxifier 配置" width="380"><br><sub>导入 Proxifier</sub></td>
   </tr>
 </table>
@@ -77,7 +77,7 @@ brew install --cask lordversa/tap/v2mac
 | [安装](https://github.com/LordVersA/v2mac/wiki/zh-Installation) | Homebrew、DMG、首次启动、更新 |
 | [服务器与订阅](https://github.com/LordVersA/v2mac/wiki/zh-Servers-and-Subscriptions) | 添加、更新、编辑、延迟测试 |
 | [连接](https://github.com/LordVersA/v2mac/wiki/zh-Connecting) | TUN、系统代理、Kill Switch、出口检测、WARP |
-| [路由](https://github.com/LordVersA/v2mac/wiki/zh-Routing) | 模式、自定义规则、导入 Proxifier、Rule Builder |
+| [路由](https://github.com/LordVersA/v2mac/wiki/zh-Routing) | 模式、规则窗口、Via 服务器、导入 Proxifier |
 | [连接列表](https://github.com/LordVersA/v2mac/wiki/zh-Connections) | 实时连接列表和地图 |
 | [安全沙盒](https://github.com/LordVersA/v2mac/wiki/zh-Sandbox) | 迷你虚拟机、沙盒应用、出口、商店 |
 | [菜单栏与快捷方式](https://github.com/LordVersA/v2mac/wiki/zh-Menu-Bar-and-Shortcuts) | 面板、键盘、快捷指令、通知 |

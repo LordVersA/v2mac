@@ -999,6 +999,15 @@ final class AppModel {
         guard let target = UserDefaults.standard.string(forKey: "debugWindowRequest") else { return }
         Task {
             try? await Task.sleep(for: .seconds(2))
+            if let path = UserDefaults.standard.string(forKey: "debugRulesFile"),
+               let text = try? String(contentsOfFile: path, encoding: .utf8), let list = Rule.decode(text) {
+                rules.showForDebug(list)
+            }
+            // `-debugSelectRule <part of a name>` shows that rule's detail.
+            if let name = UserDefaults.standard.string(forKey: "debugSelectRule"),
+               let rule = rules.draft.first(where: { $0.name.localizedCaseInsensitiveContains(name) }) {
+                rules.selection = [.rule(rule.id)]
+            }
             windowRequest = WindowRequest(code: ["main", RulesWindow.windowID, ConnectionsView.windowID].contains(target) ? target : "settings:\(target)")
             try? await Task.sleep(for: .seconds(1))
             print("[v2mac-debug] window request handled: \(windowRequest == nil), settings tab \(settingsTab.rawValue)")
