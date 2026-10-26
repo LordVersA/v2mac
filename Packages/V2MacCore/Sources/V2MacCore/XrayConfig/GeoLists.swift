@@ -116,6 +116,12 @@ public struct GeoLists: Sendable {
 
     public var isEmpty: Bool { sites.isEmpty && ips.isEmpty }
 
+    /// Whether the loaded files contain the list named by a rule entry.
+    public func containsList(_ entry: String) -> Bool {
+        guard let key = Self.key(entry) else { return false }
+        return sites[key] != nil || ips[key] != nil || v6Lists[key] != nil
+    }
+
     static func number(_ address: String) -> (UInt128, Bool)? {
         var a4 = in_addr(), a6 = in6_addr()
         if inet_pton(AF_INET, address, &a4) == 1 { return (UInt128(UInt32(bigEndian: a4.s_addr)), true) }

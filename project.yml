@@ -20,6 +20,9 @@ settings:
 packages:
   V2MacCore:
     path: Packages/V2MacCore
+  swift-argument-parser:
+    url: https://github.com/apple/swift-argument-parser
+    exactVersion: 1.8.2
 targets:
   v2mac:
     type: application
@@ -32,6 +35,8 @@ targets:
       - target: V2MacControl
       - target: V2MacPrivilegedHelper
         link: false
+      - target: V2MacCLI
+        link: false
     preBuildScripts:
       - name: Embed Xray core
         script: '"$SRCROOT/Scripts/embed-core.sh"'
@@ -39,6 +44,9 @@ targets:
     postBuildScripts:
       - name: Embed privileged helper
         script: '/bin/bash "$SRCROOT/Scripts/embed-privileged-helper.sh"'
+        basedOnDependencyAnalysis: false
+      - name: Embed command line tool
+        script: '/bin/bash "$SRCROOT/Scripts/embed-cli.sh"'
         basedOnDependencyAnalysis: false
     settings:
       base:
@@ -80,6 +88,28 @@ targets:
       configs:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac.dev.privileged
+  V2MacCLI:
+    type: tool
+    platform: macOS
+    sources:
+      - CLI
+      - Shared/CLIProtocol.swift
+    dependencies:
+      - package: swift-argument-parser
+        product: ArgumentParser
+    settings:
+      base:
+        PRODUCT_NAME: v2mac
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac.cli
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_EMIT_LOC_STRINGS: NO
+        SKIP_INSTALL: YES
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac.dev.cli
   # The Control Center switch (spec 12.4). WidgetKit needs the extension sandboxed.
   V2MacControl:
     type: app-extension
@@ -125,6 +155,7 @@ targets:
       - App/State/KillSwitchController.swift
       - App/State/SystemProxyController.swift
       - App/Support/ServerName.swift
+      - App/Features/CLI/CommandLineToolInstaller.swift
       - App/Models/Profile.swift
       - App/Models/ServerGroup.swift
       - App/Models/GroupColor.swift

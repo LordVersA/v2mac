@@ -28,6 +28,7 @@ final class AppModel {
     let warp = WarpService()
     let notifications = NotificationService()
     let sandbox = SandboxService()
+    @ObservationIgnored private var cliService: CLIService?
 
     var sidebarSelection: SidebarItem = .all
     var selectedProfileIDs: Set<UUID> = []
@@ -150,6 +151,7 @@ final class AppModel {
         regionPacks.startScheduler()
         updates.startScheduler()
         Task { await updates.refreshCoreInfo() }
+        cliService = CLIService(model: self)
         let packs = regionPacks
         connection.regionRoutes = { packs.usableRoutes }
         #if DEBUG

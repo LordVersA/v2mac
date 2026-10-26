@@ -28,7 +28,7 @@ struct V2MacApp: App {
                 .modelContainer(model.container)
         }
         .defaultSize(width: 980, height: 620)
-        .defaultLaunchBehavior(.presented)
+        .defaultLaunchBehavior(ProcessInfo.processInfo.arguments.contains("--cli-background") ? .suppressed : .presented)
         .commands { AppCommands(model: model) }
 
         Window("Logs", id: "logs") {

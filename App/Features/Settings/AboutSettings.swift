@@ -3,6 +3,7 @@ import V2MacCore
 
 struct AboutSettings: View {
     @State private var copied = false
+    @State private var commandLineTool = CommandLineToolInstaller()
 
     var body: some View {
         Form {
@@ -40,6 +41,25 @@ struct AboutSettings: View {
                 AboutLinkRow("Star on GitHub", systemImage: "star", detail: "Source code", url: AboutLinks.repository)
                 AboutLinkRow("What's New", systemImage: "sparkles", detail: "Release notes", url: AboutLinks.releases)
                 AboutLinkRow("Report a Problem", systemImage: "ladybug", detail: "Open an issue", url: AboutLinks.newIssue)
+            }
+            Section {
+                HStack {
+                    Label("v2mac", systemImage: "terminal")
+                    Spacer()
+                    switch commandLineTool.state {
+                    case .installed:
+                        Button("Remove") { commandLineTool.remove() }
+                    case .absent:
+                        Button("Install Command Line Tool") { commandLineTool.install() }
+                    case .occupied:
+                        Text("Another file uses /usr/local/bin/v2mac").foregroundStyle(.secondary)
+                    }
+                }
+                if let error = commandLineTool.error { Text(error).foregroundStyle(.red) }
+            } header: {
+                Text("Command Line Tool")
+            } footer: {
+                Text("Adds a link at /usr/local/bin/v2mac. V2Mac never replaces a file owned by another program.")
             }
             Section {
                 AboutLinkRow("LordVersa", systemImage: "person.crop.circle", detail: "github.com/LordVersA", url: AboutLinks.author)

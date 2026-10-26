@@ -36,6 +36,19 @@ Type a site, a link, an address or an app name in the search field. Above the li
 
 **Tidy Up…** (in the ⋯ menu) suggests merging rules that do the same thing, dropping rules an earlier one already covers, and removing repeated entries. Pick the ones you want; nothing changes until you Apply.
 
+## Command line and AI agents
+
+Install `v2mac` from Settings → About (Homebrew installs it automatically). Reads return a revision; pass it back on every write, and use `--dry-run` before committing. The CLI asks the running app to validate and save—never edit V2Mac preferences directly.
+
+```sh
+revision=$(v2mac rules list --json | jq -r .revision)
+v2mac rules create --name "AI services" --action proxy --item domain:openai.com --revision "$revision" --dry-run
+v2mac rules export > rules.json
+v2mac rules apply --file rules.json --revision "$revision"
+```
+
+Agents should use `--json`. Its v1 envelope always includes `apiVersion`, `ok`, `command`, `revision`, `data`, `warnings`, and `error`. A stale revision or an unapplied Rules-window draft fails without changing anything.
+
 In **Connections**, right-click a row for **Add App to Rule**, **Add Host to Rule** and **Show Rule**. The menu bar panel shows the app in front, where it goes and **Add to Rule**. Shortcuts has an **Add to Rule** action.
 
 ### Import and profiles

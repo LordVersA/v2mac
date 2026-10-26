@@ -841,6 +841,30 @@ Shortcuts action "Add to Rule" adds items to a saved rule and applies it.
 
 ### 9.1 Locating the core
 
+### 8.7 Command line tool
+
+V2Mac embeds a signed `v2mac` executable in `Contents/Helpers`. Settings → About can link it at
+`/usr/local/bin/v2mac`; it never replaces an unrelated file or link. Homebrew installs that same binary.
+
+`version`, `status`, `connect` and idempotent `disconnect` control the app. `rules` exposes list/show,
+CRUD and ordering, items, targets, testing, validation, v2 export/atomic apply, reviewed foreign import,
+Tidy Up, templates, profiles and the editable Block QUIC/Everything Else built-ins. UUIDs and exact unique
+names identify rules and profiles. `--profile` edits an inactive profile without switching it.
+
+Every write needs the SHA-256 `revision` returned by reads. The revision covers canonical saved rules,
+profiles, the active profile and editable built-ins. Stale writes and active-profile writes while the Rules
+window has a draft fail without changes. `--dry-run` validates and returns the proposed difference without
+saving or reconnecting. Active rule/profile/built-in changes reconnect a running core once; inactive-profile
+changes do not. The app validates the complete proposed state and accepts app/process tokens even when the
+program is not installed.
+
+The CLI uses an anonymous NSXPC endpoint stored mode 0600 in the private Application Support folder.
+Production and debug endpoints differ. The app accepts only its embedded executable at its resolved bundle
+path with the expected signature and exact binary hash; the CLI verifies the containing app hash. A rules
+command cold-launches the app without a window or connection and waits at most ten seconds. `status` does not
+launch it. `--json` is a stable v1 envelope (`apiVersion`, `ok`, `command`, `revision`, `data`, `warnings`,
+`error`); failures use `sysexits` categories.
+
 Use `~/Library/Application Support/v2mac/core/xray` if present and executable,
 otherwise `v2mac.app/Contents/Helpers/xray`. The version shown in Settings comes
 from `xray version`.

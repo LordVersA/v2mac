@@ -36,6 +36,10 @@
 
 **Tidy Up…**（⋯ 菜单中）会建议合并作用相同的规则、删除已被前面规则覆盖的规则，以及删除重复条目。勾选你需要的项；在 Apply 之前不会有任何改变。
 
+## 命令行与 AI 代理
+
+可在 Settings → About 安装 `v2mac`；Homebrew 会自动安装。读取命令会返回 revision；每次写入都必须传回该值，并建议先使用 `--dry-run`。CLI 会让正在运行的应用验证并保存更改，绝不会直接编辑偏好设置。代理应使用 `--json`；过期 revision 或规则窗口中未应用的草稿都会在不作任何更改的情况下失败。
+
 在 **Connections** 中右键点击某行，可使用 **Add App to Rule**、**Add Host to Rule** 和 **Show Rule**。菜单栏面板会显示前台应用、它的去向以及 **Add to Rule**。快捷指令中有 **Add to Rule** 操作。
 
 ### 导入和配置
