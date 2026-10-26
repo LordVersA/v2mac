@@ -70,6 +70,26 @@ Settings → Routing. It ships in one release.
 - Menu bar: "Frontmost app: <name> → <where it goes> ▸" with the same Add to rule menu.
 - App Intent "Add to rule" (app or domain, rule name), beside the connect intents.
 
+## R0 results (2026-10-27, Xray 26.10.21)
+- **(a) Balancer.** `leastPing` with `observatory` (probe `https://www.gstatic.com/generate_204`, 5 s in the
+  spike) moved traffic from a stopped server to the working one within one probe. An outbound with its own
+  `sockopt.dialerProxy` chain is probed end to end (dead when its hop is down). A Hysteria 2 outbound is
+  accepted as a balancer and observatory subject. **When every member is dead, the core logs "balancing
+  strategy returns empty tag" and sends the traffic to the config's *default (first) outbound*, which is a
+  leak.** So the compiler always sets `fallbackTag`: `block` (fail closed) or the proxy tag (the opt-in).
+  With it the core logs "fallback to [block], due to empty tag returned". `subjectSelector` and `selector`
+  match by tag *prefix*: each group's tags get a prefix no other outbound starts with (`via-g<n>-`).
+  Status: the metrics endpoint the app already polls (`/debug/vars`) carries `observatory`, keyed by tag,
+  with `alive`, `delay` and `last_error_reason`. R6 reads that; single Via servers join the observatory too.
+- **(b) Geo search.** `geosite.dat` (2.3 MB): 1,549 lists, 112,644 entries, 13 ms to parse in full,
+  15 MB resident, and 47 ms for a naive substring scan over every entry. Contents are searched (the tester
+  needs them anyway), indexed once off the main actor, and searched with a short debounce.
+- **(c) Order.** With `IPIfNonMatch`, an earlier IP rule is skipped in the first pass and a later domain
+  rule wins (`ip 0.0.0.0/0, port 80 → r1` above `domain:example.com → r2`: http://example.com went to r2).
+  With `IPOnDemand` it went to r1. So whenever a user rule has IP items, `domainStrategy` must be
+  `IPOnDemand` (today's rule, kept), and a rule compiled into adjacent app/domain/IP Xray rules keeps
+  first-match order.
+
 ## Tasks
 | # | Task |
 |---|---|
