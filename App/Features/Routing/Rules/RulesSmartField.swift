@@ -356,21 +356,29 @@ extension ConnectionWatcher {
     func uncovered(by rules: [Rule], catalog: RuleCatalog, ignored: Set<String> = Prefs.ignoredDiscoveries) -> [Uncovered] {
         let installed = catalog.apps
         let custom = CustomRules(rules: rules.filter(\.enabled), installedApps: installed, siteTags: catalog.geo.siteTags)
+        // The window redraws on every access log batch: answers are kept per app and host until the
+        // rules or the geo files change, and the routing is built once, not per question.
+        if coverage.rules != custom || coverage.catalog != catalog.version {
+            coverage = (custom, catalog.version, [:], RuleTester.routing(plan: .global, custom: custom))
+        }
         // Global mode has no rules of its own, so any answer is a user rule or a built-in.
-        func covered(_ q: RouteQuery) -> Bool {
-            RuleTester.route(q, plan: .global, custom: custom, geo: catalog.lists) != nil
+        func covered(_ id: String, _ q: @autoclosure () -> RouteQuery) -> Bool {
+            if let known = coverage.answers[id] { return known }
+            let answer = RuleTester.route(q(), routing: coverage.routing, geo: catalog.lists) != nil
+            coverage.answers[id] = answer
+            return answer
         }
         var out: [Uncovered] = []
         for app in apps.values where !ignored.contains(app.id) {
             let process = app.id.hasSuffix(".app") ? app.id + "/Contents/MacOS/x" : app.id
-            guard !covered(RouteQuery(process: process)) else { continue }
+            guard !covered(app.id, RouteQuery(process: process)) else { continue }
             let entry = installed.first { $0.path == app.id }?.bundleID ?? app.id
             out.append(Uncovered(id: app.id, item: .app(entry), title: (app.id as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: ""),
                                  count: app.count, last: app.last))
         }
         for host in hosts.values where !ignored.contains(host.id) {
             let query = RuleMatchers.isIP(host.id) ? RouteQuery(ips: [host.id]) : RouteQuery(host: host.id)
-            guard !covered(query) else { continue }
+            guard !covered(host.id, query) else { continue }
             let item: Rule.Item = RuleMatchers.isIP(host.id) ? .host(host.id) : .host("full:" + host.id)
             out.append(Uncovered(id: host.id, item: item, title: host.id, count: host.count, last: host.last,
                                  domain: EntryGroups.registeredDomain(ofHost: host.id).flatMap { $0 == host.id ? nil : $0 }))

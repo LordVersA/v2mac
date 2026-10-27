@@ -85,6 +85,8 @@ final class ConnectionWatcher {
         didSet { compiledRouting = RuleTester.routing(plan: .global, custom: customRules) }
     }
     @ObservationIgnored private var compiledRouting: JSONValue = [:]
+    /// Discovered's answers for these rules and this `RuleCatalog.version` (`uncovered`).
+    @ObservationIgnored var coverage: (rules: CustomRules, catalog: Int, answers: [String: Bool], routing: JSONValue) = (CustomRules(), -1, [:], [:])
     @ObservationIgnored var hasConfigFallback = false
     @ObservationIgnored var outboundActions: [String: CustomRule.Action] = [:]
     @ObservationIgnored var modeOutbounds: Set<String> = []

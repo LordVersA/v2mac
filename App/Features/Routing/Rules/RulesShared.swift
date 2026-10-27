@@ -12,6 +12,8 @@ final class RuleCatalog {
     /// Every list's contents, for the smart field and the tester.
     private(set) var lists = GeoLists()
     private var loading = false
+    /// Goes up each time `lists` is replaced.
+    @ObservationIgnored private(set) var version = 0
 
     func load() async {
         guard !geo.isLoaded, !loading else { return }
@@ -21,6 +23,7 @@ final class RuleCatalog {
         async let installed = InstalledApps.all()
         async let contents = Task.detached { GeoLists(folders: [assets]) }.value
         (geo, apps, lists) = await (catalog, installed, contents)
+        version += 1
         loading = false
     }
 
