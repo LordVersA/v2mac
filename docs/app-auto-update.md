@@ -48,7 +48,7 @@ is available and when one is ready. Settings can turn automatic install off.
 | U7 | End to end with the dev build: release N installed → N+1 served locally: only changed files and patches fetched, staged, swapped on quit; break a patch hash → full file; break the manifest sig → nothing staged; core out of range → pinned core fetched. | app |
 
 ## Status (2026-10-27)
-Implemented locally; not released. The "Done when" needs the first release built with it (N) and the next one (N+1).
+Released in V2Mac 1.3.0, the first release built with it (N). The "Done when" still needs the next release (N+1).
 - **U0 spike**, on the real 1.2.0 and 1.2.1 DMGs: (a) two CI builds already agree on `xray`, `Assets.car`, the
   geo files, strings and `AppIcon.icns`; what differs is code (main executable, CLI, privileged helper, Control
   extension), `Info.plist`, `Metadata.appintents` and `_CodeSignature`, so nothing needed fixing. (b) Only
@@ -68,7 +68,7 @@ Implemented locally; not released. The "Done when" needs the first release built
   when the same bytes were installed.
 - **U5** Four badged glyphs in `Design/` (`menubar-glyph-<outline|filled>-<available|ready>.svg`).
 - **U6** spec 9.1, 11.1, 11.3, 12.2, 12.6, 13, 14; READMEs; wiki Installation ×4; cask `auto_updates true`
-  (committed in the tap, not pushed: push it with the release).
+  (published in the tap).
 - **U7** with `-debugAppUpdate`, real 1.2.0 → locally served 1.2.1 signed with a test key: 365 KB downloaded
   instead of the 27.5 MB DMG, result byte-identical to 1.2.1 with a valid code signature; a broken main-executable
   patch → that file in full (4.3 MB), still identical; a broken `files.json.sig` → nothing built; a dev copy whose
