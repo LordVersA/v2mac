@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="22.74pt" height="18pt" viewBox="-30 -30 1090 863">
+  <!-- The outline glyph with the update badge in its top right corner: an update is ready and installs on quit (a solid dot). A clear ring keeps it apart from the bar. -->
+  <defs>
+    <mask id="badge" maskUnits="userSpaceOnUse" x="-30" y="-30" width="1090" height="863">
+      <rect x="-30" y="-30" width="1090" height="863" fill="white"/>
+      <circle cx="890" cy="150" r="250" fill="black"/>
+    </mask>
+  </defs>
+  <g mask="url(#badge)">
+  <g fill="none" stroke="black" stroke-width="56" stroke-linejoin="miter" stroke-miterlimit="6">
+    <polygon points="28,28 217,28 655,775 461,775"/>
+    <polygon points="878,28 689,28 251,775 445,775"/>
+  </g>
+  </g>
+  <circle cx="890" cy="150" r="170" fill="black"/>
+</svg>

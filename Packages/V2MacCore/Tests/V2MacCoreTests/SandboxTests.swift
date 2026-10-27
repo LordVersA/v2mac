@@ -64,7 +64,7 @@ import Testing
     @Test func planCopiesUnchangedPatchesKnownAndDownloadsTheRest() throws {
         let zip: [String: Any] = ["url": "f.zip", "sha256": Self.hashA, "size": 100]
         let patch: [String: Any] = ["url": "f.bsdiff", "sha256": Self.hashA, "size": 7, "from": Self.hashB]
-        let manifest = try SandboxManifest(data: Self.manifestJSON([
+        let manifest = try BundleManifest(data: Self.manifestJSON([
             ["path": "Contents/A", "sha256": Self.hashA, "size": 1, "executable": false, "zip": zip, "patches": []],
             ["path": "Contents/B", "sha256": Self.hashA, "size": 1, "executable": false, "zip": zip, "patches": [patch]],
             ["path": "Contents/C", "sha256": Self.hashA, "size": 1, "executable": false, "zip": zip, "patches": [patch]],
@@ -73,7 +73,7 @@ import Testing
         let damaged = String(repeating: "c", count: 64)
         let plan = manifest.plan(installed: ["Contents/A": Self.hashA, "Contents/B": Self.hashB, "Contents/C": damaged])
         #expect(plan.map(\.step) == [.copy, .patch(manifest.files[1].patches[0]), .full, .full])
-        #expect(SandboxManifest.downloadSize(plan) == 7 + 100 + 100)
+        #expect(BundleManifest.downloadSize(plan) == 7 + 100 + 100)
     }
 
     @Test func manifestRefusesPathsAndNamesOutsideTheRelease() throws {
@@ -81,13 +81,13 @@ import Testing
             ["path": path, "sha256": Self.hashA, "size": 1, "executable": false,
              "zip": ["url": url, "sha256": sha, "size": 1], "patches": []]
         }
-        _ = try SandboxManifest(data: Self.manifestJSON([entry()]))
+        _ = try BundleManifest(data: Self.manifestJSON([entry()]))
         for bad in [entry(path: "Contents/../../x"), entry(path: "/etc/x"), entry(path: "Contents//x"), entry(path: "Other/x"),
                     entry(url: "../x.zip"), entry(url: "https://example.com/x.zip"), entry(url: ".hidden"),
                     entry(sha: Self.hashA.uppercased())] {
-            #expect(throws: SandboxInstallError.checksumMismatch) { try SandboxManifest(data: Self.manifestJSON([bad])) }
+            #expect(throws: SandboxInstallError.checksumMismatch) { try BundleManifest(data: Self.manifestJSON([bad])) }
         }
-        #expect(throws: SandboxInstallError.checksumMismatch) { try SandboxManifest(data: Self.manifestJSON([entry(), entry()])) }
+        #expect(throws: SandboxInstallError.checksumMismatch) { try BundleManifest(data: Self.manifestJSON([entry(), entry()])) }
     }
 
     /// Made with Debian's bsdiff (sandbox release CI's) from `old` to `new` below: macOS's bspatch must take it.
@@ -149,7 +149,7 @@ import Testing
         // v2: the helper changed, the rootfs has a patch from v1's, the strings did not change.
         let v2files = ["Contents/MacOS/V2Mac Sandbox": helper2, "Contents/Resources/rootfs": new, "Contents/Resources/fa.lproj/L.strings": strings]
         let v2 = try await release(v2files, patch: Self.debianPatch)
-        #expect(SandboxManifest.downloadSize(try await files.plan(v2, download: download)) < Int64(new.count))
+        #expect(BundleManifest.downloadSize(try await files.plan(v2, download: download)) < Int64(new.count))
         try await files.install(v2, download: download)
         #expect(Set(requested.withLock { $0 }) == ["files.json", "files.json", "V2Mac_Sandbox.zip", "rootfs.bsdiff"])
         #expect(try Data(contentsOf: files.app.appendingPathComponent("Contents/Resources/rootfs")) == new)

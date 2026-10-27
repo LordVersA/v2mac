@@ -4,7 +4,7 @@ import Foundation
 /// The one sandbox release a V2Mac build accepts (sandbox plan: "Versions"). The pin is the trust:
 /// the release's manifest and, before every launch, the helper's executable must match it.
 public struct SandboxPin: Codable, Sendable, Equatable {
-    /// The release's `files.json` (`SandboxManifest`).
+    /// The release's `files.json` (`BundleManifest`).
     public var url: URL
     /// SHA-256 of the manifest, lowercase hex.
     public var sha256: String
@@ -38,80 +38,6 @@ public enum SandboxInstallError: Error, Sendable, Equatable, LocalizedError {
     }
 }
 
-/// A sandbox release file by file (sandbox repo, docs/delta-updates.md), written by its
-/// `Scripts/package.sh` and pinned by `SandboxPin.sha256`. Every source is checked against it before use.
-public struct SandboxManifest: Codable, Sendable, Equatable {
-    public struct Source: Codable, Sendable, Equatable {
-        /// A file name beside the manifest.
-        public var url: String
-        public var sha256: String
-        public var size: Int64
-        /// Patches only: SHA-256 of the installed file this bsdiff patch applies to.
-        public var from: String?
-    }
-
-    public struct File: Codable, Sendable, Equatable {
-        /// Inside the bundle, e.g. `Contents/Resources/rootfs.erofs`.
-        public var path: String
-        public var sha256: String
-        public var size: Int64
-        public var executable: Bool
-        public var zip: Source
-        public var patches: [Source]
-    }
-
-    public enum Step: Sendable, Equatable {
-        /// The installed file already is the new one.
-        case copy
-        case patch(Source)
-        case full
-    }
-
-    public var version: String
-    public var files: [File]
-
-    public static let maxSize = 1 << 20
-
-    /// Decodes and refuses anything that could leave the bundle or the release's folder.
-    public init(data: Data) throws {
-        self = try JSONDecoder().decode(Self.self, from: data)
-        let hex = { (s: String) in s.count == 64 && s.allSatisfy { $0.isASCII && $0.isHexDigit && !$0.isUppercase } }
-        let name = { (s: String) in
-            !s.isEmpty && !s.hasPrefix(".") && s.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || "._-".contains($0)) }
-        }
-        let pathOK = { (p: String) in
-            let parts = p.split(separator: "/", omittingEmptySubsequences: false)
-            return parts.count > 1 && parts[0] == "Contents" && !parts.contains { $0.isEmpty || $0 == "." || $0 == ".." }
-        }
-        let sources = files.flatMap { [$0.zip] + $0.patches }
-        guard Set(files.map(\.path)).count == files.count,
-              files.allSatisfy({ pathOK($0.path) && hex($0.sha256) && $0.size >= 0 && $0.zip.from == nil }),
-              files.allSatisfy({ $0.patches.allSatisfy { $0.from.map(hex) == true } }),
-              sources.allSatisfy({ name($0.url) && hex($0.sha256) && $0.size > 0 && $0.size <= 4 << 30 })
-        else { throw SandboxInstallError.checksumMismatch }
-    }
-
-    /// For each file, from the SHA-256 of its installed copy (none when missing): copy it, patch it,
-    /// or download it in full.
-    public func plan(installed: [String: String]) -> [(file: File, step: Step)] {
-        files.map { file in
-            guard let have = installed[file.path] else { return (file, .full) }
-            if have == file.sha256 { return (file, .copy) }
-            return (file, file.patches.first { $0.from == have }.map(Step.patch) ?? .full)
-        }
-    }
-
-    public static func downloadSize(_ plan: [(file: File, step: Step)]) -> Int64 {
-        plan.reduce(0) { sum, item in
-            switch item.step {
-            case .copy: sum
-            case .patch(let patch): sum + patch.size
-            case .full: sum + item.file.zip.size
-            }
-        }
-    }
-}
-
 /// Layout of `<data>/sandbox/` and the steps that fill it.
 public struct SandboxFiles: Sendable {
     public var root: URL
@@ -124,89 +50,36 @@ public struct SandboxFiles: Sendable {
     public var downloads: URL { root.appendingPathComponent("download", isDirectory: true) }
     public var isInstalled: Bool { FileManager.default.isExecutableFile(atPath: executable.path) }
 
-    /// Fetches the pinned manifest and plans every file against the installed bundle.
-    public func plan(_ pin: SandboxPin, download: ResumableDownload) async throws -> [(file: SandboxManifest.File, step: SandboxManifest.Step)] {
+    /// Fetches the pinned manifest.
+    func manifest(_ pin: SandboxPin, download: ResumableDownload) async throws -> BundleManifest {
         let fm = FileManager.default
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
         let file = root.appendingPathComponent("files.json")
         try? fm.removeItem(at: file) // a leftover would be resumed, not replaced
         defer { try? fm.removeItem(at: file) }
-        try await download.fetch(pin.url, to: file, expectedSize: Int64(SandboxManifest.maxSize))
+        try await download.fetch(pin.url, to: file, expectedSize: Int64(BundleManifest.maxSize))
         guard try Self.sha256(of: file) == pin.sha256 else { throw SandboxInstallError.checksumMismatch }
-        let manifest = try SandboxManifest(data: Data(contentsOf: file))
-        var installed: [String: String] = [:]
-        for entry in manifest.files {
-            let url = app.appendingPathComponent(entry.path)
-            guard (try? fm.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType) == .typeRegular else { continue }
-            installed[entry.path] = try? Self.sha256(of: url)
-        }
-        return manifest.plan(installed: installed)
+        return try BundleManifest(data: Data(contentsOf: file))
     }
 
-    /// Builds the pinned release in `staging/` file by file (unchanged files copied, patches where they
-    /// apply, the rest in full), checks it and puts it in place of the installed helper, which stays
-    /// until every check has passed. A failed patch falls back to that file's zip.
+    /// Fetches the pinned manifest and plans every file against the installed bundle.
+    public func plan(_ pin: SandboxPin, download: ResumableDownload) async throws -> [(file: BundleManifest.File, step: BundleManifest.Step)] {
+        let manifest = try await manifest(pin, download: download)
+        return manifest.plan(installed: manifest.current(in: app).mapValues(\.sha256))
+    }
+
+    /// Builds the pinned release in `staging/` file by file (`BundleManifest.build`), checks it and puts it
+    /// in place of the installed helper, which stays until every check has passed.
     public func install(_ pin: SandboxPin, download: ResumableDownload,
                         onProgress: (@Sendable (DownloadProgress) -> Void)? = nil) async throws {
         let fm = FileManager.default
-        let steps = try await plan(pin, download: download)
+        let manifest = try await manifest(pin, download: download)
         let staging = root.appendingPathComponent("staging", isDirectory: true)
         try? fm.removeItem(at: staging)
         defer { try? fm.removeItem(at: staging) }
+        try fm.createDirectory(at: staging, withIntermediateDirectories: true)
         let staged = SandboxFiles(root: staging)
-        try fm.createDirectory(at: downloads, withIntermediateDirectories: true)
-        var total = SandboxManifest.downloadSize(steps)
-        var done: Int64 = 0
-        func fetch(_ source: SandboxManifest.Source) async throws -> URL {
-            let file = downloads.appendingPathComponent(source.sha256)
-            let (base, sum) = (done, total)
-            try await download.fetch(URL(string: source.url, relativeTo: pin.url)!.absoluteURL, to: file, expectedSize: source.size) { p in
-                onProgress?(DownloadProgress(received: base + p.received, total: sum))
-            }
-            done += source.size
-            guard try Self.sha256(of: file) == source.sha256 else {
-                try? fm.removeItem(at: file)
-                throw SandboxInstallError.checksumMismatch
-            }
-            return file
-        }
-        for (file, step) in steps {
-            let target = staged.app.appendingPathComponent(file.path)
-            let installed = app.appendingPathComponent(file.path)
-            try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-            func full() async throws {
-                let unpacked = staging.appendingPathComponent("unpack", isDirectory: true)
-                try? fm.removeItem(at: unpacked)
-                defer { try? fm.removeItem(at: unpacked) }
-                let zip = try await fetch(file.zip)
-                guard try await CoreUpdater.run("/usr/bin/ditto", ["-x", "-k", zip.path, unpacked.path]).status == 0 else {
-                    throw SandboxInstallError.unpackFailed
-                }
-                let out = unpacked.appendingPathComponent(target.lastPathComponent)
-                guard (try? fm.attributesOfItem(atPath: out.path)[.type] as? FileAttributeType) == .typeRegular,
-                      try Self.sha256(of: out) == file.sha256 else { throw SandboxInstallError.checksumMismatch }
-                try fm.moveItem(at: out, to: target)
-            }
-            switch step {
-            case .copy:
-                try fm.copyItem(at: installed, to: target) // an APFS clone
-            case .patch(let patch):
-                do {
-                    let diff = try await fetch(patch)
-                    guard try await CoreUpdater.run("/usr/bin/bspatch", [installed.path, target.path, diff.path]).status == 0,
-                          try Self.sha256(of: target) == file.sha256 else { throw SandboxInstallError.checksumMismatch }
-                } catch is CancellationError {
-                    throw CancellationError()
-                } catch {
-                    try? fm.removeItem(at: target)
-                    total += file.zip.size
-                    try await full()
-                }
-            case .full:
-                try await full()
-            }
-            try fm.setAttributes([.posixPermissions: file.executable ? 0o755 : 0o644], ofItemAtPath: target.path)
-        }
+        try await manifest.build(at: staged.app, from: app, release: pin.url, downloads: downloads, download: download, onProgress: onProgress)
         try staged.verify(pin)
         try? fm.removeItem(at: app)
         try fm.moveItem(at: staged.app, to: app)
@@ -219,13 +92,7 @@ public struct SandboxFiles: Sendable {
         guard (try? Self.sha256(of: executable)) == pin.executableSHA256 else { throw SandboxInstallError.helperChanged }
     }
 
-    public static func sha256(of file: URL) throws -> String {
-        let handle = try FileHandle(forReadingFrom: file)
-        defer { try? handle.close() }
-        var hash = SHA256()
-        while let chunk = try handle.read(upToCount: 1 << 20), !chunk.isEmpty { hash.update(data: chunk) }
-        return hash.finalize().map { String(format: "%02x", $0) }.joined()
-    }
+    public static func sha256(of file: URL) throws -> String { try BundleManifest.sha256(of: file) }
 
     /// Default RAM cap (sandbox plan: "Resources"): a quarter of the Mac's memory, 2–8 GB.
     public static func defaultRAMCapMB(physicalMemory: UInt64) -> Int {

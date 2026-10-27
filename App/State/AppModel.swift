@@ -71,6 +71,8 @@ final class AppModel {
 
     init() {
         Prefs.registerDefaults()
+        // Spec 11.3: an update the last session staged but could not swap in. Nothing has started yet.
+        if UpdateService.swapStagedOnLaunch() { exit(0) }
         AppPaths.prepare()
         #if DEBUG
         let demo = UserDefaults.standard.bool(forKey: "debugDemoData")
@@ -268,11 +270,10 @@ final class AppModel {
                 Prefs.setAnnouncedTag(tag, "notifiedAppTag")
                 notifications.post(.appUpdate, title: String(localized: "V2Mac \(VersionCompare.normalized(tag)) is available"),
                                    body: String(localized: "Open Settings to install it."), id: "appUpdate", open: .settings(.general))
+            case .updated(let version):
+                notifications.post(.appUpdate, title: String(localized: "V2Mac updated to \(version)"),
+                                   body: String(localized: "Open Settings to read what changed."), id: "appUpdate", open: .settings(.general))
             }
-        }
-
-        updates.onHomebrewFailure = { message in
-            notifications.post(.appUpdate, title: String(localized: "V2Mac was not updated"), body: message, id: "appUpdate", open: .settings(.general))
         }
 
         latency.onFinished = { [weak self] tested, best in
@@ -1185,16 +1186,8 @@ final class AppModel {
                 }
             }
         }
-        if defaults.bool(forKey: "debugAppUpdate") {
-            Task {
-                await updates.checkApp(manual: true)
-                print("[v2mac-debug] app check: \(updates.appStatus)")
-                if case .available(let release) = updates.appStatus {
-                    await updates.installApp(release)
-                    // Only reached when the install failed; a successful one quits the app.
-                    print("[v2mac-debug] app install: \(updates.appStatus)")
-                }
-            }
+        if let manifest = defaults.string(forKey: "debugAppUpdate").flatMap(URL.init(string:)) {
+            Task { await updates.debugPrepare(manifest) }
         }
         if let mode = defaults.string(forKey: "debugCoreUpdate") {
             Task {
@@ -1330,6 +1323,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             await model.sandbox.stop()
             await model.connection.shutdown()
+            model.updates.swapOnQuit()
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater

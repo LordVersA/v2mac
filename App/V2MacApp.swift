@@ -17,7 +17,7 @@ struct V2MacApp: App {
                 .environment(model)
                 .modelContainer(model.container)
         } label: {
-            MenuBarIcon(connection: model.connection)
+            MenuBarIcon(connection: model.connection, badge: model.updates.badge)
                 .background(WindowRequestHandler(model: model))
         }
         .menuBarExtraStyle(.window)

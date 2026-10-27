@@ -37,7 +37,7 @@ Requires **macOS 26 or later** on **Apple Silicon**.
 brew install --cask lordversa/tap/v2mac
 ```
 
-Or download the DMG from the [latest release](https://github.com/LordVersA/v2mac/releases/latest). It is not notarized: on first launch use **Open Anyway** in System Settings → Privacy & Security. Details in the [installation guide](https://github.com/LordVersA/v2mac/wiki/Installation).
+Or download the DMG from the [latest release](https://github.com/LordVersA/v2mac/releases/latest). It is not notarized: on first launch use **Open Anyway** in System Settings → Privacy & Security. Details in the [installation guide](https://github.com/LordVersA/v2mac/wiki/Installation). After that V2Mac updates itself: it downloads only the files that changed and installs them when you quit.
 
 **Quick start:** click **Add Subscription** and paste your link, double-click a server, then use `127.0.0.1:10808` (SOCKS5 / HTTP) or switch on **System Proxy** or **TUN**.
 

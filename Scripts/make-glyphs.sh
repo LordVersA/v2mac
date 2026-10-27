@@ -3,8 +3,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CATALOG="$ROOT/App/Resources/Assets.xcassets"
-for variant in Filled Outline; do
-  lower=$(echo "$variant" | tr 'A-Z' 'a-z')
+# Each glyph also comes with the update badges (docs/app-auto-update.md, "Icon"): MenuBarGlyphFilledReady is
+# Design/menubar-glyph-filled-ready.svg.
+for variant in Filled Outline FilledAvailable FilledReady OutlineAvailable OutlineReady; do
+  lower=$(echo "$variant" | sed -E 's/([a-z])([A-Z])/\1-\2/' | tr 'A-Z' 'a-z')
   set_dir="$CATALOG/MenuBarGlyph$variant.imageset"
   mkdir -p "$set_dir"
   rsvg-convert -f pdf -o "$set_dir/glyph-$lower.pdf" "$ROOT/Design/menubar-glyph-$lower.svg"

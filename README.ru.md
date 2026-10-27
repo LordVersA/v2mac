@@ -37,7 +37,7 @@ VLESS, REALITY, VMess, Trojan, Shadowsocks, Hysteria2 и WireGuard в быстр
 brew install --cask lordversa/tap/v2mac
 ```
 
-Или скачайте DMG из [последнего релиза](https://github.com/LordVersA/v2mac/releases/latest). Приложение не нотаризовано: при первом запуске нажмите **Всё равно открыть** в Системные настройки → Конфиденциальность и безопасность. Подробнее в [руководстве по установке](https://github.com/LordVersA/v2mac/wiki/ru-Installation).
+Или скачайте DMG из [последнего релиза](https://github.com/LordVersA/v2mac/releases/latest). Приложение не нотаризовано: при первом запуске нажмите **Всё равно открыть** в Системные настройки → Конфиденциальность и безопасность. Подробнее в [руководстве по установке](https://github.com/LordVersA/v2mac/wiki/ru-Installation). Дальше V2Mac обновляется сама: загружает только изменившиеся файлы и устанавливает их при выходе.
 
 **Быстрый старт:** нажмите **Add Subscription** и вставьте ссылку, дважды щёлкните сервер, затем используйте `127.0.0.1:10808` (SOCKS5 / HTTP) или включите **System Proxy** или **TUN**.
 

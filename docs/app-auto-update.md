@@ -47,6 +47,34 @@ is available and when one is ready. Settings can turn automatic install off.
 | U6 | Spec 11.1/11.3/12.2, README ×4, wiki updates page ×4, String Catalogs ×3; cask `auto_updates true`. | app, wiki, homebrew-tap |
 | U7 | End to end with the dev build: release N installed → N+1 served locally: only changed files and patches fetched, staged, swapped on quit; break a patch hash → full file; break the manifest sig → nothing staged; core out of range → pinned core fetched. | app |
 
+## Status (2026-10-27)
+Implemented locally; not released. The "Done when" needs the first release built with it (N) and the next one (N+1).
+- **U0 spike**, on the real 1.2.0 and 1.2.1 DMGs: (a) two CI builds already agree on `xray`, `Assets.car`, the
+  geo files, strings and `AppIcon.icns`; what differs is code (main executable, CLI, privileged helper, Control
+  extension), `Info.plist`, `Metadata.appintents` and `_CodeSignature`, so nothing needed fixing. (b) Only
+  regular files, no links, no empty folders. (c) Main executable: patch 355 KB against a 3.9 MB zip (9 %); the
+  CLI, helper and extension patch to under 1 KB. **Go for patches.** From 1.0.0/1.1.0 the main executable
+  patches to about 1.9 MB (48 %).
+- **U1** `BundleManifest` (`Updater/BundleManifest.swift`) is the one manifest type and builder; `SandboxFiles`
+  uses it. `AppInstaller.prepareDelta` checks `files.json.sig`.
+- **U2** `Scripts/package-update.sh` (patches from the last 3 releases' DMGs, any changed file of 64 KB or more,
+  skipped over 60 % of its zip); `release.yml` publishes `dist/update/*` with the signed `files.json`.
+  On 1.2.1: 35 files, 20 patches.
+- **U3** `UpdateService`: stage in `updates/`, swap on quit (`swapOnQuit`), Restart Now, swap on launch,
+  "V2Mac updated to X", Settings toggle `installAppUpdates`. `BrewUpdater` removed.
+- **U4** `Scripts/pin-core-info.sh` (post-build) writes the `V2MacCore…` keys from `core.lock` (`MIN`,
+  `MAX_EXCLUSIVE` added there); `CorePin`; `core/xray.version`. Counting `core/xray` as a delta source rarely
+  helps: an upstream core re-signed ad hoc is not byte-identical to the one in a release, so it only matches
+  when the same bytes were installed.
+- **U5** Four badged glyphs in `Design/` (`menubar-glyph-<outline|filled>-<available|ready>.svg`).
+- **U6** spec 9.1, 11.1, 11.3, 12.2, 12.6, 13, 14; READMEs; wiki Installation ×4; cask `auto_updates true`
+  (committed in the tap, not pushed: push it with the release).
+- **U7** with `-debugAppUpdate`, real 1.2.0 → locally served 1.2.1 signed with a test key: 365 KB downloaded
+  instead of the 27.5 MB DMG, result byte-identical to 1.2.1 with a valid code signature; a broken main-executable
+  patch → that file in full (4.3 MB), still identical; a broken `files.json.sig` → nothing built; a dev copy whose
+  range excludes the bundled core fetched and installed the pinned core once. The swap itself (on quit, without
+  reopening) is covered by package tests; it is never run against the installed app.
+
 ## Done when
 A release installed by DMG and one installed by Homebrew both update to the next release by themselves,
 downloading less than the DMG when only app code changed, with the badges and toggle working, and U7 passes.

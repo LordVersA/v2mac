@@ -3,6 +3,8 @@ import SwiftUI
 
 struct MenuBarIcon: View {
     let connection: ConnectionController
+    /// docs/app-auto-update.md, "Icon": an update found, or one ready to install on quit.
+    let badge: UpdateService.Badge?
     @AppStorage("menuBarCountry") private var showsCountry = true
     @AppStorage("menuBarSpeed") private var showsSpeed = false
 
@@ -16,26 +18,31 @@ struct MenuBarIcon: View {
 
     var body: some View {
         if phase == .connected, showsSpeed {
-            Image(nsImage: MenuBarSpeed.image(code: countryCode, up: connection.upRate, down: connection.downRate))
+            Image(nsImage: MenuBarSpeed.image(code: countryCode, glyph: glyph("Filled"), up: connection.upRate, down: connection.downRate))
                 .accessibilityLabel("V2Mac, connected, \(Format.steadyRate(connection.downRate)) down, \(Format.steadyRate(connection.upRate)) up")
-        } else if phase == .connected, let countryCode, let image = MenuBarBadge.image(code: countryCode) {
+        } else if phase == .connected, let countryCode, let image = MenuBarBadge.image(code: countryCode, glyph: glyph("Filled")) {
             Image(nsImage: image).accessibilityLabel("V2Mac, connected, exit in \(countryCode)")
         } else {
             glyph
         }
     }
 
+    /// The asset for `variant` (Outline or Filled) with the update badge, if any.
+    private func glyph(_ variant: String) -> String {
+        "MenuBarGlyph" + variant + (badge.map { $0 == .ready ? "Ready" : "Available" } ?? "")
+    }
+
     @ViewBuilder
     private var glyph: some View {
         switch phase {
         case .off:
-            Image("MenuBarGlyphOutline").accessibilityLabel("V2Mac, off")
+            Image(glyph("Outline")).accessibilityLabel("V2Mac, off")
         case .connecting, .switching:
-            Image("MenuBarGlyphOutline")
+            Image(glyph("Outline"))
                 .phaseAnimator([0.35, 1.0]) { image, opacity in image.opacity(opacity) } animation: { _ in .easeInOut(duration: 0.7) }
                 .accessibilityLabel("V2Mac, connecting")
         case .connected:
-            Image("MenuBarGlyphFilled").accessibilityLabel("V2Mac, connected")
+            Image(glyph("Filled")).accessibilityLabel("V2Mac, connected")
         case .failed:
             Image(systemName: "exclamationmark.triangle.fill").accessibilityLabel("V2Mac, connection failed")
         }
@@ -50,8 +57,8 @@ enum MenuBarSpeed {
     private static let font = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .medium)
     private static let textWidth = ceil(("↓ 999.9 MB/s" as NSString).size(withAttributes: [.font: font]).width)
 
-    static func image(code: String?, up: Double, down: Double) -> NSImage {
-        let icon = code.flatMap(MenuBarBadge.image(code:)) ?? NSImage(named: "MenuBarGlyphFilled") ?? NSImage()
+    static func image(code: String?, glyph: String, up: Double, down: Double) -> NSImage {
+        let icon = code.flatMap { MenuBarBadge.image(code: $0, glyph: glyph) } ?? NSImage(named: glyph) ?? NSImage()
         let iconSize = icon.isTemplate ? NSSize(width: icon.size.width * 16 / max(icon.size.height, 1), height: 16) : icon.size
         let lines = ["↑ " + Format.steadyRate(up), "↓ " + Format.steadyRate(down)]
         let size = NSSize(width: iconSize.width + 4 + textWidth, height: 22)
@@ -91,22 +98,22 @@ enum MenuBarBadge {
     private static let size = CGSize(width: 26, height: 22)
     private static let green = Color(red: 0.16, green: 0.74, blue: 0.33)
 
-    static func image(code: String) -> NSImage? {
-        if let cached = cache[code] { return cached }
-        guard let onLight = render(code, glyph: .black), let onDark = render(code, glyph: .white) else { return nil }
+    static func image(code: String, glyph name: String) -> NSImage? {
+        if let cached = cache[code + name] { return cached }
+        guard let onLight = render(code, name, glyph: .black), let onDark = render(code, name, glyph: .white) else { return nil }
         let image = NSImage(size: size, flipped: false) { rect in
             let dark = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .vibrantDark, .aqua, .vibrantLight])
             (dark == .darkAqua || dark == .vibrantDark ? onDark : onLight).draw(in: rect)
             return true
         }
-        cache[code] = image
+        cache[code + name] = image
         return image
     }
 
-    private static func render(_ code: String, glyph: Color) -> NSImage? {
+    private static func render(_ code: String, _ name: String, glyph: Color) -> NSImage? {
         let renderer = ImageRenderer(content:
             ZStack(alignment: .bottom) {
-                Image("MenuBarGlyphFilled")
+                Image(name)
                     .resizable()
                     .scaledToFit()
                     .foregroundStyle(glyph)
@@ -293,6 +300,11 @@ struct MenuBarPanel: View {
                     HStack {
                         if model.updates.isInstallingApp {
                             AppDownloadProgress(release: release)
+                        } else if model.updates.badge == .ready {
+                            Label("V2Mac \(release.version) installs when you quit", systemImage: "checkmark.circle.fill")
+                            Spacer()
+                            Button("Restart Now") { model.updates.restartNow() }
+                                .controlSize(.small)
                         } else {
                             Label("V2Mac \(release.version) is available", systemImage: "arrow.down.circle.fill")
                             Spacer()

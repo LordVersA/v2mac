@@ -14,6 +14,12 @@ struct AppUpdateRow: View {
                     .controlSize(.small)
             case .installing(let release):
                 AppDownloadProgress(release: release)
+            case .ready(let release):
+                Label("V2Mac \(release.version) is ready. It installs when V2Mac quits.", systemImage: "checkmark.circle.fill")
+                Link("Release Notes", destination: release.pageURL)
+                Spacer()
+                Button("Restart Now") { model.updates.restartNow() }
+                    .controlSize(.small)
             case .installFailed(let release, let message):
                 Text("Update failed: \(message)").font(.caption).foregroundStyle(.secondary)
                 Link("View Release", destination: release.pageURL)

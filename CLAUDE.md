@@ -39,7 +39,8 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   `Scripts/release.sh X.Y.Z` (checks main is clean and pushed, shows the notes, tags `vX.Y.Z`,
   pushes the tag). CI (`.github/workflows/release.yml`) then runs the package tests, builds the DMG
   with the version taken from the tag, and publishes a GitHub Release with the generated notes,
-  the DMG and its `.sha256`. It then bumps `version` and `sha256` in the Homebrew cask
+  the DMG and its `.sha256`, and the in-app updater's file-by-file release (`Scripts/package-update.sh`:
+  per-file zips, bsdiff patches from the last 3 releases, signed `files.json`). It then bumps `version` and `sha256` in the Homebrew cask
   (`LordVersA/homebrew-tap`, `Casks/v2mac.rb`), which needs the `TAP_TOKEN` secret: a fine-grained
   token for `homebrew-tap` only, Contents read and write, expiring 2027-01-23. Renew it before then.
 - Never create or push release tags on your own. Run `Scripts/release.sh` only when asked.
@@ -86,6 +87,10 @@ comments cite it as "spec 6.4" etc.; read the section before changing the behavi
   - `-debugSandbox install|boot|stop|probe|update|remove` with `-debugSandboxPin <pin.json>` (from `../sandbox`,
     `Scripts/package.sh <url of files.json>`, served with e.g. `python3 -m http.server` in `../sandbox/out/release`) drives
     the Secure Sandbox (spec 12.11); the helper's `[v2mac-sandbox]` lines share stdout.
+  - `-debugAppUpdate <files.json url>` builds that release beside `-debugAppUpdateFrom <app>` (default the
+    installed V2Mac, only read) in `v2mac-dev/updates/building`, checked with `-debugAppUpdateKey <base64 public key>`
+    (make one with `Scripts/sign-update.swift keygen`); it never stages or swaps. `-debugUpdateBadge available|ready`
+    shows an update badge on the menu bar icon.
   - `-debugIntent servers|test|fastest|exit` runs that Shortcuts action (or its query) on the dev data and prints the result.
   - `-debugCleanIP YES|<transport>` opens Find Clean IP on the first server it applies to and prints the best results.
   - `-debugBackupRoundTrip <path>` (with demo data) writes a backup there, removes the servers, restores
@@ -200,7 +205,8 @@ config; `TunController` (app) drives the session.
 
 **Files.** The bundled core is `V2Mac.app/Contents/Helpers/xray` (copied and signed by
 `Scripts/embed-core.sh` as a build phase); an in-app core update in
-`~/Library/Application Support/v2mac/core/xray` takes precedence (`AppPaths.coreExecutable`).
+`~/Library/Application Support/v2mac/core/xray` takes precedence while its version is in the build's core
+range (`MIN`/`MAX_EXCLUSIVE` in `core.lock`, written into Info.plist by `Scripts/pin-core-info.sh`; `AppPaths.coreExecutable`).
 Layout of the data folder: spec section 14.
 
 **Windows.** `MenuBarExtra` panel, a `main` window, a `logs` window and Settings. The app switches

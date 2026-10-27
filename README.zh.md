@@ -37,7 +37,7 @@ VLESS、REALITY、VMess、Trojan、Shadowsocks、Hysteria2 和 WireGuard，集�
 brew install --cask lordversa/tap/v2mac
 ```
 
-也可从[最新版本](https://github.com/LordVersA/v2mac/releases/latest)下载 DMG。应用未经公证：首次启动时在 系统设置 → 隐私与安全性 中点击 **仍要打开**。详见[安装指南](https://github.com/LordVersA/v2mac/wiki/zh-Installation)。
+也可从[最新版本](https://github.com/LordVersA/v2mac/releases/latest)下载 DMG。应用未经公证：首次启动时在 系统设置 → 隐私与安全性 中点击 **仍要打开**。详见[安装指南](https://github.com/LordVersA/v2mac/wiki/zh-Installation)。之后 V2Mac 会自动更新：只下载有变化的文件，并在退出时安装。
 
 **快速开始：** 点击 **Add Subscription** 粘贴链接，双击服务器，然后使用 `127.0.0.1:10808`（SOCKS5 / HTTP），或打开 **System Proxy** 或 **TUN**。
 

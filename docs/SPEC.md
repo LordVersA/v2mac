@@ -865,7 +865,8 @@ command cold-launches the app without a window or connection and waits at most t
 launch it. `--json` is a stable v1 envelope (`apiVersion`, `ok`, `command`, `revision`, `data`, `warnings`,
 `error`); failures use `sysexits` categories.
 
-Use `~/Library/Application Support/v2mac/core/xray` if present and executable,
+Use `~/Library/Application Support/v2mac/core/xray` if present, executable and
+its version (`core/xray.version`) is in this build's core range (11.1),
 otherwise `v2mac.app/Contents/Helpers/xray`. The version shown in Settings comes
 from `xray version`.
 
@@ -1313,11 +1314,19 @@ back to a direct connection.
 - **Install:** download `Xray-macos-arm64-v8a.zip` and its `.dgst`; compare the
   `SHA2-256=` value; unpack with `/usr/bin/ditto -x -k` into a temp directory;
   run `xray version` and `xray run -test` on the current config with the new
-  binary; then move `xray` to `core/` and the two `.dat` files to `assets/`.
-  Restart the core if it was running.
+  binary; then move `xray` to `core/` (with its version in `core/xray.version`)
+  and the two `.dat` files to `assets/`. Restart the core if it was running.
 - **Revert to bundled:** delete `core/xray` and restore the asset symlinks.
-- Manual only ("Check for Update" in Settings). The UI shows current version,
+- Manual ("Check for Update" in Settings). The UI shows current version,
   available version and its date.
+- **Core range.** The core is not tied to the app's own updates. Each build
+  carries in Info.plist the pinned core it ships (`V2MacCoreVersion`,
+  `V2MacCoreSHA256` of the release zip) and the versions it also runs
+  (`V2MacCoreMin`, `V2MacCoreMaxExclusive`), written from `Scripts/core.lock`
+  by a build phase. At launch an updated `core/xray` is used only while its
+  version is in that range, else the bundled one. If even that is out of range,
+  the pinned release is downloaded in the background, checked against the
+  pinned hash and installed as above (once per session).
 
 ### 11.2 Region packs
 
@@ -1346,47 +1355,52 @@ geoip `cn` / `ru`). Loyalsoldier's files hold every country, so they are large
   "Update Now". A successful update restarts the core if the pack is in use.
 - "Bypass regions" cannot be selected until at least one pack is enabled.
 
-### 11.3 App update check
+### 11.3 App updates
 
 Once per 24 h (and on demand), read the latest release of the app's own repo
 (GitHub API; the releases Atom feed when the API cannot be read, which is common
-behind a shared proxy address). If its version is higher, show it in the menu
-bar panel and in Settings with an **Update Now** button. The check can be
-turned off; nothing is downloaded until the button is pressed.
+behind a shared proxy address). The check can be turned off.
 
-**Update Now** downloads `V2Mac-<version>.dmg`, its `.sha256` and its `.sig`
-from the release, checks the hash and the signature, copies the app out of the
-image to a temporary
-folder and verifies its code signature, bundle identifier and version. Only
-then does the app quit; a detached shell script waits for the process to exit,
-moves the old bundle aside, moves the new one into place (putting the old one
-back if that fails) and opens it. The app reconnects on launch as usual. Any
-failure before the quit leaves the installed app untouched and offers the
-release page instead. The app must be in a folder the user can write to; a
-translocated or read-only copy is refused. Releases are ad-hoc signed, so the
-code signature proves nothing about who made them, and the `.sha256` comes
-from the same release. Origin is proved by the `.sig`: an Ed25519 signature of
-the DMG by the project's key, made by `Scripts/sign-update.swift` in the
-release workflow (secret `UPDATE_SIGNING_KEY`, refused if missing). The public
-key is built into the app (`AppInstaller.updateKey`); a DMG without a valid
-signature is never installed.
+**Automatic install** (Settings → General, "Install updates automatically", on
+by default, dimmed while the check is off). A newer release is downloaded and
+checked in the background (below) and staged in `updates/V2Mac.app`; the menu
+bar icon and the panel say it is ready. When the app quits, a detached shell
+script waits for the process to exit, moves the old bundle aside, moves the new
+one into place (putting the old one back if that fails) and does not open it.
+**Restart Now** in the panel and in Settings does the same at once and opens the
+new version (the VPN drops for a few seconds; the app reconnects on launch as
+usual). If the swap at quit did not happen (logout killed the script), the next
+launch swaps before anything starts and relaunches. A failed download is tried
+again at the next hourly pass. The first launch of a newer version posts "V2Mac
+updated to X". With automatic install off, the app only shows the release with
+**Update Now**, which downloads, checks and restarts in one go.
 
-**Homebrew installs.** When the release build runs from
-`/Applications/V2Mac.app` and finds its cask installed
-(`<prefix>/Caskroom/v2mac` with `<prefix>/bin/brew`, prefix `/opt/homebrew` or
-`/usr/local`), Update Now goes through `brew` instead, so Homebrew keeps track
-of the version: while the app still runs, `brew update`, then `brew info` must
-show the release's version or a newer one in `lordversa/tap/v2mac` (else
-"Homebrew does not offer it yet"), then `brew fetch` puts the DMG in Homebrew's
-cache. Each route is tried in turn (`brew update` only until it has succeeded
-once), the local proxy through `all_proxy`/`https_proxy`; the direct route clears
-those variables. Each `brew` call is stopped after 10 minutes. The app then
-quits, and a detached script waits for it to exit (`brew` will not quit an app
-it runs inside), runs `brew upgrade --cask` from the cache, writes the exit
-status to `run/brew-upgrade.status` and opens the app again. A failed upgrade
-leaves the old version, which reports it on launch in Settings and as a
-notification, with the last line of `brew`'s output. Debug builds never use this
-path.
+**Download, file by file.** Each release publishes `files.json` (the bundle's
+manifest in the Secure Sandbox's format, `BundleManifest`: every file's path,
+SHA-256, size, mode, its own zip, and bsdiff patches from the same file of the
+last three releases), its `.sig`, and one zip or patch per file. The app checks
+the manifest's signature, then builds the release in `updates/building/`: a
+file the installed app (or `core/xray` for the bundled core) already has is
+copied, one with a matching patch is patched with `/usr/bin/bspatch`, the rest
+are downloaded in full; every zip, patch and result is checked against the
+manifest, and a failed patch downloads that file in full. Downloads resume. The
+rebuilt bundle is byte-identical to the release's, so its code signature holds.
+Any other failure falls back to the whole `V2Mac-<version>.dmg`, its `.sha256`
+and its `.sig`: hash and signature checked, the app copied out of the image.
+Either way the staged app's code signature, bundle identifier and version are
+verified, and nothing outside `updates/` changes before the swap.
+
+**Trust.** Releases are ad-hoc signed, so the code signature proves nothing
+about who made them, and the `.sha256` comes from the same release. Origin is
+proved by the `.sig` files: Ed25519 signatures of `files.json` and of the DMG by
+the project's key, made by `Scripts/sign-update.swift` in the release workflow
+(secret `UPDATE_SIGNING_KEY`, refused if missing). The public key is built into
+the app (`AppInstaller.updateKey`); nothing without a valid signature is ever
+staged.
+
+The app must be in a folder the user can write to; a translocated or read-only
+copy is refused. Homebrew installs update themselves the same way (the cask
+says `auto_updates true`). Debug builds never stage or swap.
 
 ---
 
@@ -1404,7 +1418,11 @@ path.
 ### 12.2 Menu bar item
 
 Icon by state: outline (stopped), animated (starting / switching), filled
-(running), filled with warning badge (failed).
+(running), filled with warning badge (failed). An app update adds a badge in
+the top right corner of the glyph (outline or filled, with or without the exit
+country): an open ring when one is available (found, not yet downloaded, or
+automatic install off), a solid dot when it is ready and installs on quit
+(11.3). The failed state's warning icon wins over both.
 
 The panel is as tall as its content where the screen has room. On a small
 display (under 860 points below the menu bar) the lists are shorter (two
@@ -1434,7 +1452,8 @@ connect control says so with "Allow Traffic".
    a real delay test of the whole group and turns into progress with "Stop".
 6. Routing mode picker, TUN switch, System Proxy switch with its dot (9.9).
 7. Local address with a copy button.
-8. "Update available" row when relevant.
+8. App update row when relevant: download progress, "installs when you quit"
+   with Restart Now, or Update Now.
 9. Open v2mac · Settings… · Quit.
 
 With "Speed in the menu bar" (Connection, off by default) the connected icon,
@@ -1655,7 +1674,7 @@ launch. Each kind has a switch in Settings → Notifications:
 | Traffic running out | 80%, 95% and 100% of the quota | On |
 | Automatic update failed | A scheduled update fails (first failure in a row only) | Off |
 | Servers added or removed | A scheduled update changed the server list | Off |
-| V2Mac update available | The background check finds a release, once per release; also a Homebrew upgrade that failed after the app quit for it | On |
+| V2Mac update available | The background check finds a release with automatic install off, once per release; also the first launch after an update ("V2Mac updated to X") | On |
 | Delay test finished | A test ends while the app is in the background | Off |
 | Sandbox downloaded | The sandbox download is checked and installed (section 12.11) | On |
 | Sandbox exit stopped working | A mini VM's exit stops passing traffic; sent by the sandbox helper | On |
@@ -1892,6 +1911,7 @@ is in one list or the other).
 | | Restart core after sleep or network change | On |
 | | Count traffic usage (section 12.8) | On |
 | | Check for app updates | On |
+| | Install updates automatically (11.3; dimmed while the check is off) | On |
 | | Privileged helper: status, Enable Helper…, Open Login Items, Remove Helper. Removal stops the current connection; ad-hoc builds explain the per-session fallback | Not registered |
 | | Store secrets in Apple Keychain: opt in after a notice about the macOS password prompt; otherwise use the encrypted local file | Off |
 | | Ask for Touch ID before sharing servers: copying a share link, showing its QR code and exporting a backup ask for Touch ID or the login password first (`OwnerCheck`, LocalAuthentication); one check covers a minute, and turning it off needs one too. Not in backups | Off |
@@ -1977,7 +1997,9 @@ and can be retried. These legacy credentials are never reused to authorize the h
 ├─ secrets/                      0700, default secret storage
 │  ├─ secrets.enc                0600, AES-GCM encrypted secrets
 │  └─ secrets.key                0600, random local encryption key
-├─ core/xray                     only after an in-app core update
+├─ core/xray, xray.version       only after an in-app core update
+├─ updates/                      an app update (11.3): building/ while it downloads,
+│                                V2Mac.app once checked; removed by the swap
 ├─ assets/
 │  ├─ geoip.dat, geosite.dat     symlinks to the bundle, or updated copies
 │  └─ region-<id>-geoip.dat, region-<id>-geosite.dat

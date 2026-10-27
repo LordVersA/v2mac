@@ -5,6 +5,7 @@ struct GeneralSettings: View {
     @AppStorage("reconnectOnLaunch") private var reconnectOnLaunch = true
     @AppStorage("restartOnWakeOrNetwork") private var restartOnWake = true
     @AppStorage("checkAppUpdates") private var checkUpdates = true
+    @AppStorage("installAppUpdates") private var installUpdates = true
     @AppStorage("countTraffic") private var countTraffic = true
     @State private var loginEnabled = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
@@ -31,6 +32,11 @@ struct GeneralSettings: View {
                 Text("Shows this session's traffic in the menu bar panel and the connection bar, and keeps a total.")
             }
             Toggle("Check for app updates", isOn: $checkUpdates)
+            Toggle(isOn: $installUpdates) {
+                Text("Install updates automatically")
+                Text("Downloads a new version in the background and installs it when V2Mac quits.")
+            }
+            .disabled(!checkUpdates)
             AppUpdateRow()
             PrivilegedHelperSection()
             SecretStorageSection()

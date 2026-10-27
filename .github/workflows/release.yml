@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - run: brew install xcodegen
+      - run: brew install xcodegen bsdiff
 
       - name: Resolve version
         id: v
@@ -56,6 +56,16 @@ jobs:
           fi
           Scripts/make-dmg.sh
 
+      # The in-app updater's file-by-file release (docs/app-auto-update.md): per-file zips, bsdiff patches
+      # from the last 3 releases' DMGs, and the signed files.json.
+      - name: Package update files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          Scripts/package-update.sh build/Build/Products/Release/V2Mac.app dist/update "${{ steps.v.outputs.tag }}"
+          if [[ -n "$UPDATE_SIGNING_KEY" ]]; then Scripts/sign-update.swift dist/update/files.json; fi
+
       - name: Release notes
         run: |
           TAG="${{ steps.v.outputs.tag }}"
@@ -83,7 +93,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ steps.v.outputs.tag }}" dist/*.dmg dist/*.sha256 dist/*.sig \
+          gh release create "${{ steps.v.outputs.tag }}" dist/*.dmg dist/*.sha256 dist/*.sig dist/update/* \
             --title "V2Mac ${{ steps.v.outputs.version }}" --notes-file notes.md
 
       # Points the Homebrew cask (LordVersA/homebrew-tap) at the new DMG. Needs a TAP_TOKEN

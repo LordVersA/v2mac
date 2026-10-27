@@ -17,15 +17,23 @@ enum AppPaths {
     static var runDirectory: URL { dataDirectory.appendingPathComponent("run", isDirectory: true) }
     static var coreDirectory: URL { dataDirectory.appendingPathComponent("core", isDirectory: true) }
     static var storeURL: URL { dataDirectory.appendingPathComponent("default.store") }
+    /// A checked app update waiting for the next quit (spec 11.3).
+    static var updatesDirectory: URL { dataDirectory.appendingPathComponent("updates", isDirectory: true) }
+
+    /// The core this build is made for and the versions it accepts (spec 11.1), from Info.plist.
+    static let corePin = CorePin(info: Bundle.main.infoDictionary ?? [:])
 
     static var bundledCore: URL {
         Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/xray")
     }
 
-    /// An in-app updated core wins over the bundled one.
+    /// An in-app updated core wins over the bundled one while its version is in this build's range.
     static var coreExecutable: URL {
         let override = coreDirectory.appendingPathComponent("xray")
-        return FileManager.default.isExecutableFile(atPath: override.path) ? override : bundledCore
+        guard FileManager.default.isExecutableFile(atPath: override.path) else { return bundledCore }
+        guard let corePin else { return override }
+        let version = try? String(contentsOf: coreDirectory.appendingPathComponent(CoreUpdater.versionFileName), encoding: .utf8)
+        return version.map(corePin.accepts) == true ? override : bundledCore
     }
 
     /// Creates the data directories (0700) and links the bundled geo files into `assets/`.
@@ -112,7 +120,7 @@ enum Prefs {
     /// the registered defaults. `AppModel.resetSettings` also tells the connection.
     static func resetKeys(_ tab: SettingsTab) -> [String] {
         switch tab {
-        case .general: ["reconnectOnLaunch", "restartOnWakeOrNetwork", "checkAppUpdates", "countTraffic", "logLevel", "logConnections"]
+        case .general: ["reconnectOnLaunch", "restartOnWakeOrNetwork", "checkAppUpdates", "installAppUpdates", "countTraffic", "logLevel", "logConnections"]
         case .proxy: ["proxyPort", "allowLAN", "proxyUsername", "proxyClientsRoute", "systemProxy"]
         case .routing: ["routingMode", "unmatchedRoute"]
         case .connection:
@@ -145,6 +153,7 @@ enum Prefs {
             "warpExit": false,
             "restartOnWakeOrNetwork": true,
             "checkAppUpdates": true,
+            "installAppUpdates": true,
             "allowLAN": false,
             "proxyUsername": "",
             "systemProxy": false,

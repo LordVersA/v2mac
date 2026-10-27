@@ -73,7 +73,7 @@ final class SandboxService {
     func planUpdate() async {
         guard let pin, updateAvailable, updateSize == nil else { return }
         guard let plan = try? await files.plan(pin, download: ResumableDownload(routes: downloadRoutes())) else { return }
-        updateSize = SandboxManifest.downloadSize(plan)
+        updateSize = BundleManifest.downloadSize(plan)
     }
 
     // MARK: Entry

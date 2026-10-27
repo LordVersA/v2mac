@@ -1,9 +1,11 @@
 import AppKit
 import Foundation
+import CryptoKit
 import Observation
+import Synchronization
 import V2MacCore
 
-/// Core updates (manual, spec 11.1) and the app update check (spec 11.3).
+/// Core updates (manual, and the pinned range, spec 11.1) and app updates (spec 11.3).
 @MainActor @Observable
 final class UpdateService {
     enum CoreStatus: Equatable {
@@ -21,8 +23,10 @@ final class UpdateService {
         case checking
         case upToDate
         case available(AppRelease)
-        /// Downloading and checking the release; the app restarts when it is ready.
+        /// Downloading and checking the release.
         case installing(AppRelease)
+        /// Checked and staged in `updates/`: it replaces this copy when the app quits.
+        case ready(AppRelease)
         case installFailed(AppRelease, String)
         case unavailable(String)
     }
@@ -30,10 +34,15 @@ final class UpdateService {
     /// A background check found a newer release (spec 12.6).
     enum Found: Equatable {
         case app(String)
+        /// This launch is the first of a newer version.
+        case updated(String)
     }
     @ObservationIgnored var onFound: @MainActor (Found) -> Void = { _ in }
-    /// A `brew upgrade` failed after the app quit for it; the old version reopened.
-    @ObservationIgnored var onHomebrewFailure: @MainActor (String) -> Void = { _ in }
+
+    /// What the menu bar icon shows (docs/app-auto-update.md, "Icon").
+    enum Badge: String {
+        case available, ready
+    }
 
     private(set) var coreStatus: CoreStatus = .idle
     private(set) var coreVersion: String?
@@ -43,8 +52,6 @@ final class UpdateService {
     private(set) var appProgress: DownloadProgress?
     /// Smoothed download speed in bytes per second.
     private(set) var appDownloadRate: Double?
-    /// What `brew` is doing while a Homebrew install of the app updates; nil otherwise.
-    private(set) var brewStep: String?
     private(set) var coreProgress: DownloadProgress?
     private(set) var coreDownloadRate: Double?
     private var appRate = RateTracker()
@@ -57,6 +64,11 @@ final class UpdateService {
     var isCoreRunning: () -> Bool = { false }
 
     private var schedulerTask: Task<Void, Never>?
+    private var staged: AppInstaller.Staged?
+    /// Once per session, so a pinned core that still does not suit (a broken build) is not fetched in a loop.
+    private var fetchedPinnedCore = false
+    /// Restart Now already started the swap; quitting must not start a second one.
+    private var swapScheduled = false
 
     #if DEBUG
     /// `-debugFakeUpdates YES`: shows the update button without a real release.
@@ -68,9 +80,17 @@ final class UpdateService {
 
     var availableAppUpdate: AppRelease? {
         switch appStatus {
-        case .available(let release), .installing(let release), .installFailed(let release, _): release
+        case .available(let release), .installing(let release), .ready(let release), .installFailed(let release, _): release
         default: nil
         }
+    }
+
+    var badge: Badge? {
+        #if DEBUG
+        if let badge = UserDefaults.standard.string(forKey: "debugUpdateBadge").flatMap(Badge.init) { return badge }
+        #endif
+        if case .ready = appStatus { return .ready }
+        return availableAppUpdate == nil ? nil : .available
     }
 
     var isInstallingApp: Bool {
@@ -84,31 +104,26 @@ final class UpdateService {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
-    /// The Homebrew installation that installed this copy, which then updates it instead.
-    /// Only for the copy in /Applications, where the cask puts it: another copy would stay old
-    /// while `brew` upgrades that one. Never for a Debug build: its upgrade would replace the
-    /// installed release.
-    static var homebrew: BrewUpdater? {
-        #if DEBUG
-        nil
-        #else
-        // ponytail: a cask installed with a custom --appdir falls back to the in-place swap.
-        Bundle.main.bundleIdentifier == "io.github.lordversa.v2mac"
-            && Bundle.main.bundleURL.standardizedFileURL.path == "/Applications/\(AppInstaller.appName)"
-            ? BrewUpdater.locate() : nil
-        #endif
-    }
-
-    /// Where the upgrade script leaves `brew`'s exit status (and its output, with `.log`).
-    private static var brewStatusFile: URL { AppPaths.runDirectory.appendingPathComponent("brew-upgrade.status") }
-
     private var downloader: FileDownloader { FileDownloader(routes: downloadRoutes(), timeout: 30) }
 
     // MARK: Core
 
     func refreshCoreInfo() async {
-        coreIsUpdatedCopy = FileManager.default.fileExists(atPath: AppPaths.coreDirectory.appendingPathComponent("xray").path)
+        let updated = AppPaths.coreDirectory.appendingPathComponent("xray")
+        let versionFile = AppPaths.coreDirectory.appendingPathComponent(CoreUpdater.versionFileName)
+        let fm = FileManager.default
+        // A core updated before the version file existed: record it, so the next connect can choose by range.
+        if fm.fileExists(atPath: updated.path), !fm.fileExists(atPath: versionFile.path),
+           let version = await SystemInfo.coreVersion(at: updated).map(VersionCompare.normalized) {
+            try? Data(version.utf8).write(to: versionFile)
+        }
+        coreIsUpdatedCopy = AppPaths.coreExecutable == updated
         coreVersion = await SystemInfo.coreVersion(at: AppPaths.coreExecutable).map(VersionCompare.normalized)
+        // Neither the updated nor the bundled core suits this build: fetch the pinned one.
+        if let pin = AppPaths.corePin, let coreVersion, !pin.accepts(coreVersion), coreStatus != .installing, !fetchedPinnedCore {
+            fetchedPinnedCore = true
+            await installCore(pin.release, expectedSHA256: pin.sha256)
+        }
     }
 
     /// Only on demand, from Settings → Core.
@@ -128,7 +143,7 @@ final class UpdateService {
         if case .available(let release) = coreStatus { release } else { nil }
     }
 
-    func installCore(_ release: CoreRelease) async {
+    func installCore(_ release: CoreRelease, expectedSHA256: String? = nil) async {
         guard coreStatus != .installing else { return }
         coreStatus = .installing
         coreProgress = nil
@@ -142,6 +157,7 @@ final class UpdateService {
                 coreDirectory: AppPaths.coreDirectory,
                 assetDirectory: AppPaths.assetsDirectory,
                 currentConfig: current,
+                expectedSHA256: expectedSHA256,
                 onProgress: { [weak self] progress in
                     Task { @MainActor in self?.updateCoreProgress(progress) }
                 }
@@ -181,83 +197,151 @@ final class UpdateService {
         do {
             let found = try await AppUpdateChecker.newer(than: Prefs.appVersion, repository: repo, downloader: downloader)
             Prefs.lastAppUpdateCheck = Date()
+            if case .ready(let release) = appStatus, release == found { return }
             appStatus = found.map(AppStatus.available) ?? .upToDate
-            if !manual, let found { onFound(.app(found.tag)) }
+            guard let found else { return }
+            if Self.installsAutomatically {
+                if await !stageApp(found), !manual { Prefs.lastAppUpdateCheck = nil } // retried on the next hourly pass
+            } else if !manual {
+                onFound(.app(found.tag))
+            }
         } catch {
             appStatus = manual ? .unavailable(error.localizedDescription) : .idle
         }
     }
 
-    /// Downloads and verifies the release, then quits; a detached script swaps the app
-    /// bundle and opens the new version. The installed app is untouched on any failure.
+    /// Settings → General: download and stage in the background. Never in a Debug build, whose swap
+    /// would replace V2MacDev.app with a release.
+    static var installsAutomatically: Bool {
+        #if DEBUG
+        false
+        #else
+        UserDefaults.standard.bool(forKey: "installAppUpdates")
+        #endif
+    }
+
+    /// Update Now: stages the release when it is not yet, then restarts into it.
     func installApp(_ release: AppRelease) async {
         guard !isInstallingApp else { return }
+        if case .ready = appStatus { return restartNow() }
+        #if DEBUG
+        appStatus = .installFailed(release, "Debug builds never replace themselves.")
+        #else
+        if await stageApp(release) { restartNow() }
+        #endif
+    }
+
+    /// Downloads the release (only the changed files, falling back to the DMG) and stages the checked app
+    /// in `updates/`. The installed app is untouched until the swap.
+    @discardableResult
+    private func stageApp(_ release: AppRelease) async -> Bool {
+        guard !isInstallingApp else { return false }
         appStatus = .installing(release)
         appProgress = nil
         appDownloadRate = nil
         appRate = RateTracker()
-        if let brew = Self.homebrew {
-            await installWithHomebrew(release, brew: brew)
-            return
-        }
         do {
             let target = Bundle.main.bundleURL
             try AppInstaller.checkReplaceable(target)
-            guard let urls = AppInstaller.assetURLs(repository: Self.repository, tag: release.tag) else {
-                throw CoreUpdateError.malformedResponse
+            let bundleID = Bundle.main.bundleIdentifier ?? ""
+            let onProgress: @Sendable (DownloadProgress) -> Void = { [weak self] progress in
+                Task { @MainActor in self?.updateProgress(progress) }
             }
-            let staged = try await AppInstaller.prepare(
-                dmg: urls.dmg,
-                checksum: urls.checksum,
-                expectedVersion: release.version,
-                bundleIdentifier: Bundle.main.bundleIdentifier ?? "",
-                downloader: FileDownloader(routes: downloadRoutes(), timeout: 60, maxBytes: 256 * 1024 * 1024),
-                onProgress: { [weak self] progress in
-                    Task { @MainActor in self?.updateProgress(progress) }
-                }
-            )
+            let prepared: AppInstaller.Staged
             do {
-                try AppInstaller.scheduleSwap(staged, replacing: target, processID: ProcessInfo.processInfo.processIdentifier)
+                guard let manifest = AppInstaller.manifestURL(repository: Self.repository, tag: release.tag) else {
+                    throw CoreUpdateError.malformedResponse
+                }
+                prepared = try await AppInstaller.prepareDelta(
+                    manifest: manifest, expectedVersion: release.version, bundleIdentifier: bundleID, installed: target,
+                    alternates: ["Contents/Helpers/xray": AppPaths.coreDirectory.appendingPathComponent("xray")],
+                    work: AppPaths.updatesDirectory.appendingPathComponent("building"), downloader: downloader,
+                    download: ResumableDownload(routes: downloadRoutes()), onProgress: onProgress
+                )
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
-                try? FileManager.default.removeItem(at: staged.workDirectory)
-                throw error
+                // Any failure of the file-by-file route: the whole DMG, as before.
+                guard let urls = AppInstaller.assetURLs(repository: Self.repository, tag: release.tag) else {
+                    throw CoreUpdateError.malformedResponse
+                }
+                prepared = try await AppInstaller.prepare(
+                    dmg: urls.dmg, checksum: urls.checksum, expectedVersion: release.version, bundleIdentifier: bundleID,
+                    downloader: FileDownloader(routes: downloadRoutes(), timeout: 60, maxBytes: 256 * 1024 * 1024),
+                    onProgress: onProgress
+                )
             }
-            // Quitting waits for the core shutdown, which also needs the main actor and the main
-            // queue. Called from here, or from a block on that queue, it would wait forever. A
-            // run-loop perform does not occupy the queue.
-            NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
+            staged = try AppInstaller.stage(prepared, in: AppPaths.updatesDirectory)
+            appStatus = .ready(release)
+            return true
         } catch {
             appStatus = .installFailed(release, error.localizedDescription)
+            return false
         }
     }
 
-    /// Lets `brew` download the release while the proxy still runs, then quits; a detached script
-    /// runs `brew upgrade` once the app is gone and opens it again. Untouched on any failure here.
-    private func installWithHomebrew(_ release: AppRelease, brew: BrewUpdater) async {
-        brewStep = String(localized: "Downloading V2Mac \(release.version) with Homebrew…")
+    /// Restart Now: quits, swaps the staged app in and opens it. The VPN drops for a few seconds.
+    func restartNow() {
+        guard let staged, !swapScheduled else { return }
         do {
-            try await brew.prepare(version: release.version, routes: downloadRoutes())
-            try brew.scheduleUpgrade(
-                app: Bundle.main.bundleURL,
-                processID: ProcessInfo.processInfo.processIdentifier,
-                statusFile: Self.brewStatusFile
-            )
-            // See installApp for why this is not a direct call.
-            NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
+            try AppInstaller.scheduleSwap(staged, replacing: Bundle.main.bundleURL, processID: ProcessInfo.processInfo.processIdentifier)
         } catch {
-            brewStep = nil
-            appStatus = .installFailed(release, error.localizedDescription)
+            appStatus = .unavailable(error.localizedDescription)
+            return
         }
+        swapScheduled = true
+        // Quitting waits for the core shutdown, which also needs the main actor and the main
+        // queue. Called from here, or from a block on that queue, it would wait forever. A
+        // run-loop perform does not occupy the queue.
+        NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
     }
 
-    /// Reports a `brew upgrade` that failed after the app quit for it; the old version then reopened.
-    private func reportHomebrewResult() {
-        guard let result = BrewUpdater.takeResult(Self.brewStatusFile), !result.succeeded else { return }
-        let reason = result.lastLine.isEmpty ? "" : " (\(result.lastLine))"
-        let message = String(localized: "Homebrew could not install the update\(reason). Run “brew upgrade --cask v2mac” in Terminal to see why.")
-        appStatus = .unavailable(message)
-        onHomebrewFailure(message)
+    /// From `applicationShouldTerminate`, after the core stopped: the staged app replaces this one once it
+    /// has exited, and is not opened.
+    func swapOnQuit() {
+        guard let staged, !swapScheduled else { return }
+        swapScheduled = (try? AppInstaller.scheduleSwap(staged, replacing: Bundle.main.bundleURL,
+                                                        processID: ProcessInfo.processInfo.processIdentifier, openCommand: nil)) != nil
     }
+
+    /// At launch, before anything starts: an update staged by the last session whose swap did not happen
+    /// (logout killed the script). True when the swap was started; the caller then exits.
+    static func swapStagedOnLaunch() -> Bool {
+        #if DEBUG
+        return false
+        #else
+        guard let staged = AppInstaller.staged(in: AppPaths.updatesDirectory, newerThan: Prefs.appVersion,
+                                               bundleIdentifier: Bundle.main.bundleIdentifier ?? "") else { return false }
+        return (try? AppInstaller.scheduleSwap(staged, replacing: Bundle.main.bundleURL,
+                                               processID: ProcessInfo.processInfo.processIdentifier)) != nil
+        #endif
+    }
+
+    #if DEBUG
+    /// `-debugAppUpdate <files.json url>`: builds that release beside `-debugAppUpdateFrom` (default the installed
+    /// V2Mac, only read) in the dev data folder, checked against `-debugAppUpdateKey` (a base64 public key) or the
+    /// project's, and prints the result. Never stages or swaps.
+    func debugPrepare(_ manifest: URL) async {
+        let defaults = UserDefaults.standard
+        let installed = URL(fileURLWithPath: defaults.string(forKey: "debugAppUpdateFrom") ?? "/Applications/V2Mac.app")
+        let key = defaults.string(forKey: "debugAppUpdateKey").flatMap { Data(base64Encoded: $0) }
+            .flatMap { try? Curve25519.Signing.PublicKey(rawRepresentation: $0) } ?? AppInstaller.updateKey
+        let downloaded = Mutex<Int64>(0)
+        do {
+            let version = try BundleManifest(data: try await downloader.download(manifest)).version
+            let prepared = try await AppInstaller.prepareDelta(
+                manifest: manifest, expectedVersion: version, bundleIdentifier: "io.github.lordversa.v2mac", installed: installed,
+                alternates: ["Contents/Helpers/xray": AppPaths.coreDirectory.appendingPathComponent("xray")],
+                work: AppPaths.updatesDirectory.appendingPathComponent("building"), downloader: downloader,
+                download: ResumableDownload(routes: downloadRoutes()), signedBy: key,
+                onProgress: { p in downloaded.withLock { $0 = max($0, p.received) } }
+            )
+            print("[v2mac-debug] app update: built \(prepared.version) at \(prepared.app.path), downloaded \(downloaded.withLock { $0 }) bytes")
+        } catch {
+            print("[v2mac-debug] app update failed: \(error)")
+        }
+    }
+    #endif
 
     private func updateProgress(_ progress: DownloadProgress) {
         guard case .installing = appStatus else { return }
@@ -276,7 +360,11 @@ final class UpdateService {
         schedulerTask?.cancel()
         schedulerTask = Task { [weak self] in
             // In the task, so it runs after AppModel has wired the notifications.
-            self?.reportHomebrewResult()
+            let current = Prefs.appVersion, defaults = UserDefaults.standard
+            if let last = defaults.string(forKey: "lastLaunchedVersion"), VersionCompare.isNewer(current, than: last) {
+                self?.onFound(.updated(current))
+            }
+            defaults.set(current, forKey: "lastLaunchedVersion")
             try? await Task.sleep(for: .seconds(10))
             while !Task.isCancelled {
                 await self?.checkApp()

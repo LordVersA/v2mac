@@ -43,7 +43,7 @@ brew install --cask lordversa/tap/v2mac
 
 <div dir="rtl">
 
-یا DMG را از [آخرین نسخه](https://github.com/LordVersA/v2mac/releases/latest) دانلود کنید. برنامه notarize نشده: در اولین اجرا از **Open Anyway** در System Settings → Privacy & Security استفاده کنید. جزئیات در [راهنمای نصب](https://github.com/LordVersA/v2mac/wiki/fa-Installation).
+یا DMG را از [آخرین نسخه](https://github.com/LordVersA/v2mac/releases/latest) دانلود کنید. برنامه notarize نشده: در اولین اجرا از **Open Anyway** در System Settings → Privacy & Security استفاده کنید. جزئیات در [راهنمای نصب](https://github.com/LordVersA/v2mac/wiki/fa-Installation). پس از آن V2Mac خودش را به‌روز می‌کند: فقط فایل‌های تغییرکرده را دانلود می‌کند و هنگام بستن برنامه نصب می‌کند.
 
 **شروع سریع:** روی **Add Subscription** بزنید و لینک را بچسبانید، روی یک سرور دوبار کلیک کنید، سپس از `127.0.0.1:10808` (SOCKS5 / HTTP) استفاده کنید یا **System Proxy** یا **TUN** را روشن کنید.
 

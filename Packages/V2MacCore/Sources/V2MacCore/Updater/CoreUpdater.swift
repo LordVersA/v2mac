@@ -56,7 +56,45 @@ public enum VersionCompare {
     }
 }
 
+/// The core an app build is made for (docs/app-auto-update.md, "Core split"): the pinned release from
+/// `Scripts/core.lock`, written into Info.plist at build time, and the versions it also accepts.
+public struct CorePin: Sendable, Equatable {
+    public var version: String
+    /// Of the release's zip asset.
+    public var sha256: String
+    public var min: String
+    public var maxExclusive: String
+
+    public init(version: String, sha256: String, min: String, maxExclusive: String) {
+        self.version = VersionCompare.normalized(version)
+        self.sha256 = sha256
+        self.min = VersionCompare.normalized(min)
+        self.maxExclusive = VersionCompare.normalized(maxExclusive)
+    }
+
+    /// From the `V2MacCore…` Info.plist keys; nil when a build has none.
+    public init?(info: [String: Any]) {
+        guard let version = info["V2MacCoreVersion"] as? String, let sha = info["V2MacCoreSHA256"] as? String,
+              let min = info["V2MacCoreMin"] as? String, let max = info["V2MacCoreMaxExclusive"] as? String,
+              !VersionCompare.normalized(version).isEmpty else { return nil }
+        self.init(version: version, sha256: sha.lowercased(), min: min, maxExclusive: max)
+    }
+
+    public func accepts(_ version: String) -> Bool {
+        !VersionCompare.normalized(version).isEmpty && !VersionCompare.isNewer(min, than: version)
+            && VersionCompare.isNewer(maxExclusive, than: version)
+    }
+
+    public var release: CoreRelease {
+        let base = "https://github.com/XTLS/Xray-core/releases/download/v\(version)/\(CoreUpdater.assetName)"
+        return CoreRelease(tag: "v\(version)", publishedAt: nil, assetURL: URL(string: base)!, checksumURL: URL(string: base + ".dgst")!)
+    }
+}
+
 public enum CoreUpdater {
+    /// Beside an installed `core/xray`: its version, so the app can pick a core without starting one.
+    public static let versionFileName = "xray.version"
+
     public static let assetName = "Xray-macos-arm64-v8a.zip"
     static let apiURL = URL(string: "https://api.github.com/repos/XTLS/Xray-core/releases?per_page=10")!
     static let atomURL = URL(string: "https://github.com/XTLS/Xray-core/releases.atom")!
@@ -145,17 +183,19 @@ public enum CoreUpdater {
 
     /// Downloads, verifies, unpacks and self-tests the release, then moves the binary into
     /// `coreDirectory` and the geo files into `assetDirectory`. Nothing is touched unless every
-    /// check passes. `currentConfig`, when given, is also run through `xray run -test`.
+    /// check passes. `currentConfig`, when given, is also run through `xray run -test`. With `expectedSHA256`
+    /// (a pinned core) the zip must have that hash instead of the release's `.dgst`.
     public static func install(
         _ release: CoreRelease,
         downloader: FileDownloader,
         coreDirectory: URL,
         assetDirectory: URL,
         currentConfig: URL? = nil,
+        expectedSHA256: String? = nil,
         onProgress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> Installed {
         let zip = try await downloader.download(release.assetURL, onProgress: onProgress)
-        let expected = try parseDigest(try await downloader.download(release.checksumURL))
+        let expected = if let expectedSHA256 { expectedSHA256 } else { try parseDigest(try await downloader.download(release.checksumURL)) }
         guard RegionPackInstaller.sha256(zip) == expected else {
             throw DownloadError.checksumMismatch(file: assetName)
         }
@@ -210,6 +250,7 @@ public enum CoreUpdater {
         for name in ["geoip.dat", "geosite.dat"] {
             try replace(unpacked.appendingPathComponent(name), in: assetDirectory)
         }
+        try Data(VersionCompare.normalized(version).utf8).write(to: coreDirectory.appendingPathComponent(versionFileName))
         return Installed(version: VersionCompare.normalized(version))
     }
 
@@ -228,6 +269,7 @@ public enum CoreUpdater {
     public static func revert(coreDirectory: URL, assetDirectory: URL) {
         let fm = FileManager.default
         try? fm.removeItem(at: coreDirectory.appendingPathComponent("xray"))
+        try? fm.removeItem(at: coreDirectory.appendingPathComponent(versionFileName))
         for name in ["geoip.dat", "geosite.dat"] {
             let url = assetDirectory.appendingPathComponent(name)
             let type = (try? fm.attributesOfItem(atPath: url.path))?[.type] as? FileAttributeType

@@ -213,10 +213,10 @@
     },
     "#%lld" : {
 
-    },
+},
     "%@" : {
 
-    },
+},
     "%@ · Apps: %lld · Hosts: %lld" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6328,7 +6328,7 @@
     },
     "Connection map" : {
 
-    },
+},
     "Connection Status" : {
       "localizations" : {
         "fa" : {
@@ -8012,7 +8012,7 @@
     },
     "Distance" : {
 
-    },
+},
     "DNS" : {
       "shouldTranslate" : false
     },
@@ -8282,28 +8282,6 @@
         }
       }
     },
-    "Downloading V2Mac %@ with Homebrew…" : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "در حال دانلود V2Mac %@ با Homebrew…"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Загрузка V2Mac %@ через Homebrew…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在通过 Homebrew 下载 V2Mac %@…"
-          }
-        }
-      }
-    },
     "Downloading V2Mac %@…" : {
       "localizations" : {
         "fa" : {
@@ -8366,6 +8344,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在下载…"
+          }
+        }
+      }
+    },
+    "Downloads a new version in the background and installs it when V2Mac quits." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نسخهٔ جدید را در پس‌زمینه دانلود می‌کند و هنگام بستن V2Mac نصب می‌کند."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Загружает новую версию в фоне и устанавливает её при выходе из V2Mac."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在后台下载新版本，并在 V2Mac 退出时安装。"
           }
         }
       }
@@ -10512,51 +10512,6 @@
         }
       }
     },
-    "Homebrew could not install the update%@. Run “brew upgrade --cask v2mac” in Terminal to see why." : {
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Homebrew نتوانست به‌روزرسانی را نصب کند%@. برای دیدن علت «brew upgrade --cask v2mac» را در ترمینال اجرا کنید."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Homebrew не смог установить обновление%@. Запустите «brew upgrade --cask v2mac» в Терминале, чтобы узнать причину."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Homebrew 无法安装更新%@。请在终端中运行“brew upgrade --cask v2mac”查看原因。"
-          }
-        }
-      }
-    },
-    "Homebrew does not offer V2Mac %@ yet. Try again later." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Homebrew هنوز V2Mac %@ را ارائه نمی‌دهد. بعداً دوباره امتحان کنید."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Homebrew пока не предлагает V2Mac %@. Попробуйте позже."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Homebrew 尚未提供 V2Mac %@，请稍后再试。"
-          }
-        }
-      }
-    },
     "Host" : {
       "localizations" : {
         "fa" : {
@@ -11027,6 +10982,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安装 %@"
+          }
+        }
+      }
+    },
+    "Install updates automatically" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نصب خودکار به‌روزرسانی‌ها"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Устанавливать обновления автоматически"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动安装更新"
           }
         }
       }
@@ -15275,6 +15252,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开设置进行安装。"
+          }
+        }
+      }
+    },
+    "Open Settings to read what changed." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برای دیدن تغییرات، تنظیمات را باز کنید."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Откройте настройки, чтобы узнать, что изменилось."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置查看更新内容。"
           }
         }
       }
@@ -21406,7 +21405,7 @@
     },
     "TCP" : {
 
-    },
+},
     "TCP and UDP" : {
       "localizations" : {
         "fa" : {
@@ -24765,7 +24764,7 @@
     },
     "UDP" : {
 
-    },
+},
     "UDP 443, so browsers use TCP and rules see their sites" : {
       "localizations" : {
         "fa" : {
@@ -25781,6 +25780,28 @@
     "V2Mac" : {
       "shouldTranslate" : false
     },
+    "V2Mac %@ installs when you quit" : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V2Mac %@ هنگام بستن برنامه نصب می‌شود"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V2Mac %@ установится при выходе"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V2Mac %@ 将在退出时安装"
+          }
+        }
+      }
+    },
     "V2Mac %@ is available" : {
       "localizations" : {
         "fa" : {
@@ -25821,6 +25842,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "V2Mac %@ 可用。"
+          }
+        }
+      }
+    },
+    "V2Mac %@ is ready. It installs when V2Mac quits." : {
+      "localizations" : {
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V2Mac %@ آماده است و هنگام بستن V2Mac نصب می‌شود."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V2Mac %@ готова. Она установится при выходе из V2Mac."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V2Mac %@ 已就绪，将在 V2Mac 退出时安装。"
           }
         }
       }
@@ -26090,24 +26133,24 @@
         }
       }
     },
-    "V2Mac was not updated" : {
+    "V2Mac updated to %@" : {
       "localizations" : {
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "V2Mac به‌روز نشد"
+            "value" : "V2Mac به نسخهٔ %@ به‌روز شد"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "V2Mac не обновлён"
+            "value" : "V2Mac обновлена до %@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "V2Mac 未更新"
+            "value" : "V2Mac 已更新到 %@"
           }
         }
       }
@@ -26503,7 +26546,7 @@
     },
     "VPN · %@" : {
 
-    },
+},
     "VPN tunnel" : {
       "localizations" : {
         "fa" : {
@@ -27234,7 +27277,7 @@
     },
     "You" : {
 
-    },
+},
     "You have the latest core." : {
       "localizations" : {
         "fa" : {

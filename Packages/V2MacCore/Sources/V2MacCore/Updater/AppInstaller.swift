@@ -53,6 +53,12 @@ public enum AppInstaller {
         return (dmg, checksum)
     }
 
+    /// The release's file-by-file manifest (`BundleManifest`); its signature is `<url>.sig`.
+    public static func manifestURL(repository: String, tag: String) -> URL? {
+        guard let tagPart = tag.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return nil }
+        return URL(string: "https://github.com/\(repository)/releases/download/\(tagPart)/files.json")
+    }
+
     /// The hash in a `shasum -a 256` line ("<hex>  <file>").
     public static func parseChecksum(_ data: Data) throws -> String {
         let first = String(decoding: data, as: UTF8.self).split(whereSeparator: \.isWhitespace).first.map { $0.lowercased() }
@@ -94,17 +100,91 @@ public enum AppInstaller {
         try fm.createDirectory(at: work, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         do {
             let app = try await unpack(image, in: work)
-            let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))
-            let version = info?["CFBundleShortVersionString"] as? String ?? ""
-            guard info?["CFBundleIdentifier"] as? String == bundleIdentifier,
-                  VersionCompare.normalized(version) == VersionCompare.normalized(expectedVersion) else {
-                throw AppInstallError.wrongApp
-            }
+            let version = try await check(app, expectedVersion: expectedVersion, bundleIdentifier: bundleIdentifier)
             return Staged(app: app, workDirectory: work, version: version)
         } catch {
             try? fm.removeItem(at: work)
             throw error
         }
+    }
+
+    /// Builds the release beside the installed app in `work` (docs/app-auto-update.md): the manifest must carry
+    /// the project's signature, then unchanged files are copied from `installed`, patched where a patch applies,
+    /// the rest downloaded (`BundleManifest.build`), and the result gets the same checks as a DMG's app.
+    /// Downloads stay in `work/download` for a later attempt.
+    public static func prepareDelta(
+        manifest url: URL,
+        expectedVersion: String,
+        bundleIdentifier: String,
+        installed: URL,
+        alternates: [String: URL] = [:],
+        work: URL,
+        downloader: FileDownloader,
+        download: ResumableDownload,
+        signedBy key: Curve25519.Signing.PublicKey = updateKey,
+        onProgress: (@Sendable (DownloadProgress) -> Void)? = nil
+    ) async throws -> Staged {
+        let data = try await downloader.download(url)
+        let signature = try await downloader.download(URL(string: url.absoluteString + ".sig")!)
+        guard isSigned(data, signature: signature, by: key) else { throw AppInstallError.notSignedByProject }
+        let manifest = try BundleManifest(data: data)
+        guard VersionCompare.normalized(manifest.version) == VersionCompare.normalized(expectedVersion) else {
+            throw AppInstallError.wrongApp
+        }
+        let fm = FileManager.default
+        try fm.createDirectory(at: work, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let app = work.appendingPathComponent(appName)
+        do {
+            try await manifest.build(at: app, from: installed, alternates: alternates, release: url,
+                                     downloads: work.appendingPathComponent("download"), download: download, onProgress: onProgress)
+            let version = try await check(app, expectedVersion: expectedVersion, bundleIdentifier: bundleIdentifier)
+            return Staged(app: app, workDirectory: work, version: version)
+        } catch {
+            try? fm.removeItem(at: app)
+            throw error
+        }
+    }
+
+    /// Code signature, bundle identifier and version of a downloaded app; returns its version.
+    private static func check(_ app: URL, expectedVersion: String, bundleIdentifier: String) async throws -> String {
+        _ = try? await CoreUpdater.run("/usr/bin/xattr", ["-dr", "com.apple.quarantine", app.path])
+        guard try await CoreUpdater.run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path]).status == 0 else {
+            throw AppInstallError.signatureInvalid
+        }
+        let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))
+        let version = info?["CFBundleShortVersionString"] as? String ?? ""
+        guard info?["CFBundleIdentifier"] as? String == bundleIdentifier,
+              VersionCompare.normalized(version) == VersionCompare.normalized(expectedVersion) else {
+            throw AppInstallError.wrongApp
+        }
+        return version
+    }
+
+    // MARK: Staged update
+
+    /// Moves a checked app to `updates/V2Mac.app`, where it waits for the next quit (or launch). Only a
+    /// checked app is ever moved there, so its presence means it is ready.
+    public static func stage(_ prepared: Staged, in updates: URL) throws -> Staged {
+        let fm = FileManager.default
+        let app = updates.appendingPathComponent(appName)
+        try fm.createDirectory(at: updates, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try? fm.removeItem(at: app)
+        try fm.moveItem(at: prepared.app, to: app)
+        if prepared.workDirectory != updates { try? fm.removeItem(at: prepared.workDirectory) }
+        return Staged(app: app, workDirectory: updates, version: prepared.version)
+    }
+
+    /// The app staged in `updates/` when it is a newer version of this one. Anything else there is removed.
+    public static func staged(in updates: URL, newerThan version: String, bundleIdentifier: String) -> Staged? {
+        let app = updates.appendingPathComponent(appName)
+        let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))
+        guard let newVersion = info?["CFBundleShortVersionString"] as? String,
+              info?["CFBundleIdentifier"] as? String == bundleIdentifier,
+              VersionCompare.isNewer(newVersion, than: version) else {
+            if FileManager.default.fileExists(atPath: app.path) { try? FileManager.default.removeItem(at: updates) }
+            return nil
+        }
+        return Staged(app: app, workDirectory: updates, version: newVersion)
     }
 
     private static func unpack(_ image: Data, in work: URL) async throws -> URL {
@@ -128,11 +208,6 @@ public enum AppInstaller {
         _ = try? await CoreUpdater.run("/usr/bin/hdiutil", ["detach", mount.path, "-force"])
         guard let copy else { throw AppInstallError.appMissing }
         guard copy == 0 else { throw AppInstallError.copyFailed }
-
-        _ = try? await CoreUpdater.run("/usr/bin/xattr", ["-dr", "com.apple.quarantine", app.path])
-        guard try await CoreUpdater.run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path]).status == 0 else {
-            throw AppInstallError.signatureInvalid
-        }
         return app
     }
 
@@ -149,7 +224,7 @@ public enum AppInstaller {
     }
 
     /// Waits for the running app (`$1`) to exit, replaces it (`$3`) with the staged copy (`$2`),
-    /// starts it again with the command in `$5` and removes the work directory (`$4`).
+    /// starts it again with the command in `$5` (none: it stays closed) and removes the work directory (`$4`).
     /// The old app is put back when the new one cannot be moved into place.
     public static let swapScript = """
     #!/bin/sh
@@ -174,7 +249,8 @@ public enum AppInstaller {
     fi
     rm -rf "$WORK"
     rm -f "$0"
-    "$OPEN" "$APP"
+    [ -n "$OPEN" ] && "$OPEN" "$APP"
+    exit 0
 
     """
 
@@ -183,7 +259,7 @@ public enum AppInstaller {
         _ staged: Staged,
         replacing target: URL,
         processID: Int32,
-        openCommand: String = "/usr/bin/open"
+        openCommand: String? = "/usr/bin/open"
     ) throws {
         try checkReplaceable(target)
         // Outside the work directory, which the script deletes.
@@ -191,7 +267,7 @@ public enum AppInstaller {
         try swapScript.write(to: script, atomically: true, encoding: .utf8)
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = [script.path, "\(processID)", staged.app.path, target.path, staged.workDirectory.path, openCommand]
+        process.arguments = [script.path, "\(processID)", staged.app.path, target.path, staged.workDirectory.path, openCommand ?? ""]
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice

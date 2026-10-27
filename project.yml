@@ -48,6 +48,9 @@ targets:
       - name: Embed command line tool
         script: '/bin/bash "$SRCROOT/Scripts/embed-cli.sh"'
         basedOnDependencyAnalysis: false
+      - name: Write core pin
+        script: '/bin/bash "$SRCROOT/Scripts/pin-core-info.sh"'
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.lordversa.v2mac
