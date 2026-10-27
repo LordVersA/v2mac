@@ -45,15 +45,18 @@ public struct CustomRule: Codable, Sendable, Hashable, Identifiable {
 /// An installed or running app, for matching app entries that name a bundle, a bundle id or a pattern.
 public struct InstalledApp: Sendable, Hashable {
     /// The `.app` folder.
-    public var path: String
-    public var bundleID: String
+    public let path: String
+    public let bundleID: String
+    /// Lowercased once: rules compare them against every installed app.
+    public let name: String
+    let lowerID: String
 
     public init(path: String, bundleID: String) {
         self.path = path
         self.bundleID = bundleID
+        name = (path as NSString).lastPathComponent.lowercased()
+        lowerID = bundleID.lowercased()
     }
-
-    public var name: String { (path as NSString).lastPathComponent.lowercased() }
 }
 
 /// The user's rules plus what the config needs to turn them into Xray rules.
@@ -145,12 +148,12 @@ public struct AppMatchers: Sendable, Equatable {
         if lower.hasPrefix("*") || lower.hasSuffix("*") {
             let word = lower.trimmingCharacters(in: CharacterSet(charactersIn: "*"))
             guard !word.isEmpty else { return [] }
-            return folders { $0.name.contains(word) || $0.bundleID.lowercased().contains(word) }
+            return folders { $0.name.contains(word) || $0.lowerID.contains(word) }
         }
         if lower.hasSuffix(".app") { return folders { $0.name == lower } }
         // A reverse-DNS name is a bundle id; a lone word is an executable name, as Proxifier reads it.
         if lower.contains(".") {
-            let byID = folders { $0.bundleID.lowercased() == lower }
+            let byID = folders { $0.lowerID == lower }
             return byID.isEmpty ? [entry] : byID
         }
         return [entry] + folders { $0.name == lower + ".app" }
